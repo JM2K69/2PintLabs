@@ -30,8 +30,7 @@ function  Get-StifleRClientConnectionInfo{
         $JSONExportPath = Join-Path -Path $JSONExportFolderPath -ChildPath "$(get-date -f yyyyMMdd)StifleRConnectionsOutput.json"
     }
 
-    $LogFileNamePattern = "$(get-date -f yyyyMMdd)StifleRConnectionsOutput"
-    $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -Query "Select ComputerName,ClientIPAddress,UserFlags,NetworkGroupId,VPN from Connections"
+    $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -ClassName "Connections" -ErrorAction SilentlyContinue | Where-Object {$_.CimClass -notmatch "Server"}
     $DataArray = @()
     foreach ($ConnectedClient in $ConnectedClients)
     {
@@ -72,7 +71,8 @@ function  Get-StifleRClientConnectionInfo{
                 }
                 continue
             }
-            
+            [String]$ConnectionID = $Connection.ConnectionID
+            [String]$MachineGuid = $Connection.MachineGuid
             # Loop through each item and extract the UserName
             foreach ($Session in $data.PSObject.Properties) 
             {
@@ -108,6 +108,8 @@ function  Get-StifleRClientConnectionInfo{
                             ConsoleState = $ConsoleState
                             VPNState = $VPNState
                             NetworkGroupName = $NGName
+                            ConnectionID = $ConnectionID
+                            MachineGuid = $MachineGuid
                         }
                         #$DeviceData
                         $DataArray += $DeviceData
