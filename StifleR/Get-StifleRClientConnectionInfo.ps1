@@ -30,7 +30,7 @@ function  Get-StifleRClientConnectionInfo{
         $JSONExportPath = Join-Path -Path $JSONExportFolderPath -ChildPath "$(get-date -f yyyyMMdd)StifleRConnectionsOutput.json"
     }
 
-    $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -ClassName "Connections" -ErrorAction SilentlyContinue | Where-Object {$_.CimClass -notmatch "Server"}
+    $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -ClassName "Connections" -ErrorAction SilentlyContinue  | Where-Object {$_.CimClass -notmatch "Server"}
     $DataArray = @()
     foreach ($ConnectedClient in $ConnectedClients)
     {
@@ -53,6 +53,8 @@ function  Get-StifleRClientConnectionInfo{
         $Connection = Get-WmiObject -Namespace root\StifleR -Query "Select * from Connections where ComputerName = '$ComputerName'" -ErrorAction SilentlyContinue
         if ($Connection -ne $Null)
         {
+            [String]$ConnectionID = $Connection.ConnectionID
+            [String]$MachineGuid = $Connection.MachineGuid
             try{
                 $Session = (Invoke-WmiMethod -Path $Connection.__PATH -Name QuerySessions -ErrorAction SilentlyContinue).ReturnValue 
             }
@@ -65,14 +67,18 @@ function  Get-StifleRClientConnectionInfo{
             }
             catch {
                 Write-Verbose "Failed to convert session data for $ComputerName. Error: $_"
+                Write-Verbose "  Connection ID:    $ConnectionID"
+                Write-Verbose "  Machine GUID:     $MachineGuid"
+                write-verbose "  StifleR Version:  $($Connection.Version)"
+                write-verbose "  OSBuild:          $($Connection.OSBuild)"
+                write-verbose  "  WMI Path:         $($Connection.__RELPATH)"
                 if ($Session)
                 {
                     Write-Verbose "Session data: $Session"
                 }
                 continue
             }
-            [String]$ConnectionID = $Connection.ConnectionID
-            [String]$MachineGuid = $Connection.MachineGuid
+
             # Loop through each item and extract the UserName
             foreach ($Session in $data.PSObject.Properties) 
             {
