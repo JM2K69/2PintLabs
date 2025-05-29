@@ -2,8 +2,8 @@ $STIFLERSERVERS = 'https://2psr210.2p.garytown.com:1414'
 $STIFLERULEZURL = 'https://raw.githubusercontent.com/2pintsoftware/StifleRRules/master/StifleRulez.xml'
 
 
-$ClientURL = 'https://github.com/gwblok/garytown/raw/refs/heads/master/2Pint/GARYTOWN/StifleR.ClientApp.Installer64_release2.10_Release_x64_2.10.20417.0004.zip'
-$ClientInstallScript = 'https://raw.githubusercontent.com/gwblok/garytown/refs/heads/master/2Pint/StifleR/StifleR_Client_Installer.ps1'
+$ClientURL = 'https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/GARYTOWN/210/StifleR.ClientApp.Installer64_release2.10_Release_x64_2.10.20417.0004.zip'
+$ClientInstallScript = 'https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/StifleR/StifleR_Client_Installer.ps1'
 
 $packageName = $ClientURL.Split('/')[-1]
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
