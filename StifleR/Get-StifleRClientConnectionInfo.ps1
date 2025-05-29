@@ -10,7 +10,9 @@ function  Get-StifleRClientConnectionInfo{
         [Parameter(Mandatory = $false)]
         [Switch]$ShowOutput,
         [Switch]$CSVAutoPath = $false,
-        [Switch]$JSONAutoPath = $false
+        [Switch]$JSONAutoPath = $false,
+        [Switch]$ServersOnly = $false,
+        [switch]$IncludeServers = $false
     )
     if ($CSVAutoPath -eq $true){
         $CSVExportFolderPath = "$Env:programdata\2Pint Software\Manual Exports"
@@ -31,6 +33,14 @@ function  Get-StifleRClientConnectionInfo{
     }
 
     $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -ClassName "Connections" -ErrorAction SilentlyContinue  | Where-Object {$_.CimClass -notmatch "Server"}
+
+    if ($IncludeServers -eq $true){
+        $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -ClassName "Connections" -ErrorAction SilentlyContinue
+    }
+        if ($ServersOnly -eq $true){
+        $ConnectedClients = Get-CimInstance -Namespace "ROOT\StifleR" -ClassName "Connections" -ErrorAction SilentlyContinue | Where-Object {$_.CimClass -match "Server"}
+    }
+
     $DataArray = @()
     foreach ($ConnectedClient in $ConnectedClients)
     {
