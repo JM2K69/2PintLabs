@@ -112,15 +112,29 @@ if ($Install.ExitCode -eq 0) {
 }
 else {
     Write-Host -ForegroundColor Red "Installation failed with exit code: $($Install.ExitCode)"
+    if (Test-Path -path 'HKLM:\SOFTWARE\2Pint Software'){
+        Write-Host -ForegroundColor Yellow "Attempting to remove existing StifleR Client Registry and Try Install Again."
+        Remove-Item -Path 'HKLM:\SOFTWARE\2Pint Software' -Recurse -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+        Write-Host -ForegroundColor Cyan "Retrying installation..."
+        $Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $tempDir\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
+
+    }
 }
 
 Start-Sleep -Seconds 5
 Get-InstalledApps | Where-Object { $_.DisplayName -like "*StifleR*" } | Format-Table -AutoSize
 
 $StifleRService = get-service -Name StifleRClient -ErrorAction SilentlyContinue
-if ($StifleRService.Status -ne 'Running'){
-    Start-Service -Name StifleRClient
+if (-not $StifleRService) {
+    Write-Host -ForegroundColor Red "StifleR Client service not found. Please check the installation."
+    return
 }
-if ($StifleRService.StartType -ne 'Automatic'){
-    Set-Service -Name StifleRClient -StartupType Automatic
+else{
+    if ($StifleRService.Status -ne 'Running'){
+        Start-Service -Name StifleRClient
+    }
+    if ($StifleRService.StartType -ne 'Automatic'){
+        Set-Service -Name StifleRClient -StartupType Automatic
+    }
 }
