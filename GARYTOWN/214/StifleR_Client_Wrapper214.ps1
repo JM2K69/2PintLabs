@@ -43,12 +43,13 @@ function Test-Url {
         Write-Output "URL is not accessible: $Url - Error: $_"
     }
 }
-
+Write-Host "Testing Connection to StifleR Server: $STIFLERSERVERS before proceeding with installation..."
 $StifleRServerBaseName = $STIFLERSERVERS.Replace('https://', '').Replace(':1414', '')
 if ((Test-NetConnection -ComputerName $StifleRServerBaseName -Port 1414 -WarningAction SilentlyContinue).TcpTestSucceeded -eq $false) {
     Write-Host -ForegroundColor Red "StifleR Server is not reachable. Please check the server address and port."
     return
 }
+Write-Host -ForegroundColor Green "StifleR Server is reachable. Proceeding with installation..."
 
 
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
@@ -118,7 +119,19 @@ else {
         Start-Sleep -Seconds 1
         Write-Host -ForegroundColor Cyan "Retrying installation..."
         $Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $tempDir\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
-
+        if ($Install.ExitCode -eq 0) {
+            Write-Host -ForegroundColor Green "Installation completed successfully."
+        }
+        else {
+            Write-Host -ForegroundColor Red "Installation failed again with exit code: $($Install.ExitCode)"
+            Write-Host -ForegroundColor Yellow "Please check the install.log file in $tempDir for more details."
+            Write-Host -ForegroundColor Yellow "You may need to manually remove the StifleR Client from Programs and Features."
+            Write-Host -ForegroundColor Yellow "Hey, at least we tried again, that's what matters, right?"
+            return
+        }
+    }
+    else {
+        return
     }
 }
 
