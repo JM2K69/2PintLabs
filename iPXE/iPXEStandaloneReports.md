@@ -1,9 +1,5 @@
 # Setting up iPXE Anywhere WebService Reports
 
-NOTE: WORK IN PROGRESS
-
-THIS GUIDE DOES NOT WORK YET
-
 I recently setup the 3 reports 2Pint offers for the Webservice to go along with the data it's collecting into the database.  If you've followed my pervious guides, this will fill continue on from there.
 
 ## Lab Setup
