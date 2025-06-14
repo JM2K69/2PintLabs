@@ -22,6 +22,8 @@
 .Example
 #>
 
+
+
 [CmdletBinding()]
 param (
 
@@ -31,12 +33,12 @@ param (
 $ScriptVersion = "0.0.3"
 
 #Load Functions from GitHub
-
+iex (irm https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/PSDGather/PSDGather.psm1)
 
 # Load core module
-Import-Module .\Microsoft.BDD.TaskSequenceModule.psm1 -Scope Global -Verbose:$true
-Import-Module .\PSDUtility.psm1 -Verbose:$true
-Import-Module .\PSDGather.psm1 -Verbose:$true
+#Import-Module .\Microsoft.BDD.TaskSequenceModule.psm1 -Scope Global -Verbose:$true
+#Import-Module .\PSDUtility.psm1 -Verbose:$true
+#Import-Module .\PSDGather.psm1 -Verbose:$true
 
 # Check for debug in PowerShell and TSEnv
 if($TSEnv:PSDDebug -eq "YES"){
