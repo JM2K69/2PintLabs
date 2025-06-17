@@ -5,7 +5,10 @@ Replaces Default Windows Lock Screen with your own
 DeployR
 #>
 
+Import-Module DeployR.Utility
 
+# Get the provided variables
+$URL = [String]${TSEnv:LockScreenImageURL}
 
 Function Set-LockScreenImage {
  <#
@@ -194,7 +197,7 @@ else{
         $LockScreenURL = $ImageURL
     }
     else{
-        $LockScreenURL = "https://github.com/gwblok/garytown/raw/master/OSD/CloudOSD/lockscreen.jpg"
+        $LockScreenURL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/2PintImages/2pint-desktop-stripes-dark-1920x1080.png"
     }
     Write-Output "Downloading Lock Screen Image from $LockScreenURL"
     #Download the image from the URL
@@ -215,3 +218,5 @@ else
     }
 return $exitcode
 }
+
+Set-LockScreenImage -ImageURL $URL
