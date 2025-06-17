@@ -32,9 +32,13 @@ function Set-HyperVName {
 }
 
 Write-Host -ForegroundColor DarkGray "========================================================="
-
+write-host -ForegroundColor Cyan "OS Modification Functions"
 Write-Host -ForegroundColor Green "[+] Function Set-ThisPCIconName"
 Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Set-ThisPCIconName.ps1")
 
 Write-Host -ForegroundColor Green "[+] Function Set-TimeZoneFromIP"
 Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Set-TimeZoneFromIP.ps1")
+Write-Host -ForegroundColor DarkGray "========================================================="
+Write-Host ""
+write-Host "Completed loading DeployR Functions" -ForegroundColor Cyan
+Write-Host -ForegroundColor DarkGray "========================================================="
