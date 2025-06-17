@@ -33,9 +33,6 @@ function Set-HyperVName {
 
 Write-Host -ForegroundColor DarkGray "========================================================="
 
-Write-Host -ForegroundColor Green "[+] Function Set-LockScreenImage"
-Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Set-LockScreenImage.ps1")
-
 Write-Host -ForegroundColor Green "[+] Function Set-ThisPCIconName"
 Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Set-ThisPCIconName.ps1")
 
