@@ -55,6 +55,5 @@ else
     {
     Write-Output "Did not find lockscreen.jpg in temp folder - Please confirm URL or ImageFileName is correct."
     }
-return $exitcode
 }
 

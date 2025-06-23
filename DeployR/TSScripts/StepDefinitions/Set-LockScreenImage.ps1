@@ -28,10 +28,11 @@ Function Set-LockScreenImage {
  )
 
 
+$StoragePath = "$env:SystemDrive\_2P\content"
 
 if ($ImageFileName){
     if (Test-Path .\$ImageFileName){
-        Copy-item -Path .\$ImageFileName -Destination "$env:TEMP\lockscreen.jpg" -Force -Verbose
+        Copy-item -Path .\$ImageFileName -Destination "$StoragePath\lockscreen.jpg" -Force -Verbose
     }
     else{
         Write-Output "Did not find $ImageFileName in current directory - Please confirm ImageFileName is correct."
@@ -46,22 +47,21 @@ else{
     }
     Write-Output "Downloading Lock Screen Image from $LockScreenURL"
     #Download the image from the URL
-    Invoke-WebRequest -UseBasicParsing -Uri $LockScreenURL -OutFile "$env:TEMP\lockscreen.jpg"
+    Invoke-WebRequest -UseBasicParsing -Uri $LockScreenURL -OutFile "$StoragePath\lockscreen.jpg"
 }
 
 
 #Copy the 2 files into place
-if (Test-Path -Path "$env:TEMP\lockscreen.jpg"){
-    Write-Output "Running Command: Copy-Item $($env:TEMP)\lockscreen.jpg C:\windows\web\Screen\img100.jpg -Force -Verbose"
-    Copy-Item "$env:TEMP\lockscreen.jpg" C:\windows\web\Screen\img100.jpg -Force -Verbose
-    Write-Output "Running Command: Copy-Item $($env:TEMP)\lockscreen.jpg C:\windows\web\Screen\img105.jpg -Force -Verbose"
-    Copy-Item "$env:TEMP\lockscreen.jpg" C:\windows\web\Screen\img105.jpg -Force -Verbose
+if (Test-Path -Path "$StoragePath\lockscreen.jpg"){
+    Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img100.jpg -Force -Verbose"
+    Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img100.jpg -Force -Verbose
+    Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img105.jpg -Force -Verbose"
+    Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img105.jpg -Force -Verbose
     }
 else
     {
     Write-Output "Did not find lockscreen.jpg in temp folder - Please confirm URL or ImageFileName is correct."
     }
-return $exitcode
 }
 
 Set-LockScreenImage -ImageURL $URL
