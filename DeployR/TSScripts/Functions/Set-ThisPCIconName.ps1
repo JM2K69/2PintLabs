@@ -160,8 +160,6 @@ Set-ItemProperty -Path "HKLM:Software\Microsoft\Windows\CurrentVersion\Explorer\
 #Write Out the Value of the Key
 Get-Item -Path $RegistryPath
 
-
-Return $exitcode
 #endregion
 ##*=============================================
 ##* END SCRIPT BODY
