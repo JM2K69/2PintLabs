@@ -48,8 +48,8 @@ Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwb
 Write-Host -ForegroundColor Green "[+] Function Install-WMIExplorer"
 Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Install-WMIExplorer.ps1")
 
-Write-Host -ForegroundColor Green "[+] Function New-ControlPanelDesktopShortcut"
-Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/New-ControlPanelDesktopShortcut.ps1")
+Write-Host -ForegroundColor Green "[+] Function New-ControlPanelDesktopIcon"
+Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/New-ControlPanelDesktopIcon.ps1")
 
 
 
