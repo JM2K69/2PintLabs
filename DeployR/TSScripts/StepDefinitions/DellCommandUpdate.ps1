@@ -34,6 +34,8 @@ if ($updateTypeBIOSFirmware-eq $false -and $updateTypeDrivers -eq $false -and $u
 }
 Write-Host "=============================================================================="
 
+
+#region functions
 function Get-DellSupportedModels {
     [CmdletBinding()]
     
@@ -556,7 +558,6 @@ function Get-DellDeviceDriverPack {
 
 }
 
-
 #Function to get a list of BIOS updates for a SKU, install, or download
 #Similar to the Get-HPBIOSUpdate function in HPCMSL
 Function Get-DellBIOSUpdates {
@@ -660,8 +661,15 @@ Function Get-DellBIOSUpdates {
     return $Updates |Select-Object -Property "PackageID","Name","ReleaseDate","DellVersion" | Sort-Object -Property ReleaseDate -Descending
 }
 
+#endregion functions
+
 # Do the Stuff
 
-Get-DCUAppUpdates -Install
-
+Write-Host "Installing Dell Command Update"
+Get-DCUAppUpdates -Install -Verbose
+Write-Host "=============================================================================="
+Write-Host "Invoke Dell Command Update"
+write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly"
 Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly
+Write-Host "Run Dell Command Update Step Complete"
+Write-Host "=============================================================================="
