@@ -1,7 +1,7 @@
-$TargetVersion = '2.14.2522.43'
+$TargetVersion = '2.14.2524.51'
 $STIFLERSERVERS = 'https://214-StifleR.2p.garytown.com:1414'
 $STIFLERULEZURL = 'https://raw.githubusercontent.com/2pintsoftware/StifleRRules/master/StifleRulez.xml'
-$ClientURL = 'https://2pstifler.2p.garytown.com/StifleR-ClientApp.zip'
+$ClientURL = 'https://214-StifleR.2p.garytown.com/StifleR-ClientApp.zip'
 
 function Get-InstalledApps
 {
