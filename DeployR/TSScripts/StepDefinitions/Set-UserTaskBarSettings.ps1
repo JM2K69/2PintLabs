@@ -1,11 +1,11 @@
-#Several Tweaks for Windows 10/11
-
+<#Several Tweaks for Windows 10/11
+2Pint Software - Gary Blok
+For use with DeployR Task Sequence
 #>
 
 Import-Module DeployR.Utility
 
 # Get the provided variables
-$RemoveWidgetsOnLockScreen = [bool]${TSEnv:RemoveWidgetsOnLockScreen}
 $TaskBarRemoveTaskView = [bool]${TSEnv:TaskBarRemoveTaskView}
 $TaskBarRemoveCopilot = [bool]${TSEnv:TaskBarRemoveCopilot}
 $TaskBarRemoveWidgets = [bool]${TSEnv:TaskBarRemoveWidgets}
@@ -18,7 +18,6 @@ $TaskBarStartMoreRecommendations = [bool]${TSEnv:TaskBarStartMoreRecommendations
 write-host "==================================================================="
 write-host "Tweaks for Windows 11 UI"
 write-host "Reporting Variables:"
-write-host "RemoveWidgetsOnLockScreen: $RemoveWidgetsOnLockScreen"
 write-host "TaskBarRemoveTaskView: $TaskBarRemoveTaskView" 
 write-host "TaskBarRemoveCopilot: $TaskBarRemoveCopilot"
 write-host "TaskBarRemoveWidgets: $TaskBarRemoveWidgets"
@@ -29,72 +28,61 @@ write-host "TaskBarStartMorePins: $TaskBarStartMorePins"
 write-host "TaskBarStartMoreRecommendations: $TaskBarStartMoreRecommendations"
 
 
-#Script from Jorgen Nilsson, Thank you!
+
 <#
 Customize Taskbar in Windows 11
 Sassan Fanai / Jörgen Nilsson
-Version 1.1
-Added Option to remove CoPIlot and updated remove Search
+- then modified heavily by Gary Blok
+Version 25.6.25
 #>
-[string]$RegValueName = "CustomizeTaskbar"
-[string]$FullRegKeyName = "HKLM:\SOFTWARE\ccmexec\" 
-
-# Create registry value if it doesn't exist
-If (!(Test-Path $FullRegKeyName)) {
-    New-Item -Path $FullRegKeyName -type Directory -force 
-}
-
-New-ItemProperty $FullRegKeyName -Name $RegValueName -Value "1" -Type STRING -Force
 
 REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
-
-
 # Removes Task View from the Taskbar
 if ($TaskBarRemoveTaskView) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarRemoveTaskView"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
     
 }
 # Removes Widgets from the Taskbar
 if ($TaskBarRemoveWidgets) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarRemoveWidgets"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # Removes Copilot from the Taskbar
 if ($TaskBarRemoveCopilot) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarRemoveCopilot"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowCopilotButton" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # Removes Chat from the Taskbar
 if ($TaskBarRemoveChat) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarRemoveChat"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # Default StartMenu alignment 0=Left
 if ($TaskBarMoveStartLeft) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarMoveStartLeft"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # Default StartMenu pins layout 0=Default, 1=More Pins, 2=More Recommendations (requires Windows 11 22H2)
 if ($TaskBarStartMorePins) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarStartMorePins"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_Layout" -Value "1" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # Default StartMenu pins layout 0=Default, 1=More Pins, 2=More Recommendations (requires Windows 11 22H2)
 if ($TaskBarStartMoreRecommendations) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarStartMoreRecommendations"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_Layout" -Value "2" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
     
 }    # Removes search from the Taskbar
 if ($TaskBarRemoveSearch) {
-    Write-Host "Attempting to run: $PSItem"
+    Write-Host "Attempting to run: TaskBarRemoveSearch"
     $RegKey = "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\RunOnce"
     if (-not(Test-Path $RegKey )) {
         $reg = New-Item $RegKey -Force | Out-Null

@@ -22,12 +22,12 @@ $ScanOnly = [bool]${TSEnv:ScanOnly}
 
 
 Write-Host "=============================================================================="
-Write-Host "Current DCU Settings selected from Task Sequence" {
+Write-Host "Current DCU Settings selected from Task Sequence" 
     Write-Host "updateTypeBIOSFirmware: $updateTypeBIOSFirmware"
     Write-Host "updateTypeDrivers: $updateTypeDrivers"
     Write-Host "updateTypeApplications: $updateTypeApplications"
     Write-Host "ScanOnly: $ScanOnly"
-}
+
 if ($updateTypeBIOSFirmware-eq $false -and $updateTypeDrivers -eq $false -and $updateTypeApplications -eq $false){
     Write-Host "!!Since no boxes are checked, running all updates!!"
     Write-Host "This is totally logical, ok! It's based on the DCU documentation."
