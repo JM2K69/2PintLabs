@@ -15,10 +15,19 @@ ALL INFORMATION IS PUBLICLY AVAILABLE ON THE INTERNET. I JUST CONSOLIDATED IT IN
 Import-Module DeployR.Utility
 
 # Get the provided variables
-$updateTypeBIOSFirmware = [bool]${TSEnv:updateTypeBIOSFirmware}
-$updateTypeDrivers = [bool]${TSEnv:updateTypeDrivers}
-$updateTypeApplications = [bool]${TSEnv:updateTypeApplications}
-$ScanOnly = [bool]${TSEnv:ScanOnly}
+$updateTypeBIOSFirmware = ${TSEnv:updateTypeBIOSFirmware}
+$updateTypeDrivers = ${TSEnv:updateTypeDrivers}
+$updateTypeApplications = ${TSEnv:updateTypeApplications}
+$ScanOnly = ${TSEnv:ScanOnly}
+
+if ($updateTypeBIOSFirmware -eq "true") {[bool]$updateTypeBIOSFirmware = $true} 
+else {[bool]$updateTypeBIOSFirmware = $false}
+if ($updateTypeDrivers -eq "true") {[bool]$updateTypeDrivers = $true} 
+else {[bool]$updateTypeDrivers = $false}
+if ($updateTypeApplications -eq "true") {[bool]$updateTypeApplications = $true} 
+else {[bool]$updateTypeApplications = $false}
+if ($ScanOnly -eq "true") {[bool]$ScanOnly = $true} 
+else {[bool]$ScanOnly = $false}
 
 
 Write-Host "=============================================================================="
@@ -106,6 +115,11 @@ Function Get-DCUInstallDetails {
     }
     return $DCU
 }
+
+
+
+# Run the check
+
 
 #https://www.dell.com/support/manuals/en-us/command-update/dellcommandupdate_rg/command-line-interface-error-codes?guid=guid-fbb96b06-4603-423a-baec-cbf5963d8948&lang=en-us
 Function Get-DCUExitInfo {
@@ -660,16 +674,104 @@ Function Get-DellBIOSUpdates {
     }
     return $Updates |Select-Object -Property "PackageID","Name","ReleaseDate","DellVersion" | Sort-Object -Property ReleaseDate -Descending
 }
+# Function to check for Windows Desktop Runtime
+function Test-WindowsDesktopRuntime {
+    # Registry paths where .NET Runtime info is typically stored
+    $registryPaths = @(
+        "HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App",
+        "HKLM:\SOFTWARE\dotnet\Setup\InstalledVersions\x86\sharedfx\Microsoft.WindowsDesktop.App"
+    )
 
+    $runtimesFound = $false
+    $installedVersions = @()
+
+    foreach ($path in $registryPaths) {
+        if (Test-Path $path) {
+            # Get all version subkeys
+            $versions = Get-ChildItem -Path $path -ErrorAction SilentlyContinue | 
+                ForEach-Object { $_.PSChildName }
+            
+            foreach ($version in $versions) {
+                $runtimesFound = $true
+                $installedVersions += $version
+            }
+        }
+    }
+
+    # Check via Get-WmiObject as alternative method
+    $wmiApps = Get-WmiObject -Class Win32_Product | 
+        Where-Object { $_.Name -like "*Microsoft Windows Desktop Runtime*" }
+
+    if ($wmiApps) {
+        $runtimesFound = $true
+        $wmiVersions = $wmiApps | ForEach-Object { 
+            [PSCustomObject]@{
+                Version = $_.Version
+                Name = $_.Name
+            }
+        }
+        $installedVersions += $wmiVersions
+    }
+
+    # Output results
+    if ($runtimesFound) {
+        Write-Host "Microsoft Windows Desktop Runtime is installed." -ForegroundColor Green
+        Write-Host "Found versions:"
+        $installedVersions | Sort-Object -Unique | ForEach-Object {
+            if ($_ -is [PSCustomObject]) {
+                Write-Host "- $($_).Name ($($_).Version)"
+            }
+            else {
+                Write-Host "- Version $_"
+            }
+        }
+    }
+    else {
+        Write-Host "Microsoft Windows Desktop Runtime is not installed." -ForegroundColor Red
+    }
+
+    return $runtimesFound
+}
 #endregion functions
 
 # Do the Stuff
 
+$DCU = Get-DCUAppUpdates -Latest
+
+#Write-Host "=============================================================================="
+Write-Host "Check for Desktop Runtime Dependencies"
+$RunTimeInstalled = Test-WindowsDesktopRuntime
+
+if (!$RunTimeInstalled) {
+    Write-Host "Microsoft Windows Desktop Runtime is not installed, please install it before running Dell Command Update" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "Installing Dell Command Update"
-Get-DCUAppUpdates -Install -Verbose
-Write-Host "=============================================================================="
-Write-Host "Invoke Dell Command Update"
-write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly"
-Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly
-Write-Host "Run Dell Command Update Step Complete"
-Write-Host "=============================================================================="
+$DCU
+
+try {
+    Get-DCUAppUpdates -Install -Verbose
+    Write-Host "Dell Command Update Installed Successfully"
+    $DCUVersion = Get-DCUVersion
+    Write-Host "Dell Command Update Version: $DCUVersion"
+}
+catch {
+    Write-Host "One More Try to Install Dell Command Update"
+    Get-DCUAppUpdates -Install -UseWebRequest -Verbose
+}
+
+if ((Get-DCUVersion) -eq "false"){
+    Write-Host "Dell Command Update is not getting installed, do some extra testing.."
+    exit ($DCU.VendorVersion).replace(".","")
+}
+else {
+
+    Write-Host "=============================================================================="
+    Write-Host "Invoke Dell Command Update"
+    write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly"
+    Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly
+    Write-Host "Run Dell Command Update Step Complete"
+    Write-Host "=============================================================================="
+}
+

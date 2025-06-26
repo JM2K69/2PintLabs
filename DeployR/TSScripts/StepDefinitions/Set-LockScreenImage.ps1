@@ -8,7 +8,7 @@ DeployR
 Import-Module DeployR.Utility
 
 # Get the provided variables
-$URL = [String]${TSEnv:LockScreenImageURL}
+[String]$URL = ${TSEnv:LockScreenImageURL}
 
 Function Set-LockScreenImage {
  <#
