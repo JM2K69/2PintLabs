@@ -11,56 +11,56 @@ Import-Module DeployR.Utility
 [String]$URL = ${TSEnv:LockScreenImageURL}
 
 Function Set-LockScreenImage {
- <#
- .SYNOPSIS
+    <#
+    .SYNOPSIS
     Sets the Lock Screen Image to a custom image.
- .DESCRIPTION
+    .DESCRIPTION
     This function sets the lock screen image to a custom image, typically downloaded from a URL.
- .PARAMETER exitcode
+    .PARAMETER exitcode
     The exit code to return after execution.
- .EXAMPLE
+    .EXAMPLE
     Set-LockScreenImage 
- #>
-[CmdletBinding()]
- param(
-  [String]$ImageURL,
-  [String]$ImageFileName #ASSUMES THIS IMAGE IS IN THE SAME PACKAGE AS THE SCRIPT, OTHERWISE USE THE URL PARAMETER
- )
-
-
-$StoragePath = "$env:SystemDrive\_2P\content"
-
-if ($ImageFileName){
-    if (Test-Path .\$ImageFileName){
-        Copy-item -Path .\$ImageFileName -Destination "$StoragePath\lockscreen.jpg" -Force -Verbose
+    #>
+    [CmdletBinding()]
+    param(
+    [String]$ImageURL,
+    [String]$ImageFileName #ASSUMES THIS IMAGE IS IN THE SAME PACKAGE AS THE SCRIPT, OTHERWISE USE THE URL PARAMETER
+    )
+    
+    
+    $StoragePath = "$env:SystemDrive\_2P\content"
+    
+    if ($ImageFileName){
+        if (Test-Path .\$ImageFileName){
+            Copy-item -Path .\$ImageFileName -Destination "$StoragePath\lockscreen.jpg" -Force -Verbose
+        }
+        else{
+            Write-Output "Did not find $ImageFileName in current directory - Please confirm ImageFileName is correct."
+        }
     }
     else{
-        Write-Output "Did not find $ImageFileName in current directory - Please confirm ImageFileName is correct."
+        if ($ImageURL){
+            $LockScreenURL = $ImageURL
+        }
+        else{
+            $LockScreenURL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/2PintImages/2pint-desktop-stripes-dark-1920x1080.png"
+        }
+        Write-Output "Downloading Lock Screen Image from $LockScreenURL"
+        #Download the image from the URL
+        Invoke-WebRequest -UseBasicParsing -Uri $LockScreenURL -OutFile "$StoragePath\lockscreen.jpg"
     }
-}
-else{
-    if ($ImageURL){
-        $LockScreenURL = $ImageURL
+    
+    
+    #Copy the 2 files into place
+    if (Test-Path -Path "$StoragePath\lockscreen.jpg"){
+        Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img100.jpg -Force -Verbose"
+        Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img100.jpg -Force -Verbose
+        Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img105.jpg -Force -Verbose"
+        Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img105.jpg -Force -Verbose
     }
-    else{
-        $LockScreenURL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/2PintImages/2pint-desktop-stripes-dark-1920x1080.png"
-    }
-    Write-Output "Downloading Lock Screen Image from $LockScreenURL"
-    #Download the image from the URL
-    Invoke-WebRequest -UseBasicParsing -Uri $LockScreenURL -OutFile "$StoragePath\lockscreen.jpg"
-}
-
-
-#Copy the 2 files into place
-if (Test-Path -Path "$StoragePath\lockscreen.jpg"){
-    Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img100.jpg -Force -Verbose"
-    Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img100.jpg -Force -Verbose
-    Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img105.jpg -Force -Verbose"
-    Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img105.jpg -Force -Verbose
-    }
-else
+    else
     {
-    Write-Output "Did not find lockscreen.jpg in temp folder - Please confirm URL or ImageFileName is correct."
+        Write-Output "Did not find lockscreen.jpg in temp folder - Please confirm URL or ImageFileName is correct."
     }
 }
 

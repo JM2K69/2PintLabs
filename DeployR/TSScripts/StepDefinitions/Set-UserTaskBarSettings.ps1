@@ -35,7 +35,8 @@ Sassan Fanai / Jörgen Nilsson
 - then modified heavily by Gary Blok
 Version 25.6.25
 #>
-
+[GC]::Collect()
+Write-Host "Mounting Default User Registry Hive (REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT)"
 REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
 # Removes Task View from the Taskbar
 if ($TaskBarRemoveTaskView -eq $true) {
@@ -93,6 +94,7 @@ if ($TaskBarRemoveSearch -eq $true) {
 }
 
 [GC]::Collect()
+Write-Host "Unmounting Default User Registry Hive (REG UNLOAD HKLM\Default)"
 REG UNLOAD HKLM\Default
 
 
