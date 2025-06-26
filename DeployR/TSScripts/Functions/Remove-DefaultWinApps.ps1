@@ -83,6 +83,7 @@ Function Remove-DefaultWinApps {
         "MicrosoftCorporationII.MicrosoftFamily"
         "C27EB4BA.DropboxOEM"
         "DevHome"
+        "LinkedIn"
     )
 
 
