@@ -13,6 +13,7 @@ ALL INFORMATION IS PUBLICLY AVAILABLE ON THE INTERNET. I JUST CONSOLIDATED IT IN
 #>
 #Pull Vars from TS:
 Import-Module DeployR.Utility
+$LogPath = "$env:SystemDrive\_2P\Logs"
 
 # Get the provided variables
 $updateTypeBIOSFirmware = ${TSEnv:updateTypeBIOSFirmware}
@@ -770,6 +771,7 @@ else {
     Write-Host "=============================================================================="
     Write-Host "Invoke Dell Command Update"
     write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly"
+    write-host "Log Path: $LogPath\DCU-CLI-TIMESTAMP-ACTION.log"
     Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly
     Write-Host "Run Dell Command Update Step Complete"
     Write-Host "=============================================================================="
