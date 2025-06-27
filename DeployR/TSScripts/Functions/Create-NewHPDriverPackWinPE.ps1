@@ -144,7 +144,7 @@ Function Create-NewHPDriverPackWinPE {
         $SoftpaqList = $XML.ImagePal.Solutions.UpdateInfo
         if ($SystemInfo){
             $SysInfo = $XML.ImagePal.SystemInfo.System
-            return $SystemInfo
+            return $SysInfo
             break
         }
         return $SoftpaqList
@@ -298,9 +298,10 @@ Function Create-NewHPDriverPackWinPE {
     }
     Foreach ($Driver in $Drivers){
         Write-Host "Driver: $($Driver.Name) - $($Driver.Description)"
-        if ($Driver.URL -ne $null){
-            Write-Host "Downloading Driver from: $($Driver.URL)"
+        if ($null -ne $Driver.URL){
+            Write-Host "Downloading Driver from: $($Driver.URL)" -ForegroundColor Cyan
             $DownloadedFile = "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe"
+            write-host "Downloading to: $DownloadedFile" -ForegroundColor Green
             $DestinationPath = "$ExtractedDriverLocation\$($Driver.id)"
             #Start-BitsTransfer -Source "https://$($Driver.URL)" -Destination "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe" -DisplayName $Driver.Name -Description $Driver.Description -ErrorAction SilentlyContinue
             Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL $Driver.URL -DestinationPath $DownloadedFile -ErrorAction SilentlyContinue
@@ -310,7 +311,7 @@ Function Create-NewHPDriverPackWinPE {
                 Start-Process -FilePath $SevenZipPath -ArgumentList "x $DownloadedFile -o$DestinationPath -y" -Wait -NoNewWindow -PassThru
             }
             else {
-                Write-Host "Failed to download driver: $($Driver.Name)"
+                Write-Host "Failed to download driver: $($Driver.Name)" -ForegroundColor Red
             }
         }
         else {
