@@ -51,6 +51,10 @@ Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwb
 Write-Host -ForegroundColor Green "[+] Function New-ControlPanelDesktopIcon"
 Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/New-ControlPanelDesktopIcon.ps1")
 
+Write-Host -ForegroundColor Green "[+] Function Create-NewHPDriverPackWinPE"
+Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Create-NewHPDriverPackWinPE.ps1")
+
+
 
 
 Write-Host -ForegroundColor DarkGray "========================================================="

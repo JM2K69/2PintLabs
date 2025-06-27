@@ -9,7 +9,7 @@ Import-Module DeployR.Utility
 
 # Get the provided variables
 [String]$URL = ${TSEnv:GenericUserImageURL}
-
+[String]$FinishAction = ${TSEnv:FinishAction}
 Function Resize-Image {
     [CmdletBinding()]
     param(
@@ -81,7 +81,8 @@ Function Set-GenericUserImage {
     #>
     [CmdletBinding()]
     param(
-    [String]$ImageURL
+    [String]$ImageURL,
+    [String]$FinishAction
     )
     
     
@@ -125,7 +126,13 @@ Function Set-GenericUserImage {
         Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-192.png" -Force
         Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-200.png" -Force
     }
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "UseDefaultTile" -Value 1 -Type Dword -Force
+    if ($FinishAction -eq "Reseal"){
+        Write-Host "Skipping setting UseDefaultTile as FinishAction is Reseal"
+    }
+    else {
+        Write-Output "Setting UseDefaultTile to 1"
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "UseDefaultTile" -Value 1 -Type Dword -Force
+    }
 }
 
 $URLExtension = [System.IO.Path]::GetExtension($URL)
@@ -134,4 +141,4 @@ if ($URLExtension -ne ".png") {
     exit 1
 }
 
-Set-GenericUserImage -ImageURL $URL
+Set-GenericUserImage -ImageURL $URL -FinishAction $FinishAction
