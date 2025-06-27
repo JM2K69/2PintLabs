@@ -30,6 +30,10 @@ Function Create-NewHPDriverPackWinPE {
         Write-Host "7za.exe not found in expected path. Please ensure it is available in the Tools directory."
         Exit 1
     }
+    #Import DeployR.Utility module
+    if (-not (Get-Module -Name DeployR.Utility)) {
+        Import-Module X:\_2P\Client\PSModules\DeployR.Utility\DeployR.Utility.psd1 -Force -ErrorAction Stop
+    }
     
     #Build Download Content Location
     $DownloadContentPath = "$TargetSystemDrive\_2P\content\Drivers"
@@ -298,8 +302,9 @@ Function Create-NewHPDriverPackWinPE {
             Write-Host "Downloading Driver from: $($Driver.URL)"
             $DownloadedFile = "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe"
             $DestinationPath = "$ExtractedDriverLocation\$($Driver.id)"
-            Start-BitsTransfer -Source "https://$($Driver.URL)" -Destination "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe" -DisplayName $Driver.Name -Description $Driver.Description -ErrorAction SilentlyContinue
-            if (Test-Path -Path "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe") {
+            #Start-BitsTransfer -Source "https://$($Driver.URL)" -Destination "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe" -DisplayName $Driver.Name -Description $Driver.Description -ErrorAction SilentlyContinue
+            Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL $Driver.URL -DestinationPath $DownloadedFile -ErrorAction SilentlyContinue
+            if (Test-Path -Path $DownloadedFile) {
                 Write-Host "Driver downloaded successfully: $($Driver.Name)"
                 write-Host "Expanding Driver Pack to $ExtractedDriverLocation"
                 Start-Process -FilePath $SevenZipPath -ArgumentList "x $DownloadedFile -o$DestinationPath -y" -Wait -NoNewWindow -PassThru
