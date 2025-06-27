@@ -9,7 +9,6 @@ Import-Module DeployR.Utility
 
 # Get the provided variables
 [String]$URL = ${TSEnv:GenericUserImageURL}
-$URL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/2PintImages/2pint-desktop-stripes-dark-1920x1080.png"
 
 Function Resize-Image {
     [CmdletBinding()]
