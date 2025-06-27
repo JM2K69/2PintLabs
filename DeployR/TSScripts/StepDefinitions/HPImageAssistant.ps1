@@ -411,6 +411,9 @@ Grabs the output from a recent run of HPIA and parses the XML to find recommenda
 # Install HPIA
 Install-HPIA
 
+Write-Host "=============================================================================="
+write-Host "Look for Logs: $env:systemdrive\ProgramData\HP\HPIA"
+
 # Run HPIA
 if ($ScanOnly -eq "true"){
     Write-Host "Running HPIA in Scan Only Mode" -ForegroundColor Green
@@ -420,3 +423,6 @@ else {
     Write-Host "Running HPIA in Update Mode" -ForegroundColor Green
     Invoke-HPIA -Operation "Analyze" -Category $Category -Selection "All" -Action "Install" -NoninteractiveMode
 }
+
+write-host "HPIA Run Complete"
+Write-Host "=============================================================================="

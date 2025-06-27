@@ -99,21 +99,33 @@ Function Set-GenericUserImage {
         Write-Output "Failed to download image from $ImageURL"
         exit 1
     }
-    $Image = Get-Item -Path "$StoragePath\user-original-tall.png"
+    $Image = Get-Item -Path "$StoragePath\user-original.png"
+    Copy-Item -path $Image.FullName -Destination "$env:temp\user-original.png" -Force
     #Get Image Pixel Size
     $ImageSize = [System.Drawing.Image]::FromFile($Image.FullName)
     Write-Output "Image Size: $($ImageSize.Width) x $($ImageSize.Height)"
-    
-    $MainImage = Resize-Image -ImagePath $Image.FullName -MaxWidth 500 -MaxHeight 500
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user.png" -Force
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\guest.png" -Force
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-32.png" -Force
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-40.png" -Force
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-48.png" -Force
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-192.png" -Force
-    Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-200.png" -Force
-
-    
+    if ($ImageSize.Width -gt 500 -or $ImageSize.Height -gt 500) {
+        Write-Output "Image is larger than 500x500 pixels, resizing..."
+        $MainImage = Resize-Image -ImagePath $Image.FullName -MaxWidth 500 -MaxHeight 500
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user.png" -Force
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\guest.png" -Force
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-32.png" -Force
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-40.png" -Force
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-48.png" -Force
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-192.png" -Force
+        Copy-Item -Path $MainImage -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-200.png" -Force
+        Move-Item -Path $MainImage -Destination "$env:temp\user-modified.png" -Force
+    } else {
+        Write-Output "Image is within the acceptable size range."
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user.png" -Force
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\guest.png" -Force
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-32.png" -Force
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-40.png" -Force
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-48.png" -Force
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-192.png" -Force
+        Copy-Item -Path $Image.FullName -Destination "$env:ProgramData\Microsoft\User Account Pictures\user-200.png" -Force
+    }
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "UseDefaultTile" -Value 1 -Type Dword -Force
 }
 
 $URLExtension = [System.IO.Path]::GetExtension($URL)

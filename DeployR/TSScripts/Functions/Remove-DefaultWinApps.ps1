@@ -91,10 +91,18 @@ Function Remove-DefaultWinApps {
     
     if ( -not ( get-module DISM ) ) { import-module DISM }
     
-    
-    $LogPath = $ts.Value("_SMSTSLogPath") + "\RemoveApps.Log"  #SCCM
-    Write-Host "Running within TS, Set $LogPath"
-    
+    Import-Module DeployR.Utility
+    try {
+    $PATH = "$(${TSEnv:OSDTARGETSYSTEMDRIVE})\"
+    $LogFolder = ${TSEnv:_DEPLOYRLOGS}
+    }
+    catch {
+        $LogFolder = "C:\Windows\Temp"
+        $Path = $null
+    }
+    # Get the provided variables
+
+    $LogPath = $LogFolder + "\RemoveApps.Log"
     Write-Output "LogPath: $LogPath"
     
     write-verbose "New DISM LogLevel [3]  LogPath: $LogPath"

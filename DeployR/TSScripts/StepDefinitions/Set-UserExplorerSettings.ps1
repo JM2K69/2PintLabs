@@ -24,34 +24,40 @@ write-host "DisableSpotlightCollectionOnDesktop: $DisableSpotlightCollectionOnDe
 [GC]::Collect()
 Write-Host "Mounting Default User Registry Hive (REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT)"
 REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
-# Removes Task View from the Taskbar
+# Sets the Explorer Show File Extensions setting
 if ($ExplorerShowFileExtensions -eq $true) {
     Write-Host "Attempting to run: ExplorerShowFileExtensions"
-    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Value "1" -PropertyType Dword -Force
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
     
 }
-# Removes Widgets from the Taskbar
+# Sets the Explorer Show Hidden Folders setting
 if ($ExplorerShowHiddenFolders -eq $true) {
-    Write-Host "Attempting to run: TaskBarRemoveWidgets"
-    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Value "0" -PropertyType Dword -Force
+    Write-Host "Attempting to run: ExplorerShowHiddenFolders"
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Value "1" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
-# Removes Copilot from the Taskbar
+# Sets the Explorer Show System Files setting
 if ($ExplorerShowSystemFiles -eq $true) {
-    Write-Host "Attempting to run: TaskBarRemoveCopilot"
+    Write-Host "Attempting to run: ExplorerShowSystemFiles"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowSuperHidden" -Value "1" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # "Learn more about this picture" from the desktop (so wallpaper will work)
 if ($HideLearnMoreAboutThisPicture -eq $true) { 
     Write-Host "Attempting to run: HideLearnMoreAboutThisPicture"
+    if (-not (Test-Path -Path HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel)) {
+        New-Item -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -ItemType directory -Force -ErrorAction SilentlyContinue
+    }
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel" -Name "{2cc5ca98-6485-489a-920e-b3e88a6ccce3}" -Value "1" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
 # Disabling Windows Spotlight for Desktop
 if ($DisableSpotlightCollectionOnDesktop -eq $true) {
     Write-Host "Attempting to run: DisableSpotlightCollectionOnDesktop"
+    if (-not (Test-Path -Path HKLM:\Default\Software\Policies\Microsoft\Windows\CloudContent)) {
+        New-Item -Path "HKLM:\Default\Software\Policies\Microsoft\Windows\CloudContent" -ItemType directory -Force -ErrorAction SilentlyContinue
+    }
     $reg = New-ItemProperty "HKLM:\Default\Software\Policies\Microsoft\Windows\CloudContent" -Name "DisableSpotlightCollectionOnDesktop" -Value "1" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
