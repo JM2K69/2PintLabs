@@ -304,7 +304,13 @@ Function Create-NewHPDriverPackWinPE {
             write-host "Downloading to: $DownloadedFile" -ForegroundColor Green
             $DestinationPath = "$ExtractedDriverLocation\$($Driver.id)"
             #Start-BitsTransfer -Source "https://$($Driver.URL)" -Destination "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe" -DisplayName $Driver.Name -Description $Driver.Description -ErrorAction SilentlyContinue
-            Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL $Driver.URL -DestinationPath $DownloadedFile -ErrorAction SilentlyContinue
+            try {
+                Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL $Driver.URL -DestinationPath $DownloadedFile -ErrorAction SilentlyContinue
+            } catch {
+                Write-Host "Failed to download driver: $($Driver.Name)" -ForegroundColor red
+                Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
+                Invoke-WebRequest -Uri $Driver.URL -OutFile $DownloadedFile -UseBasicParsing
+            }
             if (Test-Path -Path $DownloadedFile) {
                 Write-Host "Driver downloaded successfully: $($Driver.Name)"
                 write-Host "Expanding Driver Pack to $ExtractedDriverLocation"
