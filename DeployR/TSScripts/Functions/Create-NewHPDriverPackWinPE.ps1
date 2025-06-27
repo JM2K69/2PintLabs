@@ -297,7 +297,7 @@ Function Create-NewHPDriverPackWinPE {
         Write-Host "Found $($Drivers.Count) Drivers for this platform."
     }
     Foreach ($Driver in $Drivers){
-        Write-Host "Driver: $($Driver.Name) - $($Driver.Description)"
+        Write-Host "Driver: $($Driver.Name) - $($Driver.Description)" -ForegroundColor Magenta
         if ($null -ne $Driver.URL){
             Write-Host "Downloading Driver from: $($Driver.URL)" -ForegroundColor Cyan
             $DownloadedFile = "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe"
@@ -305,7 +305,7 @@ Function Create-NewHPDriverPackWinPE {
             $DestinationPath = "$ExtractedDriverLocation\$($Driver.id)"
             #Start-BitsTransfer -Source "https://$($Driver.URL)" -Destination "$TargetSystemDrive\_2P\content\Drivers\$($Driver.id).exe" -DisplayName $Driver.Name -Description $Driver.Description -ErrorAction SilentlyContinue
             try {
-                Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL $Driver.URL -DestinationPath $DownloadedFile -ErrorAction SilentlyContinue
+                Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "https://$($Driver.URL)" -DestinationPath $DownloadedFile -ErrorAction SilentlyContinue
             } catch {
                 Write-Host "Failed to download driver: $($Driver.Name)" -ForegroundColor red
                 Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
