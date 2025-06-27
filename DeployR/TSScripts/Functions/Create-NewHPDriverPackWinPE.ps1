@@ -46,11 +46,6 @@ Function Create-NewHPDriverPackWinPE {
     }
     
     
-    # Install HPCMSL module
-    #Write-Host "Installing HPCMSL module..."
-    #Install-Module -name HPCMSL -AcceptLicense -SkipPublisherCheck -Force
-    #Import-Module HPCMSL
-    
     #Region Functions
     function Test-HPIASupport {
         $CabPath = "$env:TEMP\platformList.cab"
@@ -276,10 +271,8 @@ Function Create-NewHPDriverPackWinPE {
             return $false
         }
     }
-    
-    
     #EndRegion Functions
-    
+
     if (Test-HPIASupport){
         Write-Host "This Platform is supported by HPIA"
     }
@@ -287,7 +280,6 @@ Function Create-NewHPDriverPackWinPE {
         Write-Host "This Platform is not supported by HPIA"
         exit 0
     }
-    
     $Drivers = Get-HPSoftpaqListLatest | Where-Object {$_.Category -match "Driver -"} 
     if ($Drivers.Count -eq 0){
         Write-Host "No Drivers found for this platform, exiting."
@@ -324,16 +316,14 @@ Function Create-NewHPDriverPackWinPE {
             Write-Host "No URL found for this driver, skipping download."
         }
     }
-    
     #Apply Drivers in ExtractedDriverLocation to Offline OS
     if ($ApplyDrivers -eq $false){
         Write-Host "Skipping Driver Application to Offline OS"
         return
     }
     else {
+        Write-Host -ForegroundColor Cyan "Applying Drivers to Offline OS at $TargetSystemDrive from $ExtractedDriverLocation"
         Add-WindowsDriver -Path "$($TargetSystemDrive)\" -Driver "$ExtractedDriverLocation" -Recurse -ErrorAction SilentlyContinue -LogPath $LogPath\AddDrivers.log
     }
-    
-    
 }
 

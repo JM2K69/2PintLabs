@@ -6,30 +6,31 @@ Set-DeployRHost "http://localhost:7282"
 
 # Ensure the backup directory exists
 if (-not (Test-Path -Path $BackupLocation)) {New-Item -Path $BackupLocation -ItemType Directory | Out-Null}
-if (-not (Test-Path -Path "$BackupLocation\ContentItems")) {New-Item -Path "$BackupLocation\ContentItems" -ItemType Directory | Out-Null}
-if (-not (Test-Path -Path "$BackupLocation\StepDefinitions")) {New-Item -Path "$BackupLocation\StepDefinitions" -ItemType Directory | Out-Null}
-if (-not (Test-Path -Path "$BackupLocation\TaskSequences")) {New-Item -Path "$BackupLocation\TaskSequences" -ItemType Directory | Out-Null}
+if (-not (Test-Path -Path "$BackupLocation\$DateStamp")) {New-Item -Path "$BackupLocation\$DateStamp" -ItemType Directory | Out-Null}
+if (-not (Test-Path -Path "$BackupLocation\$DateStamp\ContentItems")) {New-Item -Path "$BackupLocation\$DateStamp\ContentItems" -ItemType Directory | Out-Null}
+if (-not (Test-Path -Path "$BackupLocation\$DateStamp\StepDefinitions")) {New-Item -Path "$BackupLocation\$DateStamp\StepDefinitions" -ItemType Directory | Out-Null}
+if (-not (Test-Path -Path "$BackupLocation\$DateStamp\TaskSequences")) {New-Item -Path "$BackupLocation\$DateStamp\TaskSequences" -ItemType Directory | Out-Null}
 
 Write-Host "Starting DeployR backup at $DateStamp" -ForegroundColor Green
 #Backup DeployR content items
 Write-Host "Backing up DeployR content items..." -ForegroundColor Yellow
-Get-DeployRContentItem | Where-Object {$_.id -notlike '00000000-0000-0000-0000-*'} | ForEach-Object {
+Get-DeployRContentItem | Where-Object {$_.id -notlike '00000000-0000-0000-0000-*'} | Where-Object {$_.contentItemPurpose -match "Other"} | ForEach-Object {
     write-host "Backing up content item: $($_.name) | $($_.id)" -ForegroundColor Cyan
-    Export-DeployRContentItem -Id $_.id -DestinationFolder "$BackupLocation\ContentItems\$($_.name)-$($_.id)-$DateStamp"
+    Export-DeployRContentItem -Id $_.id -DestinationFolder "$BackupLocation\$DateStamp\ContentItems\$($_.name)-$($_.id)"
 }
 
 #Backup DeployR step definitions
 Write-Host "Backing up DeployR step definitions..." -ForegroundColor Yellow
 (Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'}) | ForEach-Object {
     write-host "Backing up step definition: $($_.name) | $($_.id)" -ForegroundColor Cyan
-    Export-DeployRStepDefinition -Id $_.id -DestinationFolder "$BackupLocation\StepDefinitions\$($_.name)-$($_.id)-$DateStamp"
+    Export-DeployRStepDefinition -Id $_.id -DestinationFolder "$BackupLocation\$DateStamp\StepDefinitions\$($_.name)-$($_.id)"
 }
 
 #Backup DeployR task sequences
 Write-Host "Backing up DeployR task sequences..." -ForegroundColor Yellow
 (Get-DeployRMetadata -Type TaskSequence | Where-Object {$_.id -notlike '0000*'}) | ForEach-Object {
     write-host "Backing up task sequence: $($_.name) | $($_.id)" -ForegroundColor Cyan
-    Export-DeployRTaskSequence -Id $_.id -DestinationFolder "$BackupLocation\TaskSequences\$($_.name)-$($_.id)-$DateStamp"
+    Export-DeployRTaskSequence -Id $_.id -DestinationFolder "$BackupLocation\$DateStamp\TaskSequences\$($_.name)-$($_.id)"
 }
 
 <# for Import Reference
