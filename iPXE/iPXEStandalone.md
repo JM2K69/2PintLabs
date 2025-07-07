@@ -171,6 +171,8 @@ And now Defaults rest of the way
 
 Yippee.. we have this installed!  Now if you go back into SQL Server Management Studio, you can confirm it did create a database:
 
+Note: It can take a minute for the database to show up, so just be patient and hit refresh a few times.
+
 ![Image11](media/iPXEInstall11.png)
 
 ### 2PXE Install <a name="2PXESetup"></a>

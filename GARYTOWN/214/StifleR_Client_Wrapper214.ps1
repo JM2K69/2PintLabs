@@ -1,7 +1,7 @@
-$TargetVersion = '2.14.2522.43'
+$TargetVersion = '2.14.2524.51'
 $STIFLERSERVERS = 'https://214-StifleR.2p.garytown.com:1414'
 $STIFLERULEZURL = 'https://raw.githubusercontent.com/2pintsoftware/StifleRRules/master/StifleRulez.xml'
-$ClientURL = 'https://2pstifler.2p.garytown.com/StifleR-ClientApp.zip'
+$ClientURL = 'https://214-StifleR.2p.garytown.com/StifleR-ClientApp.zip'
 
 function Get-InstalledApps
 {
@@ -43,12 +43,13 @@ function Test-Url {
         Write-Output "URL is not accessible: $Url - Error: $_"
     }
 }
-
+Write-Host "Testing Connection to StifleR Server: $STIFLERSERVERS before proceeding with installation..."
 $StifleRServerBaseName = $STIFLERSERVERS.Replace('https://', '').Replace(':1414', '')
 if ((Test-NetConnection -ComputerName $StifleRServerBaseName -Port 1414 -WarningAction SilentlyContinue).TcpTestSucceeded -eq $false) {
     Write-Host -ForegroundColor Red "StifleR Server is not reachable. Please check the server address and port."
     return
 }
+Write-Host -ForegroundColor Green "StifleR Server is reachable. Proceeding with installation..."
 
 
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
@@ -112,15 +113,41 @@ if ($Install.ExitCode -eq 0) {
 }
 else {
     Write-Host -ForegroundColor Red "Installation failed with exit code: $($Install.ExitCode)"
+    if (Test-Path -path 'HKLM:\SOFTWARE\2Pint Software'){
+        Write-Host -ForegroundColor Yellow "Attempting to remove existing StifleR Client Registry and Try Install Again."
+        Remove-Item -Path 'HKLM:\SOFTWARE\2Pint Software' -Recurse -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+        Write-Host -ForegroundColor Cyan "Retrying installation..."
+        $Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $tempDir\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
+        if ($Install.ExitCode -eq 0) {
+            Write-Host -ForegroundColor Green "Installation completed successfully."
+        }
+        else {
+            Write-Host -ForegroundColor Red "Installation failed again with exit code: $($Install.ExitCode)"
+            Write-Host -ForegroundColor Yellow "Please check the install.log file in $tempDir for more details."
+            Write-Host -ForegroundColor Yellow "You may need to manually remove the StifleR Client from Programs and Features."
+            Write-Host -ForegroundColor Yellow "Hey, at least we tried again, that's what matters, right?"
+            return
+        }
+    }
+    else {
+        return
+    }
 }
 
 Start-Sleep -Seconds 5
 Get-InstalledApps | Where-Object { $_.DisplayName -like "*StifleR*" } | Format-Table -AutoSize
 
 $StifleRService = get-service -Name StifleRClient -ErrorAction SilentlyContinue
-if ($StifleRService.Status -ne 'Running'){
-    Start-Service -Name StifleRClient
+if (-not $StifleRService) {
+    Write-Host -ForegroundColor Red "StifleR Client service not found. Please check the installation."
+    return
 }
-if ($StifleRService.StartType -ne 'Automatic'){
-    Set-Service -Name StifleRClient -StartupType Automatic
+else{
+    if ($StifleRService.Status -ne 'Running'){
+        Start-Service -Name StifleRClient
+    }
+    if ($StifleRService.StartType -ne 'Automatic'){
+        Set-Service -Name StifleRClient -StartupType Automatic
+    }
 }
