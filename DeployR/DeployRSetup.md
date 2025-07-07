@@ -65,9 +65,9 @@ Under the IntegrationSettings area:
 - CertificateThumbprint = the Thumbprint you're using for HTTPS in IIS
 - ConnectionString = Server=.\SQLEXPRESS;Database=DeployR;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
 - ContentLocation = D:\DeployRContentItems | Set this to what works good for you, I setup a separate volume just for the content, which I'll enable deduplication on.
-- ClientURL = https://214-DeployR:7281
+- ClientURL = https://FQDN:7281 | https://214-DeployR.2p.garytown.com:7281
 - JoinInfrastructure = TRUE (turned On)
-- StifleRServerApiURL: https://214-DeployR:9000
+- StifleRServerApiURL: https://FQDN:9000 | https://214-DeployR.2p.garytown.com:9000 
 
 ## Post Installation
 
