@@ -5,7 +5,7 @@ This is my lab setup, super simple.
 - Windows Server 2025 Standard
   - HyperV VM | 8GB RAM | C: = 120GB | D: = 400 GB (DeployR Content Items)
 - Name: 214-DeployR
-- FQDN: ....  I'm just using a WorkGroup, no Domain Join
+- FQDN: ....  I'm just using a WorkGroup, no Domain Join.. but I'm using the DNS suffix of 2p.garytown.com
 - Certificates are from the 2PXE installation, more on that later.
 - User Account (local): gary.blok - Full Admin - Used for all installs
 
