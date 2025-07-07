@@ -83,13 +83,22 @@ if ($TaskBarStartMoreRecommendations -eq $true) {
     
 }    # Removes search from the Taskbar
 if ($TaskBarRemoveSearch -eq $true) {
-    Write-Host "Attempting to run: TaskBarRemoveSearch"
+    Write-Host "Attempting to run: TaskBarRemoveSearch RunOnce"
     $RegKey = "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\RunOnce"
     if (-not(Test-Path $RegKey )) {
         $reg = New-Item $RegKey -Force | Out-Null
         try { $reg.Handle.Close() } catch {}
     }
     $reg = New-ItemProperty $RegKey -Name "RemoveSearch"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Search /t REG_DWORD /v SearchboxTaskbarMode /d 0 /f" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
+
+    Write-Host "Attempting to run: TaskBarRemoveSearch HKCU"
+    $RegKey = "HKCU\Software\Microsoft\Windows\CurrentVersion\Search"
+    if (-not(Test-Path $RegKey )) {
+        $reg = New-Item $RegKey -Force | Out-Null
+        try { $reg.Handle.Close() } catch {}
+    }
+    $reg = New-ItemProperty $RegKey -Name "SearchboxTaskbarMode"  -Value "0" -PropertyType String -Force
     try { $reg.Handle.Close() } catch {}
 }
 
