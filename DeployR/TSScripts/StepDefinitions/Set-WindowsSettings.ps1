@@ -30,13 +30,29 @@ if ($DisableWindowsConsumerFeatures -eq $true) {
     try { $reg.Handle.Close() } catch {}
     $reg = New-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableSoftLanding" -Value "1" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
+
 }
 # Removes Widgets from the Taskbar
 if ($DisableWidgetsOnLockScreen -eq $true) {
+    <#  This isn't working as I'd expected, so I'm going to try a different method
     Write-Host "Attempting to run: DisableWidgetsOnLockScreen"
     New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -ItemType directory -Force | Out-Null
     $reg = New-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenWidgetsEnabled" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
+    New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -ItemType directory -Force | Out-Null
+    $reg = New-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenWidgetsEnabled" -Value "0" -PropertyType Dword -Force
+    try { $reg.Handle.Close() } catch {}
+    #>
+    [GC]::Collect()
+    Write-Host "Mounting Default User Registry Hive (REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT)"
+    REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
+    Write-Host "Attempting to run: DisableWidgetsOnLockScreen"
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Lock Screen" -Name "LockScreenWidgetsEnabled" -Value "0" -PropertyType Dword -Force
+    try { $reg.Handle.Close() } catch {}
+    Start-Sleep -Seconds 1
+    [GC]::Collect()
+    Write-Host "Unmounting Default User Registry Hive (REG UNLOAD HKLM\Default)"
+    REG UNLOAD HKLM\Default
 }
 
 if ($null -ne $RegisteredOwner) {
