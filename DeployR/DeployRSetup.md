@@ -12,7 +12,7 @@ This is my lab setup, super simple.
 ## PreReqs
 
 - MS Junk
-  - ASP.Net Core 8.0.16
+  - ASP.Net Core 8.0.17
     - .NET RUntime
     - .Net Desktop Runtime
     - ASP.NET Core Runtime
