@@ -56,7 +56,7 @@ NOTE:  I installed 2PXE on the same server, which created self-signed certificat
 
 Under the IntegrationSettings area:
 
-- DeployR full URL: <https://214-DeployR:7281/v1>
+- DeployR full URL: <https://FQDN:7281/v1> | https://214-DeployR.2p.garytown.com:7281/v1>
   - Update because LOCALHOST doesn't match the cert. :-)
 - Everything else should just be standard settings for StifleR
 
