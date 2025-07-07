@@ -76,6 +76,4 @@ So once you get to this point, you'll want to make sure the services are all run
 
 ### Boot Media
 
-Prep...
-
-I made mods to my script, I'll upload it later.
+Use the Console to create it, then find it on the D:\DeployRContentItems\Content\Boot
