@@ -1,4 +1,4 @@
-﻿function Move-StifleRNetwork {
+﻿function Move-StifleRNetworkToDifferentGroup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
