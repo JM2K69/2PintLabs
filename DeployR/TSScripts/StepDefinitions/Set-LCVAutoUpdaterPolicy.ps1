@@ -1,0 +1,497 @@
+
+#Pull Vars from TS:
+Import-Module DeployR.Utility
+$LogPath = "$env:SystemDrive\_2P\Logs"
+
+# Get the provided variables
+
+$AutoUpdatesEnabled = ${TSEnv:LCVAutoUpdatesEnabled}
+if ($AutoUpdatesEnabled -eq $false){
+    $RegistryPath = "HKLM:\SOFTWARE\Policies\Lenovo\Commercial Vantage"
+    if (!(Test-Path -Path $RegistryPath)){
+        return "Lenovo Vantage is not installed. Please install Lenovo Vantage first."
+    }
+    Write-Host "AutoUpdatesEnabled is set to false, Skipping configuration of Auto Updates"
+    Write-Host "Setting AutoUpdateEnabled to 0"
+    New-ItemProperty -Path $RegistryPath -Name "AutoUpdateEnabled" -Value 0 -PropertyType dword -Force | Out-Null
+    exit 0
+}
+
+$CompanyName = ${TSEnv:LCVCompanyName}
+if ($null -eq $CompanyName) {
+    Write-Host -ForegroundColor Red "CompanyName is not set. Please set the CompanyName variable in the Task Sequence."
+    $CompanyName = "Your Friendly Lenovo Team"
+}
+
+$ScheduleTimeAutoUpdate = ${TSEnv:LCVScheduleTimeAutoUpdate}
+if ($null -eq $ScheduleTimeAutoUpdate){
+    Write-Host "Setting ScheduleTimeAutoUpdate to default of 18:30:00, as it was NULL"
+    $ScheduleTimeAutoUpdate = "18:30:00"
+}
+#Update Deferrals
+$UpdateDeferrals = ${TSEnv:LCVUpdateDeferrals}
+if ($null -eq $UpdateDeferrals) {
+    Write-Host "Setting UpdateDeferrals to Enabled, as it was NULL"
+    $UpdateDeferrals = "Enabled"
+}
+$DeferLimit = ${TSEnv:LCVDeferLimit}
+if ($null -eq $DeferLimit) {
+    Write-Host "Setting DeferLimit to default of 10, as it was NULL"
+    $DeferLimit = 25
+}
+$DeferTime = ${TSEnv:LCVDeferTime}
+if ($null -eq $DeferTime) {
+    Write-Host "Setting DeferTime to default of 60, as it was NULL"
+    $DeferTime = 60
+}
+
+$SUUpdateFrequencyWeekFirst = ${TSEnv:LCVUpdateFrequencyWeekFirst}
+$SUUpdateFrequencyWeekSecond = ${TSEnv:LCVUpdateFrequencyWeekSecond}
+$SUUpdateFrequencyWeekThird = ${TSEnv:LCVUpdateFrequencyWeekThird}
+$SUUpdateFrequencyWeekFourth = ${TSEnv:LCVUpdateFrequencyWeekFourth}
+$SUUpdateFrequencyWeekLast = ${TSEnv:LCVUpdateFrequencyWeekLast}
+
+$SUUpdateFrequencyDayMonday = ${TSEnv:LCVUpdateFrequencyDayMonday}
+$SUUpdateFrequencyDayTuesday = ${TSEnv:LCVUpdateFrequencyDayTuesday}
+$SUUpdateFrequencyDayWednesday = ${TSEnv:LCVUpdateFrequencyDayWednesday}
+$SUUpdateFrequencyDayThursday = ${TSEnv:LCVUpdateFrequencyDayThursday}
+$SUUpdateFrequencyDayFriday = ${TSEnv:LCVUpdateFrequencyDayFriday}
+$SUUpdateFrequencyDaySaturday = ${TSEnv:LCVUpdateFrequencyDaySaturday}
+$SUUpdateFrequencyDaySunday = ${TSEnv:LCVUpdateFrequencyDaySunday}
+
+if ($SUUpdateFrequencyWeekFirst -eq $false -and $SUUpdateFrequencyWeekSecond -eq $false -and $SUUpdateFrequencyWeekThird -eq $false -and $SUUpdateFrequencyWeekFourth -eq $false -and $SUUpdateFrequencyWeekLast -eq $false) {
+    Write-Host "Setting SUUpdateFrequency to default of 1st week of the month, as all weeks were set to false"
+    $SUUpdateFrequencyWeekFirst = $true
+}
+if ($SUUpdateFrequencyDayMonday -eq $false -and $SUUpdateFrequencyDayTuesday -eq $false -and $SUUpdateFrequencyDayWednesday -eq $false -and $SUUpdateFrequencyDayThursday -eq $false -and $SUUpdateFrequencyDayFriday -eq $false -and $SUUpdateFrequencyDaySaturday -eq $false -and $SUUpdateFrequencyDaySunday -eq $false) {
+    Write-Host "Setting SUUpdateFrequency to default of Wednesday, as all days were set to false"
+    $SUUpdateFrequencyDayWednesday = $true
+}
+
+#ConfigureSystemUpdateUpdates
+$SUFilterCriticalApplication = ${TSEnv:LCVFilterCriticalApplication}
+$SUFilterCriticalDriver = ${TSEnv:LCVFilterCriticalDriver}
+$SUFilterCriticalBIOS = ${TSEnv:LCVFilterCriticalBIOS}
+$SUFilterCriticalFirmware = ${TSEnv:LCVFilterCriticalFirmware}
+$SUFilterCriticalOthers = ${TSEnv:LCVFilterCriticalOthers}
+
+$SUFilterRecommendedApplication = ${TSEnv:LCVFilterRecommendedApplication}
+$SUFilterRecommendedDriver = ${TSEnv:LCVFilterRecommendedDriver}
+$SUFilterRecommendedBIOS = ${TSEnv:LCVFilterRecommendedBIOS}
+$SUFilterRecommendedFirmware = ${TSEnv:LCVFilterRecommendedFirmware}
+$SUFilterRecommendedOthers = ${TSEnv:LCVFilterRecommendedOthers}
+
+$SUFilterOptionalApplication = ${TSEnv:LCVFilterOptionalApplication}
+$SUFilterOptionalDriver = ${TSEnv:LCVFilterOptionalDriver}
+$SUFilterOptionalBIOS = ${TSEnv:LCVFilterOptionalBIOS}
+$SUFilterOptionalFirmware = ${TSEnv:LCVFilterOptionalFirmware}
+$SUFilterOptionalOthers = ${TSEnv:LCVFilterOptionalOthers}#Check if CompanyName is set
+if ($null -eq $CompanyName) {
+    Write-Host -ForegroundColor Red "CompanyName is not set. Please set the CompanyName variable in the Task Sequence."
+    #Setting to Generic Company Name
+    $CompanyName = "Your Friendly Lenovo Team"
+}
+
+function Set-LenovoVantageAutoUpdates {
+    [CmdletBinding()]
+    param (
+
+        [string]$CompanyName,
+        [string]$SystemUpdateRepository,
+        [ValidateSet('True','False')]
+        [string]$AutoUpdateEnabled = $true,
+        [ValidateSet('True','False')]
+        [string]$ConfigureAutoUpdate = $true,
+        [Parameter(HelpMessage="Format HH:mm:ss For example 18:30:00 for 6:30PM")]
+        [ValidatePattern("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]")]
+        [string]$ScheduleTimeAutoUpdate = "18:30:00", #6:30PM by Default
+
+        
+        #Update Deferrals
+        [ValidateSet('Enabled','Disabled')]
+        [string]$UpdateDeferrals = "Enabled",
+        [Parameter(HelpMessage="number of times the end-user is allowed to defer updates (DeferLimit)")]
+        [ValidateRange(0,100)]
+        [string]$DeferLimit = 10, #10 times by Default
+        [Parameter(HelpMessage="amount of time for each deferral (DeferTime)")]
+        [ValidateRange(0,60)]
+        [string]$DeferTime = 60, #60 minutes by Default
+
+
+        #ConfigureSystemUpdateUpdates
+        [ValidateSet('True','False')]
+        [string]$SUFilterCriticalAll,
+        [ValidateSet('True','False')]
+        [string]$SUFilterCriticalApplication,
+        [ValidateSet('True','False')]
+        [string]$SUFilterCriticalDriver,
+        [ValidateSet('True','False')]
+        [string]$SUFilterCriticalBIOS,
+        [ValidateSet('True','False')]
+        [string]$SUFilterCriticalFirmware,
+        [ValidateSet('True','False')]
+        [string]$SUFilterCriticalOthers,
+        [ValidateSet('True','False')]
+        [string]$SUFilterRecommendedAll,
+        [ValidateSet('True','False')]
+        [string]$SUFilterRecommendedApplication,
+        [ValidateSet('True','False')]
+        [string]$SUFilterRecommendedDriver,
+        [ValidateSet('True','False')]
+        [string]$SUFilterRecommendedBIOS,
+        [ValidateSet('True','False')]
+        [string]$SUFilterRecommendedFirmware,
+        [ValidateSet('True','False')]
+        [string]$SUFilterRecommendedOthers,
+        [ValidateSet('True','False')]
+        [string]$SUFilterOptionalAll,
+        [ValidateSet('True','False')]
+        [string]$SUFilterOptionalApplication,
+        [ValidateSet('True','False')]
+        [string]$SUFilterOptionalDriver,
+        [ValidateSet('True','False')]
+        [string]$SUFilterOptionalBIOS,
+        [ValidateSet('True','False')]
+        [string]$SUFilterOptionalFirmware,
+        [ValidateSet('True','False')]
+        [string]$SUFilterOptionalOthers
+    )
+
+    $RegistryPath = "HKLM:\SOFTWARE\Policies\Lenovo\Commercial Vantage"
+    if (!(Test-Path -Path $RegistryPath)){
+        return "Lenovo Vantage is not installed. Please install Lenovo Vantage first."
+    }
+    #Enabling Dependencies
+    if ($ScheduleTimeAutoUpdate){$AutoUpdateEnabled = $true}
+    if ($DeferLimit) {$UpdateDeferrals = "Enabled"}
+    if ($DeferTime)  {$UpdateDeferrals = "Enabled"}
+    if ($UpdateDeferrals){$AutoUpdateEnabled = $true}
+    if ($AutoUpdateEnabled) {$ConfigureAutoUpdate = $true}
+
+    #Start Doing Stuff
+    if ($CompanyName) {
+        New-ItemProperty -Path $RegistryPath -Name "CompanyName" -Value $CompanyName -PropertyType string -Force | Out-Null
+    }
+    if ($SystemUpdateRepository) {
+        New-ItemProperty -Path $RegistryPath -Name "LocalRepository" -Value $SystemUpdateRepository -PropertyType string -Force | Out-Null
+    }
+    if ($AutoUpdateEnabled) {
+        if ($AutoUpdateEnabled -eq $true){
+            Write-Host "Setting AutoUpdateEnabled to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoUpdateEnabled" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoUpdateEnabled to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoUpdateEnabled" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($ConfigureAutoUpdate) {
+        if ($ConfigureAutoUpdate -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($ScheduleTimeAutoUpdate) {
+        Write-Host "Setting AutoUpdateScheduleTime to $ScheduleTimeAutoUpdate"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateScheduleTime" -Value $ScheduleTimeAutoUpdate -PropertyType string -Force | Out-Null
+    }
+    
+    #Deferrals
+
+    if ($UpdateDeferrals) {
+        if ($UpdateDeferrals -eq "Enabled"){
+            Write-Host "Setting DeferUpdateEnabled to 1"
+            New-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled" -Value 1 -PropertyType dword -Force | Out-Null
+
+            if ($DeferLimit) {
+                Write-Host "Setting DeferUpdateEnabled.Limit to $DeferLimit"
+                New-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled.Limit" -Value $DeferLimit -PropertyType string -Force | Out-Null
+            }
+            else {
+                Write-Host "Setting DeferUpdateEnabled.Limit to Default"
+                New-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled.Limit" -Value "" -PropertyType string -Force | Out-Null 
+            }
+            if ($DeferTime) {
+                Write-Host "Setting DeferUpdateEnabled.Time to $DeferTime"
+                New-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled.Time" -Value $DeferTime -PropertyType string -Force | Out-Null
+            }
+            else {
+                Write-Host "Setting DeferUpdateEnabled.Time to Default of 60"
+                New-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled.Time" -Value "60" -PropertyType string -Force | Out-Null
+            }
+        }
+        elseif ($UpdateDeferrals -eq "Disabled") {
+            Write-Host "Removing Update Deferral Properties"
+            Remove-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled" -Force | Out-Null
+            Remove-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled.Time" -Force | Out-Null
+            Remove-ItemProperty -Path $RegistryPath -Name "DeferUpdateEnabled.Limit" -Force | Out-Null
+
+        }
+    }
+
+    
+#ConfigureSystemUpdateUpdates
+    #Region Critical
+    if ($SUFilterCriticalAll) {
+        if ($SUFilterCriticalAll -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.critical.application to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.application" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.BIOS to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.BIOS" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.driver to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.driver" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.firmware to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.firmware" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.others to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.others" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.critical.application to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.application" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.BIOS to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.BIOS" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.driver to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.driver" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.firmware to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.firmware" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.critical.others to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.others" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }    
+    if ($SUFilterCriticalApplication) {
+        if ($SUFilterCriticalApplication -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.critical.application to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.application" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.critical.application to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.application" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterCriticalDriver) {
+        if ($SUFilterCriticalDriver -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.critical.driver to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.driver" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.critical.driver to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.driver" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterCriticalBIOS) {
+        if ($SUFilterCriticalBIOS -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.critical.BIOS to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.BIOS" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.critical.BIOS to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.BIOS" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterCriticalFirmware) {
+        if ($SUFilterCriticalFirmware -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.critical.firmware to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.firmware" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.critical.firmware to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.firmware" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterCriticalOthers) {
+        if ($SUFilterCriticalOthers -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.critical.others to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.others" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.critical.others to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.critical.others" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    #EndRegion Critical
+    #Region Recommended
+    if ($SUFilterRecommendedAll) {
+        if ($SUFilterRecommendedAll -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.application to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.application" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.BIOS to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.BIOS" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.driver to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.driver" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.firmware to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.firmware" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.others to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.others" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.application to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.application" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.BIOS to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.BIOS" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.driver to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.driver" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.firmware to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.firmware" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.others to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.others" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }    
+    if ($SUFilterRecommendedApplication) {
+        if ($SUFilterRecommendedApplication -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.application to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.application" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.application to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.application" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterRecommendedDriver) {
+        if ($SUFilterRecommendedDriver -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.driver to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.driver" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.driver to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.driver" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterRecommendedBIOS) {
+        if ($SUFilterRecommendedBIOS -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.BIOS to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.BIOS" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.BIOS to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.BIOS" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterRecommendedFirmware) {
+        if ($SUFilterRecommendedFirmware -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.firmware to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.firmware" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.firmware to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.firmware" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterRecommendedOthers) {
+        if ($SUFilterRecommendedOthers -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.others to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.others" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.recommended.others to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.recommended.others" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    #EndRegion recommended
+    #Region optional
+    if ($SUFilterOptionalAll) {
+        if ($SUFilterOptionalAll -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.optional.application to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.application" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.BIOS to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.BIOS" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.driver to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.driver" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.firmware to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.firmware" -Value 1 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.others to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.others" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.optional.application to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.application" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.BIOS to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.BIOS" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.driver to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.driver" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.firmware to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.firmware" -Value 0 -PropertyType dword -Force | Out-Null
+            Write-Host "Setting AutoSystemUpdateFilter.optional.others to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.others" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }    
+    if ($SUFilterOptionalApplication) {
+        if ($SUFilterOptionalApplication -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.optional.application to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.application" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.optional.application to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.application" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterOptionalDriver) {
+        if ($SUFilterOptionalDriver -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.optional.driver to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.driver" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.optional.driver to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.driver" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterOptionalBIOS) {
+        if ($SUFilterOptionalBIOS -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.optional.BIOS to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.BIOS" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.optional.BIOS to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.BIOS" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterOptionalFirmware) {
+        if ($SUFilterOptionalFirmware -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.optional.firmware to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.firmware" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.optional.firmware to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.firmware" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    if ($SUFilterOptionalOthers) {
+        if ($SUFilterOptionalOthers -eq $true){
+            Write-Host "Setting AutoSystemUpdateFilter.optional.others to 1"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.others" -Value 1 -PropertyType dword -Force | Out-Null
+        }
+        else {
+            Write-Host "Setting AutoSystemUpdateFilter.optional.others to 0"
+            New-ItemProperty -Path $RegistryPath -Name "AutoSystemUpdateFilter.optional.others" -Value 0 -PropertyType dword -Force | Out-Null
+        }
+    }
+    #EndRegion optional
+}
+
+#Feed Variables into Function
+Set-LenovoVantageAutoUpdates -CompanyName $CompanyName `
+    -SystemUpdateRepository $SystemUpdateRepository `
+    -AutoUpdateEnabled $true `
+    -ConfigureAutoUpdate $true `
+    -ScheduleTimeAutoUpdate $ScheduleTimeAutoUpdate `
+    -UpdateDeferrals $UpdateDeferrals `
+    -DeferLimit $DeferLimit `
+    -DeferTime $DeferTime `
+    -SUFilterCriticalApplication $SUFilterCriticalApplication `
+    -SUFilterCriticalDriver $SUFilterCriticalDriver `
+    -SUFilterCriticalBIOS $SUFilterCriticalBIOS `
+    -SUFilterCriticalFirmware $SUFilterCriticalFirmware `
+    -SUFilterCriticalOthers $SUFilterCriticalOthers `
+    -SUFilterRecommendedApplication $SUFilterRecommendedApplication `
+    -SUFilterRecommendedDriver $SUFilterRecommendedDriver `
+    -SUFilterRecommendedBIOS $SUFilterRecommendedBIOS `
+    -SUFilterRecommendedFirmware $SUFilterRecommendedFirmware `
+    -SUFilterRecommendedOthers $SUFilterRecommendedOthers `
+    -SUFilterOptionalApplication $SUFilterOptionalApplication `
+    -SUFilterOptionalDriver $SUFilterOptionalDriver `
+    -SUFilterOptionalBIOS $SUFilterOptionalBIOS `
+    -SUFilterOptionalFirmware $SUFilterOptionalFirmware `
+    -SUFilterOptionalOthers $SUFilterOptionalOthers
