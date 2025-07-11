@@ -1,20 +1,19 @@
-
 #Pull Vars from TS:
 Import-Module DeployR.Utility
 $LogPath = "$env:SystemDrive\_2P\Logs"
 
-# Get the provided variables
-
+# Get the provided variables & Exit if not set to enable Auto Updates
 $AutoUpdatesEnabled = ${TSEnv:LCVAutoUpdatesEnabled}
 if ($AutoUpdatesEnabled -eq $false){
-    $RegistryPath = "HKLM:\SOFTWARE\Policies\Lenovo\Commercial Vantage"
-    if (!(Test-Path -Path $RegistryPath)){
-        return "Lenovo Vantage is not installed. Please install Lenovo Vantage first."
-    }
     Write-Host "AutoUpdatesEnabled is set to false, Skipping configuration of Auto Updates"
     Write-Host "Setting AutoUpdateEnabled to 0"
     New-ItemProperty -Path $RegistryPath -Name "AutoUpdateEnabled" -Value 0 -PropertyType dword -Force | Out-Null
     exit 0
+}
+
+$RegistryPath = "HKLM:\SOFTWARE\Policies\Lenovo\Commercial Vantage"
+if (!(Test-Path -Path $RegistryPath)){
+    return "Lenovo Vantage is not installed. Please install Lenovo Vantage first."
 }
 
 $CompanyName = ${TSEnv:LCVCompanyName}
@@ -30,9 +29,13 @@ if ($null -eq $ScheduleTimeAutoUpdate){
 }
 #Update Deferrals
 $UpdateDeferrals = ${TSEnv:LCVUpdateDeferrals}
-if ($null -eq $UpdateDeferrals) {
+if ($null -eq $UpdateDeferrals -or $UpdateDeferrals -eq "TRUE") {
     Write-Host "Setting UpdateDeferrals to Enabled, as it was NULL"
     $UpdateDeferrals = "Enabled"
+}
+else{
+    Write-Host "Setting UpdateDeferrals to Disabled, as it was set to FALSE"
+    $UpdateDeferrals = "Disabled"
 }
 $DeferLimit = ${TSEnv:LCVDeferLimit}
 if ($null -eq $DeferLimit) {
@@ -69,23 +72,23 @@ if ($SUUpdateFrequencyDayMonday -eq $false -and $SUUpdateFrequencyDayTuesday -eq
 }
 
 #ConfigureSystemUpdateUpdates
-$SUFilterCriticalApplication = ${TSEnv:LCVFilterCriticalApplication}
-$SUFilterCriticalDriver = ${TSEnv:LCVFilterCriticalDriver}
-$SUFilterCriticalBIOS = ${TSEnv:LCVFilterCriticalBIOS}
-$SUFilterCriticalFirmware = ${TSEnv:LCVFilterCriticalFirmware}
-$SUFilterCriticalOthers = ${TSEnv:LCVFilterCriticalOthers}
+$SUFilterCriticalApplication = ${TSEnv:LCVSUFilterCriticalApplication}
+$SUFilterCriticalDriver = ${TSEnv:LCVSUFilterCriticalDriver}
+$SUFilterCriticalBIOS = ${TSEnv:LCVSUFilterCriticalBIOS}
+$SUFilterCriticalFirmware = ${TSEnv:LCVSUFilterCriticalFirmware}
+$SUFilterCriticalOthers = ${TSEnv:LCVSUFilterCriticalOthers}
 
-$SUFilterRecommendedApplication = ${TSEnv:LCVFilterRecommendedApplication}
-$SUFilterRecommendedDriver = ${TSEnv:LCVFilterRecommendedDriver}
-$SUFilterRecommendedBIOS = ${TSEnv:LCVFilterRecommendedBIOS}
-$SUFilterRecommendedFirmware = ${TSEnv:LCVFilterRecommendedFirmware}
-$SUFilterRecommendedOthers = ${TSEnv:LCVFilterRecommendedOthers}
+$SUFilterRecommendedApplication = ${TSEnv:LCVSUFilterRecommendedApplication}
+$SUFilterRecommendedDriver = ${TSEnv:LCVSUFilterRecommendedDriver}
+$SUFilterRecommendedBIOS = ${TSEnv:LCVSUFilterRecommendedBIOS}
+$SUFilterRecommendedFirmware = ${TSEnv:LCVSUFilterRecommendedFirmware}
+$SUFilterRecommendedOthers = ${TSEnv:LCVSUFilterRecommendedOthers}
 
-$SUFilterOptionalApplication = ${TSEnv:LCVFilterOptionalApplication}
-$SUFilterOptionalDriver = ${TSEnv:LCVFilterOptionalDriver}
-$SUFilterOptionalBIOS = ${TSEnv:LCVFilterOptionalBIOS}
-$SUFilterOptionalFirmware = ${TSEnv:LCVFilterOptionalFirmware}
-$SUFilterOptionalOthers = ${TSEnv:LCVFilterOptionalOthers}#Check if CompanyName is set
+$SUFilterOptionalApplication = ${TSEnv:LCVSUFilterOptionalApplication}
+$SUFilterOptionalDriver = ${TSEnv:LCVSUFilterOptionalDriver}
+$SUFilterOptionalBIOS = ${TSEnv:LCVSUFilterOptionalBIOS}
+$SUFilterOptionalFirmware = ${TSEnv:LCVSUFilterOptionalFirmware}
+$SUFilterOptionalOthers = ${TSEnv:LCVSUFilterOptionalOthers}#Check if CompanyName is set
 if ($null -eq $CompanyName) {
     Write-Host -ForegroundColor Red "CompanyName is not set. Please set the CompanyName variable in the Task Sequence."
     #Setting to Generic Company Name
@@ -471,6 +474,32 @@ function Set-LenovoVantageAutoUpdates {
     #EndRegion optional
 }
 
+#Write Host All Variables
+Write-Host "CompanyName: $CompanyName"
+Write-Host "SystemUpdateRepository: $SystemUpdateRepository" 
+Write-Host "AutoUpdateEnabled: $AutoUpdateEnabled"
+Write-Host "ConfigureAutoUpdate: $ConfigureAutoUpdate"
+Write-Host "ScheduleTimeAutoUpdate: $ScheduleTimeAutoUpdate"
+Write-Host "UpdateDeferrals: $UpdateDeferrals" 
+Write-Host "DeferLimit: $DeferLimit"
+Write-Host "DeferTime: $DeferTime"
+Write-Host "SUFilterCriticalApplication: $SUFilterCriticalApplication"
+Write-Host "SUFilterCriticalDriver: $SUFilterCriticalDriver"
+Write-Host "SUFilterCriticalBIOS: $SUFilterCriticalBIOS"
+Write-Host "SUFilterCriticalFirmware: $SUFilterCriticalFirmware"
+Write-Host "SUFilterCriticalOthers: $SUFilterCriticalOthers"
+Write-Host "SUFilterRecommendedApplication: $SUFilterRecommendedApplication"
+Write-Host "SUFilterRecommendedDriver: $SUFilterRecommendedDriver"
+Write-Host "SUFilterRecommendedBIOS: $SUFilterRecommendedBIOS"
+Write-Host "SUFilterRecommendedFirmware: $SUFilterRecommendedFirmware"
+Write-Host "SUFilterRecommendedOthers: $SUFilterRecommendedOthers"
+Write-Host "SUFilterOptionalApplication: $SUFilterOptionalApplication"
+Write-Host "SUFilterOptionalDriver: $SUFilterOptionalDriver"
+Write-Host "SUFilterOptionalBIOS: $SUFilterOptionalBIOS"
+Write-Host "SUFilterOptionalFirmware: $SUFilterOptionalFirmware"
+Write-Host "SUFilterOptionalOthers: $SUFilterOptionalOthers"
+
+
 #Feed Variables into Function
 Set-LenovoVantageAutoUpdates -CompanyName $CompanyName `
     -SystemUpdateRepository $SystemUpdateRepository `
@@ -495,3 +524,134 @@ Set-LenovoVantageAutoUpdates -CompanyName $CompanyName `
     -SUFilterOptionalBIOS $SUFilterOptionalBIOS `
     -SUFilterOptionalFirmware $SUFilterOptionalFirmware `
     -SUFilterOptionalOthers $SUFilterOptionalOthers
+
+#These are extra variables that are used in the Task Sequence but not in the function
+
+#Setting Updates to run each month by Default:
+Write-Host "Setting AutoUpdateMonthlySchedule.month.AllMonths to 1"
+New-ItemProperty -Path $RegistryPath -Name "AutoUpdateMonthlySchedule.month.AllMonths" -Value 1 -PropertyType dword -Force | Out-Null
+
+#Which weeks of the month to run updates
+if ($SUUpdateFrequencyWeekFirst) {
+    if ($SUUpdateFrequencyWeekFirst -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.FirstWeek to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.FirstWeek" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.FirstWeek to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.FirstWeek" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyWeekSecond) {
+    if ($SUUpdateFrequencyWeekSecond -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.SecondWeek to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.SecondWeek" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.SecondWeek to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.SecondWeek" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyWeekThird) {
+    if ($SUUpdateFrequencyWeekThird -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.ThirdWeek to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.ThirdWeek" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.ThirdWeek to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.ThirdWeek" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyWeekFourth) {
+    if ($SUUpdateFrequencyWeekFourth -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.FourthWeek to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.FourthWeek" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.FourthWeek to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.FourthWeek" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyWeekLast) {
+    if ($SUUpdateFrequencyWeekLast -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.LastWeek to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.LastWeek" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.frequency.LastWeek to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.frequency.LastWeek" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+
+#Which days of the week to run updates
+if ($SUUpdateFrequencyDayMonday) {
+    if ($SUUpdateFrequencyDayMonday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Monday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Monday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Monday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Monday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyDayTuesday) {
+    if ($SUUpdateFrequencyDayTuesday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Tuesday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Tuesday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Tuesday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Tuesday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyDayWednesday) {
+    if ($SUUpdateFrequencyDayWednesday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Wednesday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Wednesday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Wednesday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Wednesday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyDayThursday) {
+    if ($SUUpdateFrequencyDayThursday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Thursday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Thursday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Thursday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Thursday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyDayFriday) {
+    if ($SUUpdateFrequencyDayFriday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Friday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Friday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Friday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Friday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyDaySaturday) {
+    if ($SUUpdateFrequencyDaySaturday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Saturday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Saturday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Saturday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Saturday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+if ($SUUpdateFrequencyDaySunday) {
+    if ($SUUpdateFrequencyDaySunday -eq $true){
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Sunday to 1"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Sunday" -Value 1 -PropertyType dword -Force | Out-Null
+    }
+    else {
+        Write-Host "Setting AutoUpdateDailySchedule.dayOfWeek.Sunday to 0"
+        New-ItemProperty -Path $RegistryPath -Name "AutoUpdateDailySchedule.dayOfWeek.Sunday" -Value 0 -PropertyType dword -Force | Out-Null
+    }
+}
+#End of Task Sequence Variables

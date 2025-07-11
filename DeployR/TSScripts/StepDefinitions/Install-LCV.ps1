@@ -1,6 +1,6 @@
 #Pull Vars from TS:
 Import-Module DeployR.Utility
-$LogPath = "$env:SystemDrive\_2P\Logs"
+#$LogPath = "$env:SystemDrive\_2P\Logs"
 
 # Get the provided variables
 $WarrantyInfoHide = ${TSEnv:LCVWarrantyInfoHide}

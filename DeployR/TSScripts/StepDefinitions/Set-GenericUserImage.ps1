@@ -8,8 +8,11 @@ DeployR
 Import-Module DeployR.Utility
 
 # Get the provided variables
-[String]$URL = ${TSEnv:GenericUserImageURL}
+[String]$URL = ${TSEnv:BrandingImageURL}
 [String]$FinishAction = ${TSEnv:FinishAction}
+[String]$ImageFileName = ${TSEnv:BrandingImageFileName}
+[String]$ImageFileContentItem = ${TSEnv:CONTENT-BrandingImageCI}
+
 Function Resize-Image {
     [CmdletBinding()]
     param(
@@ -82,7 +85,9 @@ Function Set-GenericUserImage {
     [CmdletBinding()]
     param(
     [String]$ImageURL,
-    [String]$FinishAction
+    [String]$FinishAction,
+    [String]$ImageFileName, 
+    [String]$ImageFileContentItem 
     )
     
     
@@ -90,14 +95,32 @@ Function Set-GenericUserImage {
     if (!(Test-Path -Path $StoragePath)) {
         New-Item -ItemType Directory -Path $StoragePath -Force | Out-Null
     }
-    
-    Write-Output "Downloading Image from $ImageURL"
-    #Download the image from the URL
-    Invoke-WebRequest -UseBasicParsing -Uri $ImageURL -OutFile "$StoragePath\user-original.png"
+    if ($ImageURL){
+        Write-Output "Downloading Image from $ImageURL"
+        #Download the image from the URL
+        Invoke-WebRequest -UseBasicParsing -Uri $ImageURL -OutFile "$StoragePath\user-original.png"
+        if (Test-Path -Path "$StoragePath\user-original.png") {
+            Write-Output "Image downloaded successfully."
+        } else {
+            Write-Output "Failed to download image from $ImageURL"
+            exit 1
+        }
+    }
+    if ($ImageFileName){
+        $ImageFilePath = "$ImageFileContentItem\$ImageFileName"
+        if (Test-Path $ImageFilePath){
+            Write-Output "Copying Image from Content Item to $StoragePath\user-original.png"
+            Copy-item -Path $ImageFilePath -Destination "$StoragePath\user-original.png" -Force -Verbose
+        }
+        else{
+            Write-Output "Did not find $ImageFileName in current directory - Please confirm ImageFileName is correct."
+            exit 1
+        }
+    }
     if (Test-Path -Path "$StoragePath\user-original.png") {
-        Write-Output "Image downloaded successfully."
+        Write-Output "Image found at $StoragePath\user-original.png, Continuing..."
     } else {
-        Write-Output "Failed to download image from $ImageURL"
+        Write-Output "Image not found at $StoragePath\user-original.png"
         exit 1
     }
     $Image = Get-Item -Path "$StoragePath\user-original.png"
@@ -135,10 +158,19 @@ Function Set-GenericUserImage {
     }
 }
 
-$URLExtension = [System.IO.Path]::GetExtension($URL)
-if ($URLExtension -ne ".png") {
-    Write-Output "The URL provided does not point to a PNG image. Please provide a valid PNG image URL."
-    exit 1
+
+
+if ($URL -ne "") {
+    write-host "Branding Image URL is set to $URL"
+    $URLExtension = [System.IO.Path]::GetExtension($URL)
+    if ($URLExtension -ne ".png") {
+        Write-Output "The URL provided does not point to a PNG image. Please provide a valid PNG image URL."
+        exit 1
+    }
+    Set-GenericUserImage -ImageURL $URL -FinishAction $FinishAction
 }
 
-Set-GenericUserImage -ImageURL $URL -FinishAction $FinishAction
+if ($ImageFileName -ne "") {
+    Write-Output "Generic User Image File Name is set to $ImageFileName"
+    Set-GenericUserImage -ImageFileName $ImageFileName -ImageFileContentItem $ImageFileContentItem -FinishAction $FinishAction
+}

@@ -8,7 +8,16 @@ DeployR
 Import-Module DeployR.Utility
 
 # Get the provided variables
-[String]$URL = ${TSEnv:LockScreenImageURL}
+[String]$URL = ${TSEnv:BrandingLockScreenImageURL}
+[String]$ImageFileName = ${TSEnv:BrandingLockScreenImageFileName}
+[String]$ImageFileContentItem = ${TSEnv:CONTENT-BrandingLockScreenImageCI}
+
+#Report Variables:
+Write-Output "Lock Screen Image URL: $URL"
+Write-Output "Lock Screen Image File Name: $ImageFileName"
+Write-Output "Lock Screen Image Content Item: $ImageFileContentItem"
+
+
 
 Function Set-LockScreenImage {
     <#
@@ -24,15 +33,17 @@ Function Set-LockScreenImage {
     [CmdletBinding()]
     param(
     [String]$ImageURL,
-    [String]$ImageFileName #ASSUMES THIS IMAGE IS IN THE SAME PACKAGE AS THE SCRIPT, OTHERWISE USE THE URL PARAMETER
+    [String]$ImageFileName, 
+    [String]$ImageFileContentItem 
     )
     
     
     $StoragePath = "$env:SystemDrive\_2P\content"
     
     if ($ImageFileName){
-        if (Test-Path .\$ImageFileName){
-            Copy-item -Path .\$ImageFileName -Destination "$StoragePath\lockscreen.jpg" -Force -Verbose
+        $ImageFilePath = "$ImageFileContentItem\$ImageFileName"
+        if (Test-Path $ImageFilePath){
+            Copy-item -Path $ImageFilePath -Destination "$StoragePath\lockscreen.jpg" -Force -Verbose
         }
         else{
             Write-Output "Did not find $ImageFileName in current directory - Please confirm ImageFileName is correct."
@@ -64,4 +75,16 @@ Function Set-LockScreenImage {
     }
 }
 
-Set-LockScreenImage -ImageURL $URL
+if ($URL -ne ""){
+    Write-Output "Lock Screen Image URL is set to $URL"
+    Set-LockScreenImage -ImageURL $URL
+}
+if ($ImageFileName -ne ""){
+    Write-Output "Lock Screen Image File Name is set to $ImageFileName"
+    
+}
+if ($ImageFileContentItem -ne ""){
+    Write-Output "Lock Screen Image Content Item is set to $ImageFileContentItem"
+    Set-LockScreenImage -ImageFileName $ImageFileName -ImageFileContentItem $ImageFileContentItem
+}
+
