@@ -118,8 +118,7 @@ For me the URL is: https://214-stifler.2p.garytown.com/StifleRDashboard
 
 It will prompt for credintials, I'm going to use what I'm logged in as, which I know is also in the correct groups for permissions:
 
-![Image01](media/Dashboard01.png)
-![Image02](media/Dashboard02.png)
+![Image01](media/DashBoard01.png)
+![Image02](media/DashBoard02.png)
 
 Once you're logged in, it will be a bit underwhelming, as you have no clients yet reporting in Data.  So the next thing... deploy your 2.14 clients.
-
