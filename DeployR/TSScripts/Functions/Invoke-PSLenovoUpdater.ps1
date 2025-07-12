@@ -1,5 +1,20 @@
 # Based on: https://github.com/jantari/LSUClient
 
+function Invoke-PSLenovoUpdater {
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('True', 'False')]
+    [string]$updateTypeDrivers = 'True',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('True', 'False')]
+    [string]$updateTypeBIOS = 'false',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('True', 'False')]
+    [string]$scanonly = 'False'
+)
 
 #Setup LOCALAPPDATA Variable
 [System.Environment]::SetEnvironmentVariable('LOCALAPPDATA',"$env:SystemDrive\Windows\system32\config\systemprofile\AppData\Local")
@@ -7,7 +22,7 @@
 Write-Host "==================================================================="
 Write-Host "Lenovo Update Script"
 try {
-    Import-Module -Name 'C:\_2P\Client\PSModules\LSUClient' -Force -Verbose
+    Import-Module -Name 'LSUClient' -Force
     Write-Host "LSUClient module found and imported successfully."
 } catch {
     Write-Host "LSUClient module not found, installing..."
@@ -16,9 +31,9 @@ try {
 
 Write-Host "Importing DeployR.Utility module..."
 Import-Module DeployR.Utility
-$LSUDrivers = ${TSEnv:updateTypeDrivers}
-$LSUBIOS = ${TSEnv:updateTypeBIOS}
-$LSUScanOnly = ${TSEnv:scanonly}
+$LSUDrivers = $updateTypeDrivers
+$LSUBIOS = $updateTypeBIOS
+$LSUScanOnly = $scanonly
 
 Write-Host "LSUDrivers: $LSUDrivers"
 Write-Host "LSUBIOS: $LSUBIOS"
@@ -27,6 +42,7 @@ Write-Host "LSUScanOnly: $LSUScanOnly"
 Write-Host "==================================================================="
 Write-Host ""
 Write-Host "Checking for Lenovo updates..." -ForegroundColor Cyan
+
 #Find and Report Updates
 try {
     $updates = Get-LSUpdate -ErrorAction SilentlyContinue | Where-Object { $_.Installer.Unattended }
@@ -83,4 +99,5 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
 }
 
 Write-Host -ForegroundColor Green "Lenovo updates completed."
-
+}
+#Invoke-PSLenovoUpdater -updateTypeDrivers $true

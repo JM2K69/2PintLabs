@@ -17,21 +17,25 @@ Write-Host "OSDTargetSystemDrive: $OSDTargetSystemDrive"
 
 
 
-if ($MakeAlias = "Lenovo"){
+if ($MakeAlias -eq "Lenovo"){
     #Get the LSUClient Module
-    Write-Host "Attempting to run: Save-Module -Name LSUClient -Path $($OSDTargetSystemDrive):\Program Files\WindowsPowerShell\Modules"
-    Save-Module -Name LSUClient -Path "$($OSDTargetSystemDrive):\Program Files\WindowsPowerShell\Modules"
+    Write-Host "Attempting to run: Save-Module -Name LSUClient -Path $($OSDTargetSystemDrive)\Program Files\WindowsPowerShell\Modules"
+    Save-Module -Name LSUClient -Path "$($OSDTargetSystemDrive)\Program Files\WindowsPowerShell\Modules"
+    #Write-Host "Attempting to run: Save-Module -Name LSUClient -Path $($OSDTargetSystemDrive)\_2P\Client\PSModules"
+    #Save-Module -Name LSUClient -Path "$($OSDTargetSystemDrive)\_2P\Client\PSModules" -Force
 }
 
-if ($MakeAlias = "Dell"){}
+if ($MakeAlias -eq "Dell"){}
 
-if ($MakeAlias = "HP"){
+if ($MakeAlias -eq "HP"){
     #Get the HPBIOSConfigUtility Module
-    Write-Host "Attempting to run: Save-Module -Name HPCMSL -Path $($OSDTargetSystemDrive):\Program Files\WindowsPowerShell\Modules"
-    Save-Module -Name HPCMSL -Path "$($OSDTargetSystemDrive):\Program Files\WindowsPowerShell\Modules"
+    Write-Host "Attempting to run: Save-Module -Name HPCMSL -Path $($OSDTargetSystemDrive)\Program Files\WindowsPowerShell\Modules"
+    Save-Module -Name HPCMSL -Path "$($OSDTargetSystemDrive)\Program Files\WindowsPowerShell\Modules"
+    #Write-Host "Attempting to run: Save-Module -Name HPCMSL -Path $($OSDTargetSystemDrive)\_2P\Client\PSModules"
+    #Save-Module -Name HPCMSL -Path "$($OSDTargetSystemDrive)\_2P\Client\PSModules" -Force
 }
 
-if ($MakeAlias = "Microsoft"){}
+if ($MakeAlias -eq "Microsoft"){}
 
 write-host "==================================================================="
 
