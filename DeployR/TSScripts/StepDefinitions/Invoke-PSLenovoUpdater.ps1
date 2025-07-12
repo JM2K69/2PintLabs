@@ -1,7 +1,14 @@
 # Based on: https://github.com/jantari/LSUClient
 
 
-Install-Module -Name 'LSUClient' -Force
+try {
+    Import-Module -Name 'LSUClient' -Force
+    Write-Host "LSUClient module found and imported successfully."
+} catch {
+    Write-Host "LSUClient module not found, installing..."
+    Install-Module -Name 'LSUClient' -Force
+}
+
 
 Import-Module DeployR.Utility
 $LSUDrivers = ${TSEnv:updateTypeDrivers}
