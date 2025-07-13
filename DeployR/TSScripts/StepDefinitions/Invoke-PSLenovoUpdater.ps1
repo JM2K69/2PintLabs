@@ -14,7 +14,7 @@ if ($ModuleFile) {
 } 
 else {
     Write-Host "LSUClient module not found, installing..."
-    Install-Module -Name 'LSUClient' -Force
+    Install-Module -Name 'LSUClient' -Force -Scope AllUsers
     $ModuleFile = Get-ChildItem -path 'C:\Program Files\PowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
 }
 # Try to import the module

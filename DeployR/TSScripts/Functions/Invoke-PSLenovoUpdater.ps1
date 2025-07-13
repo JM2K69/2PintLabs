@@ -27,7 +27,7 @@ if ($ModuleFile) {
 } 
 else {
     Write-Host "LSUClient module not found, installing..."
-    Install-Module -Name 'LSUClient' -Force
+    Install-Module -Name 'LSUClient' -Force -Scope AllUsers
     $ModuleFile = Get-ChildItem -path 'C:\Program Files\PowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
 }
 # Try to import the module
@@ -111,4 +111,4 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
 
 Write-Host -ForegroundColor Green "Lenovo updates completed."
 }
-Invoke-PSLenovoUpdater -updateTypeDrivers $true
+#Invoke-PSLenovoUpdater -updateTypeDrivers $true
