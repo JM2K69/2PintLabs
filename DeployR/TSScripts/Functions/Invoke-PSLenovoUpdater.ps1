@@ -15,19 +15,30 @@ param (
     [ValidateSet('True', 'False')]
     [string]$scanonly = 'False'
 )
-
-#Setup LOCALAPPDATA Variable
 [System.Environment]::SetEnvironmentVariable('LOCALAPPDATA',"$env:SystemDrive\Windows\system32\config\systemprofile\AppData\Local")
 
 Write-Host "==================================================================="
 Write-Host "Lenovo Update Script"
-try {
-    Import-Module -Name 'LSUClient' -Force
-    Write-Host "LSUClient module found and imported successfully."
-} catch {
+
+#Check For Module & Install if not present
+$ModuleFile = Get-ChildItem -path 'C:\Program Files\PowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
+if ($ModuleFile) {
+    Write-Host "LSUClient module found at $($ModuleFile.FullName)"
+} 
+else {
     Write-Host "LSUClient module not found, installing..."
     Install-Module -Name 'LSUClient' -Force
+    $ModuleFile = Get-ChildItem -path 'C:\Program Files\PowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
 }
+# Try to import the module
+try {
+    Import-Module $ModuleFile.FullName -Force -Verbose
+    Write-Host "LSUClient module found and imported successfully."
+} catch {
+    Write-Host "Still Unable to import LSUClient module, please check the installation." -ForegroundColor Red
+    exit 0
+}
+
 
 Write-Host "Importing DeployR.Utility module..."
 Import-Module DeployR.Utility
@@ -100,4 +111,4 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
 
 Write-Host -ForegroundColor Green "Lenovo updates completed."
 }
-#Invoke-PSLenovoUpdater -updateTypeDrivers $true
+Invoke-PSLenovoUpdater -updateTypeDrivers $true

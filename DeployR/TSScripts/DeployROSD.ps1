@@ -57,6 +57,11 @@ Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwb
 Write-Host -ForegroundColor Green "[+] Function Invoke-PSLenovoUpdater"
 Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/TSScripts/Functions/Invoke-PSLenovoUpdater.ps1")
 
+write-host -ForegroundColor Green "[+] Function Get-PowerSettingSleepAfter"
+write-host -ForegroundColor Green "[+] Function Set-PowerSettingSleepAfter"
+Invoke-Expression (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/gwblok/garytown/refs/heads/master/Dev/PowerSettingsSleepAfterFunctions.ps1")
+
+
 Write-Host -ForegroundColor DarkGray "========================================================="
 Write-Host ""
 write-Host "Completed loading DeployR Functions" -ForegroundColor Cyan
