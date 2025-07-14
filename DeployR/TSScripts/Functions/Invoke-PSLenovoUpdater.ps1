@@ -112,3 +112,5 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
 Write-Host -ForegroundColor Green "Lenovo updates completed."
 }
 #Invoke-PSLenovoUpdater -updateTypeDrivers $true
+
+Start-Process pwsh.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\Invoke-PSLenovoUpdater.ps1`" -updateTypeDrivers $true"
