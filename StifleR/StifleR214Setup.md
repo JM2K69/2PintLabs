@@ -126,7 +126,11 @@ Once you're logged in, it will be a bit underwhelming, as you have no clients ye
 
 ## Troubleshooting
 
-Dashboard Troubleshooting, confirm Registry & Server.config.  Make sure they are the FQDN of your server and have https, not http.
+Confirm the following:
+- Dashboard Settings in Registry for proper FQDN 
+- Dashboard Server.config file fr proper FQDN
+- Ensure the Config Editor has the correct thumbprints for the Certificate used
+- Ensure the Certificate subject name matches the FQDN of the server and that you're IIS is bound for HTTPS on 443.
 
 Registry: HKLM:\Software\2Pint Software\StilfeR\Dashboard
 ![Image01](media/DashBoardRegistry01.png)
