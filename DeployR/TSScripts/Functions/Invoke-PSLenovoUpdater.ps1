@@ -1,14 +1,27 @@
 # Based on: https://github.com/jantari/LSUClient
 
+function Invoke-PSLenovoUpdater {
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('True', 'False')]
+    [string]$updateTypeDrivers = 'True',
 
-#Setup LOCALAPPDATA Variable
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('True', 'False')]
+    [string]$updateTypeBIOS = 'false',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('True', 'False')]
+    [string]$scanonly = 'False'
+)
 [System.Environment]::SetEnvironmentVariable('LOCALAPPDATA',"$env:SystemDrive\Windows\system32\config\systemprofile\AppData\Local")
 
 Write-Host "==================================================================="
 Write-Host "Lenovo Update Script"
 
 #Check For Module & Install if not present
-$ModuleFile = Get-ChildItem -path 'C:\Program Files\WindowsPowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
+$ModuleFile = Get-ChildItem -path 'C:\Program Files\PowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
 if ($ModuleFile) {
     Write-Host "LSUClient module found at $($ModuleFile.FullName)"
 } 
@@ -26,11 +39,12 @@ try {
     exit 0
 }
 
+
 Write-Host "Importing DeployR.Utility module..."
 Import-Module DeployR.Utility
-$LSUDrivers = ${TSEnv:updateTypeDrivers}
-$LSUBIOS = ${TSEnv:updateTypeBIOS}
-$LSUScanOnly = ${TSEnv:scanonly}
+$LSUDrivers = $updateTypeDrivers
+$LSUBIOS = $updateTypeBIOS
+$LSUScanOnly = $scanonly
 
 Write-Host "LSUDrivers: $LSUDrivers"
 Write-Host "LSUBIOS: $LSUBIOS"
@@ -39,6 +53,7 @@ Write-Host "LSUScanOnly: $LSUScanOnly"
 Write-Host "==================================================================="
 Write-Host ""
 Write-Host "Checking for Lenovo updates..." -ForegroundColor Cyan
+
 #Find and Report Updates
 try {
     $updates = Get-LSUpdate -ErrorAction SilentlyContinue | Where-Object { $_.Installer.Unattended }
@@ -95,4 +110,5 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
 }
 
 Write-Host -ForegroundColor Green "Lenovo updates completed."
-
+}
+#Invoke-PSLenovoUpdater -updateTypeDrivers $true
