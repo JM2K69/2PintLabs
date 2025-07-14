@@ -122,3 +122,14 @@ It will prompt for credintials, I'm going to use what I'm logged in as, which I 
 ![Image02](media/DashBoard02.png)
 
 Once you're logged in, it will be a bit underwhelming, as you have no clients yet reporting in Data.  So the next thing... deploy your 2.14 clients.
+
+
+## Troubleshooting
+
+Dashboard Troubleshooting, confirm Registry & Server.config.  Make sure they are the FQDN of your server and have https, not http.
+
+Registry: HKLM:\Software\2Pint Software\StilfeR\Dashboard
+![Image01](media/DashBoardRegistry01.png)
+
+Config File: C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json
+![Image01](media/DashBoardConfig01.png)
