@@ -11,6 +11,7 @@ Import-Module DeployR.Utility
 [String]$URL = ${TSEnv:BrandingLockScreenImageURL}
 [String]$ImageFileName = ${TSEnv:BrandingLockScreenImageFileName}
 [String]$ImageFileContentItem = ${TSEnv:CONTENT-BrandingLockScreenImageCI}
+[String]$BrandingLockScreenImageEnforce = ${TSEnv:BrandingLockScreenImageEnforce}
 
 #Report Variables:
 Write-Output "Lock Screen Image URL: $URL"
@@ -68,11 +69,28 @@ Function Set-LockScreenImage {
         Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img100.jpg -Force -Verbose
         Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img105.jpg -Force -Verbose"
         Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img105.jpg -Force -Verbose
+
     }
     else
     {
         Write-Output "Did not find lockscreen.jpg in temp folder - Please confirm URL or ImageFileName is correct."
     }
+}
+
+if ($BrandingLockScreenImageEnforce -eq "true") {
+    Write-Output "Enforcing Lock Screen Image"
+    $LockScreenImagePath = "C:\windows\web\Screen\EnforcedLockScreenImage.jpg"
+    Copy-Item "$StoragePath\lockscreen.jpg" $LockScreenImagePath -Force -Verbose
+    $RegPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+    if (!(Test-Path -Path $RegPath)) {
+            New-Item -Path $RegPath -Force | Out-Null
+        }
+    New-ItemProperty -Path $RegPath -Name LockScreenImagePath -Value $LockScreenImagePath -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $RegPath -Name LockScreenImageUrl -Value $LockScreenImagePath -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $RegPath -Name LockScreenImageStatus -Value 1 -PropertyType DWORD -Force | Out-Null
+} else {
+    Write-Output "Not enforcing Lock Screen Image"
+    exit 0
 }
 
 if ($URL -ne ""){
