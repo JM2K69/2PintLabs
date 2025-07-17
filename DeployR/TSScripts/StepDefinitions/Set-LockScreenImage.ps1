@@ -17,7 +17,7 @@ Import-Module DeployR.Utility
 Write-Output "Lock Screen Image URL: $URL"
 Write-Output "Lock Screen Image File Name: $ImageFileName"
 Write-Output "Lock Screen Image Content Item: $ImageFileContentItem"
-
+Write-Output "Lock Screen Image Enforce: $BrandingLockScreenImageEnforce"
 
 
 Function Set-LockScreenImage {
@@ -35,7 +35,8 @@ Function Set-LockScreenImage {
     param(
     [String]$ImageURL,
     [String]$ImageFileName, 
-    [String]$ImageFileContentItem 
+    [String]$ImageFileContentItem,
+    [string]$BrandingLockScreenImageEnforce = "false"
     )
     
     
@@ -69,15 +70,11 @@ Function Set-LockScreenImage {
         Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img100.jpg -Force -Verbose
         Write-Output "Running Command: Copy-Item $StoragePath\lockscreen.jpg C:\windows\web\Screen\img105.jpg -Force -Verbose"
         Copy-Item "$StoragePath\lockscreen.jpg" C:\windows\web\Screen\img105.jpg -Force -Verbose
-
     }
-    else
-    {
+    else{
         Write-Output "Did not find lockscreen.jpg in temp folder - Please confirm URL or ImageFileName is correct."
     }
-}
-
-if ($BrandingLockScreenImageEnforce -eq "true") {
+    if ($BrandingLockScreenImageEnforce -eq "true") {
     Write-Output "Enforcing Lock Screen Image"
     $LockScreenImagePath = "C:\windows\web\Screen\EnforcedLockScreenImage.jpg"
     Copy-Item "$StoragePath\lockscreen.jpg" $LockScreenImagePath -Force -Verbose
@@ -88,14 +85,17 @@ if ($BrandingLockScreenImageEnforce -eq "true") {
     New-ItemProperty -Path $RegPath -Name LockScreenImagePath -Value $LockScreenImagePath -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $RegPath -Name LockScreenImageUrl -Value $LockScreenImagePath -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $RegPath -Name LockScreenImageStatus -Value 1 -PropertyType DWORD -Force | Out-Null
-} else {
-    Write-Output "Not enforcing Lock Screen Image"
-    exit 0
+    } 
+    else {
+        Write-Output "Not enforcing Lock Screen Image"
+    }
 }
+
+
 
 if ($URL -ne ""){
     Write-Output "Lock Screen Image URL is set to $URL"
-    Set-LockScreenImage -ImageURL $URL
+    Set-LockScreenImage -ImageURL $URL -BrandingLockScreenImageEnforce $BrandingLockScreenImageEnforce
 }
 if ($ImageFileName -ne ""){
     Write-Output "Lock Screen Image File Name is set to $ImageFileName"
@@ -103,6 +103,6 @@ if ($ImageFileName -ne ""){
 }
 if ($ImageFileContentItem -ne ""){
     Write-Output "Lock Screen Image Content Item is set to $ImageFileContentItem"
-    Set-LockScreenImage -ImageFileName $ImageFileName -ImageFileContentItem $ImageFileContentItem
+    Set-LockScreenImage -ImageFileName $ImageFileName -ImageFileContentItem $ImageFileContentItem -BrandingLockScreenImageEnforce $BrandingLockScreenImageEnforce
 }
 
