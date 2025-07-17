@@ -5,4 +5,6 @@
 
 - Language stuff
 - Company Branding - Registered to: etc
+- Defender Updates
+- OEM Tools Offline Mode
 - 
