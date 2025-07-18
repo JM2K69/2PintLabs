@@ -487,7 +487,7 @@ else {
         Write-Host "Found $($Drivers.Count) drivers to process after Cleanup"
     }
     if ($MakeAlias -eq "HP") {
-        $Drivers = Get-HPDeviceDriverPack -OSVer Windows11 -ListAll
+        $Drivers = Get-SoftpaqList
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "BIOS" -and $_.Name -notmatch "Firmware" -and $_.Name -notmatch "FW"}
         if ($IncludeGraphics -eq $false) {
             $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
@@ -498,8 +498,7 @@ else {
         Write-Host "Found $($Drivers.Count) drivers to process after Cleanup"
     }
     if ($MakeAlias -eq "Lenovo") {
-        Write-Host "Using Lenovo Driver Pack for WinPE"
-        $Drivers = Get-LnvDriverPack -MachineType (Get-LnvMachineType) -WindowsVersion 11 -ListAll
+        $Drivers = Find-LnvUpdate -MachineType (Get-LnvMachineType) -ListAll -WindowsVersion 11
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "BIOS" -and $_.Name -notmatch "Firmware" -and $_.Name -notmatch "FW"  -and $_.Name -notmatch "Lenovo Base Utility"  -and $_.Name -notmatch "WAN"}
         if ($IncludeGraphics -ne $true) {
             $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
