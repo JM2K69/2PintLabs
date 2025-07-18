@@ -582,6 +582,7 @@ function Invoke-DriverDownloadExpand {
     # Expand
     $ExpandFile = $GetItemOutFile.FullName
     Write-Verbose -Message "DriverPack: $ExpandFile"
+    Write-Progress -Activity "Expanding Driver Pack" -Status "Expanding $ExpandFile" -PercentComplete 50
     #=================================================
     #   Cab
     #=================================================
@@ -800,7 +801,54 @@ function Migrate-WinPEDrivers {
     }
     
     Write-Host "Starting DISM injection: /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse"
-    & Dism /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse
+    $Output = "$env:systemdrive\_2p\Logs\DISMMigrateDriversOutput.txt"
+    $DISM = Start-Process DISM.EXE -ArgumentList "/image:$($WindowsPath)\ /Add-Driver /driver:$exportRoot /recurse" -PassThru -NoNewWindow -RedirectStandardOutput $Output
+    #& Dism /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse
+    $SameLastLine = $null
+    do {  #Continous loop while DISM is running
+        Start-Sleep -Milliseconds 300
+
+        #Read in the DISM Logfile
+        $Content = Get-Content -Path $Output -ReadCount 1
+        $LastLine = $Content | Select-Object -Last 1
+        if ($LastLine){
+            if ($SameLastLine -ne $LastLine){ #Only continue if DISM log has changed
+                $SameLastLine = $LastLine
+                Write-Output $LastLine
+                if ($LastLine -match "Searching for driver packages to install..."){
+                    #Write-Output $LastLine
+                    Write-Progress -Activity "Migrating Drivers" -Status $LastLine -PercentComplete 5
+                }
+                elseif ($LastLine -match "Installing"){
+                    #Write-Output $LastLine
+                    $Message = $Content | Where-Object {$_ -match "Installing"} | Select-Object -Last 1
+                    if ($Message){
+                        $ToRemove = $Message.Split(':') | Select-Object -Last 1
+                        $Message = $Message.Replace(":$($ToRemove)","")
+                        $Message = $Message.Replace($exportRoot,"")
+                        $Total = (($Message.Split("-")[0]).Split("of") | Select-Object -Last 1).replace(" ","")
+                        $Counter = ((($Message.Split("-")[0]).Split("of") | Select-Object -First 1).replace(" ","")).replace("Installing","")
+                        if ($Counter -eq "0"){$Counter = 1}
+                        $Total = $Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still installing
+                        $PercentComplete = [math]::Round(($Counter / $Total) * 100)
+                        Write-Progress -Activity "Migrating Drivers" -Status $LastLine -PercentComplete $PercentComplete
+
+                    }
+                }
+                elseif ($LastLine -match "The operation completed successfully."){
+                    Write-Progress -Activity "Migrating Drivers" -Status $LastLine -Completed
+                }
+                else{
+                    Write-Progress -Activity "Migrating Drivers" -Status $LastLine -Completed
+                }
+            }
+        }
+        
+    }
+    until (!(Get-Process -Name DISM -ErrorAction SilentlyContinue))
+
+    Write-Output "Dism Step Complete"
+    Write-Output "See DISM log for more Details: $Output"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: DISM exited with $LASTEXITCODE" -Severity 3
     }
@@ -1037,5 +1085,53 @@ else {
     Write-Host -ForegroundColor Cyan "Applying Drivers to Offline OS at $TargetSystemDrive from $ExtractedDriverLocation"
     #Add-WindowsDriver -Path "$($TargetSystemDrive)\" -Driver "$ExtractedDriverLocation" -Recurse -ErrorAction SilentlyContinue -LogPath $LogPath\AddDrivers.log
     
-    & Dism /Image:"$($TargetSystemDrive)\" /Add-Driver /Driver:$ExtractedDriverLocation /Recurse
+    #& Dism /Image:"$($TargetSystemDrive)\" /Add-Driver /Driver:$ExtractedDriverLocation /Recurse
+    $Output = "$env:systemdrive\_2p\Logs\DISMApplyDriversOutput.txt"
+    $DISM = Start-Process DISM.EXE -ArgumentList "/image:$($TargetSystemDrive)\ /Add-Driver /driver:$ExtractedDriverLocation /recurse" -PassThru -NoNewWindow -RedirectStandardOutput $Output
+ 
+
+    #& Dism /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse
+    $SameLastLine = $null
+    do {  #Continous loop while DISM is running
+        Start-Sleep -Milliseconds 300
+
+        #Read in the DISM Logfile
+        $Content = Get-Content -Path $Output -ReadCount 1
+        $LastLine = $Content | Select-Object -Last 1
+        if ($LastLine){
+            if ($SameLastLine -ne $LastLine){ #Only continue if DISM log has changed
+                $SameLastLine = $LastLine
+                Write-Output $LastLine
+                if ($LastLine -match "Searching for driver packages to install..."){
+                    #Write-Output $LastLine
+                    Write-Progress -Activity "Applying Drivers" -Status $LastLine -PercentComplete 5
+                }
+                elseif ($LastLine -match "Installing"){
+                    #Write-Output $LastLine
+                    $Message = $Content | Where-Object {$_ -match "Installing"} | Select-Object -Last 1
+                    if ($Message){
+                        $ToRemove = $Message.Split(':') | Select-Object -Last 1
+                        $Message = $Message.Replace(":$($ToRemove)","")
+                        $Message = $Message.Replace($ExtractedDriverLocation,"")
+                        $Total = (($Message.Split("-")[0]).Split("of") | Select-Object -Last 1).replace(" ","")
+                        [int]$Counter = ((($Message.Split("-")[0]).Split("of") | Select-Object -First 1).replace(" ","")).replace("Installing","")
+                        if ([int]$Counter -eq "0"){[int]$Counter = 1}
+                        [int]$Total = [int]$Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still installing
+                        $PercentComplete = [math]::Round(($Counter / $Total) * 100)
+                        Write-Progress -Activity "Applying Drivers" -Status $LastLine -PercentComplete $PercentComplete
+
+                    }
+                }
+                elseif ($LastLine -match "The operation completed successfully."){
+                    Write-Progress -Activity "Migrating Drivers" -Status $LastLine -Completed
+                }
+                else{
+                    Write-Progress -Activity "Migrating Drivers" -Status $LastLine -Completed
+                }
+            }
+        }
+        
+    }
+    until (!(Get-Process -Name DISM -ErrorAction SilentlyContinue))
+
 }

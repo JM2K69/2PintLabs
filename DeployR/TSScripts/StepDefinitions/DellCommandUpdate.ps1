@@ -275,9 +275,20 @@ Function Get-DCUAppUpdates {
                     $LogFileName = ($TargetFilePathName.replace(".exe",".log")).Replace(".EXE",".log")
                     $Arguments = "/s /l=$LogFileName"
                     Write-Output "Starting DCU Install"
+                    Write-Progress -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 10
                     write-output "Log file = $LogFileName"
-                    $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
+                    [int]$PercentComplete = 10
+                    $Process = Start-Process "$TargetFilePathName" $Arguments -PassThru
+                    do {
+                        
+                        Start-Sleep -Seconds 5
+                        $PercentComplete += 2
+                        Write-Progress -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete $PercentComplete
+                    }
+                    until ($Process.HasExited)
+
                     write-output "Update Complete with Exitcode: $($Process.ExitCode)"
+                    write-process -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 100
                     If($Process -ne $null -and $Process.ExitCode -eq '2'){
                         Write-Verbose "Reboot Required"
                     }
@@ -432,9 +443,11 @@ function Invoke-DCU {
                         $Message = ($Message.Split(':') | Select-Object -Last 1).trim()
                         $Message = $Message.Replace("...","")
                         $CounterPart = (($Message -split "of")[0]).Trim()
-                        $Counter = $CounterPart.Substring($CounterPart.Length-1)  
+                        [int]$Counter = $CounterPart.Substring($CounterPart.Length-1)
+                        if ($Counter -eq "0"){$Counter = 1} #If the counter is 0, set it to 1
+                        #Write-Output $Counter
                         $Total = ((($Message -split "of")[1]).Trim()).substring(0,1)
-                        $Total = $Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still downloading
+                        [int]$Total = [int]$Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still downloading
                         #Write-Output $Message
                         $PercentComplete = [math]::Round(($Counter / $Total) * 100)
                         Write-Progress -Activity "DCU Downloading" -Status $Message -PercentComplete $PercentComplete
@@ -449,9 +462,10 @@ function Invoke-DCU {
                         $Message = "$($ToKeep[0]) -$($ToKeep[1])"
                         $Message = $Message.trim()
                         $CounterPart = (($Message -split "of")[0]).Trim()
-                        $Counter = $CounterPart.Substring($CounterPart.Length-1)  
+                        [int]$Counter = $CounterPart.Substring($CounterPart.Length-1)
+                        if ($Counter -eq "0"){$Counter = 1} #If the counter is 0, set it to 1
                         $Total = ((($Message -split "of")[1]).Trim()).substring(0,1)
-                        $Total = $Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still installing
+                        [int]$Total = [int]$Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still installing
                         #Write-Output $Message
                         $PercentComplete = [math]::Round(($Counter / $Total) * 100)
                         Write-Progress -Activity "DCU Installing" -Status $Message -PercentComplete $PercentComplete
