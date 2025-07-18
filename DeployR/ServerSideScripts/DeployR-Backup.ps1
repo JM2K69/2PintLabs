@@ -72,6 +72,7 @@ Function Duplicate-DeployRStepDefinition {
     Write-Host "Duplicated Step Definition as $($Sample.name) with ID $NewStepGuid" -ForegroundColor Green
 }
 
+#THIS DOES NOT WORKING.... Still messing around
 Function Duplicate-DeployRTaskSequence {
     param (
         [Parameter(Mandatory = $true)]
