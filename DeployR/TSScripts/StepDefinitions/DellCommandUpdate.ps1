@@ -38,6 +38,7 @@ Write-Host "Current DCU Settings selected from Task Sequence"
     Write-Host "updateTypeBIOSFirmware: $updateTypeBIOSFirmware"
     Write-Host "updateTypeDrivers: $updateTypeDrivers"
     Write-Host "updateTypeApplications: $updateTypeApplications"
+    Write-Host "updateSeverityVar: $updateSeverityVar"
     Write-Host "ScanOnly: $ScanOnly"
 
 if ($updateTypeBIOSFirmware-eq $false -and $updateTypeDrivers -eq $false -and $updateTypeApplications -eq $false){
@@ -81,7 +82,6 @@ function Get-DellSupportedModels {
     }
     return $SupportedModelsObject
 }
-
 Function Get-DCUVersion {
     $DCU=(Get-ItemProperty "HKLM:\SOFTWARE\Dell\UpdateService\Clients\CommandUpdate\Preferences\Settings" -ErrorVariable err -ErrorAction SilentlyContinue)
     if ($err.Count -eq 0) {
@@ -364,26 +364,23 @@ function Invoke-DCU {
     }
 
     #Pick Action, Scan or ApplyUpdates if both are selected, ApplyUpdates will be the action, if neither are selected, Scan will be the action
-    $DateTimeStamp = Get-Date -Format "yyyyMMdd-HHmmss"
     if ($scanOnly){
         $ActionVar = "/scan -report=$LogPath"
-        $Action = "Scan"
     }
     else{
         $ActionVar = "/applyUpdates"
-        $Action = "ApplyUpdates"
     }
     
 
     #Create Arugment List for Dell Command Update CLI
-    $ArgList = "$ActionVar $updateSeverityVar $updateTypeVar $updateDeviceCategoryVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-$Action.log`""
-    Write-Verbose $ArgList
+    $ArgList = "$ActionVar $updateSeverityVar $updateTypeVar $updateDeviceCategoryVar -outputlog=`"$LogPath\DCU-CLI.log`""
+    Write-Host $ArgList
     $DCUApply = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
     if ($DCUApply.ExitCode -ne 0){
         $ExitInfo = Get-DCUExitInfo -DCUExit $DCUApply.ExitCode
-        Write-Verbose "Exit: $($DCUApply.ExitCode)"
-        Write-Verbose "Description: $($ExitInfo.Description)"
-        Write-Verbose "Resolution: $($ExitInfo.Resolution)"
+        Write-Host "Exit: $($DCUApply.ExitCode)"
+        Write-Host "Description: $($ExitInfo.Description)"
+        Write-Host "Resolution: $($ExitInfo.Resolution)"
     }
 }
 
@@ -776,7 +773,7 @@ else {
 
     Write-Host "=============================================================================="
     Write-Host "Invoke Dell Command Update"
-    write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly"
+    write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityVar"
     write-host "Log Path: $LogPath\DCU-CLI-TIMESTAMP-ACTION.log"
     Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityVar
     Write-Host "Run Dell Command Update Step Complete"

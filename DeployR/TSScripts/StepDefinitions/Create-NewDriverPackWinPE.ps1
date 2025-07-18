@@ -48,20 +48,243 @@ if ($MakeAlias -eq "Lenovo") {
         Write-Host "Lenovo.Client.Scripting module already installed."
     }
 }
-
+<# I don't think I need this for what I'm doing
 if ($MakeAlias -eq 'HP'){
-    write-host "Installing HPCMSL module if not already installed..."
-    if (-not (Get-Module -Name HPCMSL -ListAvailable)) {
-        Write-Host "HPCMSL module not found. Installing..."
-        Install-Module -Name HPCMSL -Force -SkipPublisherCheck -AcceptLicense
-    } else {
-        Write-Host "HPCMSL module already installed."
-    }
+write-host "Installing HPCMSL module if not already installed..."
+if (-not (Get-Module -Name HPCMSL -ListAvailable)) {
+Write-Host "HPCMSL module not found. Installing..."
+Install-Module -Name HPCMSL -Force -SkipPublisherCheck -AcceptLicense
+} else {
+Write-Host "HPCMSL module already installed."
 }
-
+}
+#>
 
 #region functions
 # Function to get Dell supported models
+function Test-HPIASupport {
+    $CabPath = "$env:TEMP\platformList.cab"
+    $XMLPath = "$env:TEMP\platformList.xml"
+    $PlatformListCabURL = "https://hpia.hpcloud.hp.com/ref/platformList.cab"
+    Invoke-WebRequest -Uri $PlatformListCabURL -OutFile $CabPath -UseBasicParsing
+    $Expand = expand $CabPath $XMLPath
+    [xml]$XML = Get-Content $XMLPath
+    $Platforms = $XML.ImagePal.Platform.SystemID
+    $MachinePlatform = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product
+    if ($MachinePlatform -in $Platforms){$HPIASupport = $true}
+    else {$HPIASupport = $false}
+    return $HPIASupport
+}
+function Get-HPOSSupport {
+    [CmdletBinding()]
+    param(
+    [Parameter(Position=0,mandatory=$false)]
+    [string]$Platform,
+    [switch]$Latest,
+    [switch]$MaxOS,
+    [switch]$MaxOSVer,
+    [switch]$MaxOSNum
+    )
+    $CabPath = "$env:TEMP\platformList.cab"
+    $XMLPath = "$env:TEMP\platformList.xml"
+    if ($Platform){$MachinePlatform = $platform}
+    else {$MachinePlatform = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product}
+    $PlatformListCabURL = "https://hpia.hpcloud.hp.com/ref/platformList.cab"
+    Invoke-WebRequest -Uri $PlatformListCabURL -OutFile $CabPath -UseBasicParsing
+    $Expand = expand $CabPath $XMLPath
+    [xml]$XML = Get-Content $XMLPath
+    $XMLPlatforms = $XML.ImagePal.Platform
+    $OSList = ($XMLPlatforms | Where-Object {$_.SystemID -match $MachinePlatform}).OS | Select-Object -Property OSReleaseIdDisplay, OSBuildId, OSDescription
+    
+    if ($Latest){
+        [String]$MaxOSSupported = ($OSList.OSDescription | Where-Object {$_ -notmatch "LTSB"}| Select-Object -Unique| Measure-Object -Maximum).Maximum
+        [String]$MaxOSVerion = (($OSList | Where-Object {$_.OSDescription -eq "$MaxOSSupported"}).OSReleaseIdDisplay | Measure-Object -Maximum).Maximum
+        return "$MaxOSSupported $MaxOSVerion"
+        break
+    }
+    if ($MaxOS){
+        [String]$MaxOSSupported = ($OSList.OSDescription | Where-Object {$_ -notmatch "LTSB"}| Select-Object -Unique| Measure-Object -Maximum).Maximum
+        if ($MaxOSSupported -Match "11"){[String]$MaxOSName = "Win11"}
+        else {[String]$MaxOSName = "Win10"}
+        return "$MaxOSName"
+        break
+    }
+    if ($MaxOSVer){
+        [String]$MaxOSSupported = ($OSList.OSDescription | Where-Object {$_ -notmatch "LTSB"}| Select-Object -Unique| Measure-Object -Maximum).Maximum
+        [String]$MaxOSVersion = (($OSList | Where-Object {$_.OSDescription -eq "$MaxOSSupported"}).OSReleaseIdDisplay | Measure-Object -Maximum).Maximum
+        return "$MaxOSVersion"
+        break
+    }
+    if ($MaxOSNum){
+        [String]$MaxOSSupported = ($OSList.OSDescription | Where-Object {$_ -notmatch "LTSB"}| Select-Object -Unique| Measure-Object -Maximum).Maximum
+        if ($MaxOSSupported -Match "11"){[String]$MaxOSNumber = "11.0"}
+        else {[String]$MaxOSNumber = "10.0"}
+        return "$MaxOSNumber"
+        break
+    }
+    return $OSList
+}
+
+function Get-HPSoftpaqListLatest {
+    [CmdletBinding()]
+    param(
+    [Parameter(Position=0,mandatory=$false)]
+    [string]$Platform,
+    [switch]$SystemInfo,
+    [switch]$MaxOSVer,
+    [switch]$MaxOSNum
+    )
+    if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64"){
+        $Arch = '64'
+    }
+    
+    if ($Platform){$MachinePlatform = $platform}
+    else {$MachinePlatform = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product}
+    $OSNum = Get-HPOSSupport -MaxOSNum -Platform $MachinePlatform
+    $ReleaseID = Get-HPOSSupport -MaxOSVer -Platform $MachinePlatform
+    $BaseURL = ("https://hpia.hpcloud.hp.com/ref/$($MachinePlatform)/$($MachinePlatform)_$($Arch)_$($OSNum).$($ReleaseID).cab").ToLower()
+    #https://hpia.hpcloud.hp.com/ref/83b2/83b2_64_11.0.23h2.cab
+    $CabPath = "$env:TEMP\HPIA.cab"
+    $XMLPath = "$env:TEMP\HPIA.xml"
+    Write-Verbose "Invoke-WebRequest -Uri $BaseURL -OutFile $CabPath -UseBasicParsing"
+    Invoke-WebRequest -Uri $BaseURL -OutFile $CabPath -UseBasicParsing
+    $Expand = expand $CabPath $XMLPath
+    [xml]$XML = Get-Content $XMLPath
+    $SoftpaqList = $XML.ImagePal.Solutions.UpdateInfo
+    if ($SystemInfo){
+        $SysInfo = $XML.ImagePal.SystemInfo.System
+        return $SysInfo
+        break
+    }
+    return $SoftpaqList
+    
+}
+
+function Get-HPSoftPaqItems {
+    [CmdletBinding()]
+    param(
+    [Parameter(Position=0,mandatory=$false)]
+    [string] $Platform,
+    [Parameter(Position=1,mandatory=$true)]
+    [string] $osver,
+    [Parameter(Position=2,mandatory=$true)]
+    [ValidateSet("10.0","11.0")]
+    [string] $os
+    )
+    
+    
+    
+    if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64"){$Arch = '64'}
+    $CabPath = "$env:TEMP\HPIA.cab"
+    $XMLPath = "$env:TEMP\HPIA.xml"
+    if ($Platform){$MachinePlatform = $platform}
+    else {$MachinePlatform = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product}
+    
+    #Test Passed Parameters
+    $OSList = Get-HPOSSupport -Platform $MachinePlatform
+    if ($OS -eq "11.0"){
+        $OK = $OSList | Where-Object {$_.OSDescription -match "Windows 11"}
+        if ($null -eq $OK){
+            Write-Error "Your option of OS: $OS is not valid, This platform does not support Windows 11"
+            break
+        }
+    }
+    if ($OS -eq "10.0"){
+        $OK = $OSList | Where-Object {$_.OSDescription -match "Windows 10"}
+        if ($null -eq $OK){
+            Write-Error "Your option of OS: $OS is not valid, This platform does not support Windows 10"
+            break
+        }
+    }
+    $SupportedOSVers = $OSList.OSReleaseIdDisplay
+    if ($osver -notin $SupportedOSVers){
+        Write-Host -ForegroundColor red "Selected Release $OSVer is not supported by this Platform: $MachinePlatform"
+        Write-Error " Use Get-HPOSSupport to find list of options"
+        break
+    }
+    $BaseURL = ("https://hpia.hpcloud.hp.com/ref/$($MachinePlatform)/$($MachinePlatform)_$($Arch)_$($os).$($osver).cab").ToLower()
+    Write-Verbose "Invoke-WebRequest -Uri $BaseURL -OutFile $CabPath -UseBasicParsing"
+    Invoke-WebRequest -Uri $BaseURL -OutFile $CabPath -UseBasicParsing
+    $Expand = expand $CabPath $XMLPath
+    [xml]$XML = Get-Content $XMLPath
+    $SoftpaqList = $XML.ImagePal.Solutions.UpdateInfo
+    
+    return $SoftpaqList
+    
+}
+
+function Get-HPDriverPackLatest {
+    [CmdletBinding()]
+    param(
+    [Parameter(Position=0,mandatory=$false)]
+    [string]$Platform,
+    [switch]$URL,
+    [switch]$download
+    )
+    if ($Platform){$MachinePlatform = $platform}
+    else {$MachinePlatform = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product}
+    $OSList = Get-HPOSSupport -Platform $MachinePlatform
+    if (($OSList.OSDescription) -contains "Microsoft Windows 11"){
+        $OS = "11.0"
+        #Get the supported Builds for Windows 11 so we can loop through them
+        $SupportedWinXXBuilds = ($OSList| Where-Object {$_.OSDescription -match "11"}).OSReleaseIdDisplay | Sort-Object -Descending
+        if ($SupportedWinXXBuilds){
+            write-Verbose "Checking for Win $OS Driver Pack"
+            [int]$Loop_Index = 0
+            do {
+                Write-Verbose "Checking for Driver Pack for $OS $($SupportedWinXXBuilds[$loop_index])"
+                $DriverPack = Get-HPSoftPaqItems -osver $($SupportedWinXXBuilds[$loop_index]) -os $OS -Platform $MachinePlatform | Where-Object {$_.Category -match "Driver Pack"}
+                #$DriverPack = Get-SoftpaqList -Category Driverpack -OsVer $($SupportedWinXXBuilds[$loop_index]) -Os "Win11" -ErrorAction SilentlyContinue
+                
+                if (!($DriverPack)){$Loop_Index++;}
+                if ($DriverPack){
+                    Write-Verbose "Windows 11 $($SupportedWinXXBuilds[$loop_index]) Driver Pack Found"
+                }
+            }
+            while ($null -eq $DriverPack -and $loop_index -lt $SupportedWinXXBuilds.Count)
+        }
+    }
+    
+    if (!($DriverPack)){ #If no Win11 Driver Pack found, check for Win10 Driver Pack
+        if (($OSList.OSDescription) -contains "Microsoft Windows 10"){
+            $OS = "10.0"
+            #Get the supported Builds for Windows 10 so we can loop through them
+            $SupportedWinXXBuilds = ($OSList| Where-Object {$_.OSDescription -match "10"}).OSReleaseIdDisplay | Sort-Object -Descending
+            if ($SupportedWinXXBuilds){
+                write-Verbose "Checking for Win $OS Driver Pack"
+                [int]$Loop_Index = 0
+                do {
+                    Write-Verbose "Checking for Driver Pack for $OS $($SupportedWinXXBuilds[$loop_index])"
+                    $DriverPack = Get-HPSoftPaqItems -osver $($SupportedWinXXBuilds[$loop_index]) -os $OS  -Platform $MachinePlatform | Where-Object {$_.Category -match "Driver Pack"}
+                    #$DriverPack = Get-SoftpaqList -Category Driverpack -OsVer $($SupportedWinXXBuilds[$loop_index]) -Os "Win10" -ErrorAction SilentlyContinue
+                    if (!($DriverPack)){$Loop_Index++;}
+                    if ($DriverPack){
+                        Write-Verbose "Windows 10 $($SupportedWinXXBuilds[$loop_index]) Driver Pack Found"
+                    }
+                }
+                while ($null-eq $DriverPack  -and $loop_index -lt $SupportedWinXXBuilds.Count)
+            }
+        }
+    }
+    if ($DriverPack){
+        Write-Verbose "Driver Pack Found: $($DriverPack.Name) for Platform: $Platform"
+        if($PSBoundParameters.ContainsKey('Download')){
+            Save-WebFile -SourceUrl "https://$($DriverPack.URL)" -DestinationName "$($DriverPack.id).exe" -DestinationDirectory "C:\Drivers"
+        }
+        else{
+            if($PSBoundParameters.ContainsKey('URL')){
+                return "https://$($DriverPack.URL)"
+            }
+            else {
+                return $DriverPack
+            }
+        }
+    }
+    else {
+        Write-Verbose "No Driver Pack Found for Platform: $Platform"
+        return $false
+    }
+}
 function Get-DellSupportedModels {
     [CmdletBinding()]
     
@@ -98,18 +321,18 @@ function Get-DellSupportedModels {
 function Get-DCUUpdateList {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$False)]
-        [ValidateLength(4,4)]    
-        [string]$SystemSKUNumber,
-        [ValidateSet('bios','firmware','driver','application')]
-        [String[]]$updateType,
-        [ValidateSet('audio','video','network','chipset','storage','BIOS','Application')]
-        [String[]]$updateDeviceCategory,
-        [switch]$RAWXML,
-        [switch]$Latest,
-        [switch]$TLDR
+    [Parameter(Mandatory=$False)]
+    [ValidateLength(4,4)]    
+    [string]$SystemSKUNumber,
+    [ValidateSet('bios','firmware','driver','application')]
+    [String[]]$updateType,
+    [ValidateSet('audio','video','network','chipset','storage','BIOS','Application')]
+    [String[]]$updateDeviceCategory,
+    [switch]$RAWXML,
+    [switch]$Latest,
+    [switch]$TLDR
     )
-
+    
     
     $temproot = "$env:windir\temp"
     #$SystemSKUNumber = (Get-CimInstance -ClassName Win32_ComputerSystem).SystemSKUNumber
@@ -129,7 +352,7 @@ function Get-DCUUpdateList {
     }
     if (Test-Path $CabPathIndexModel){Remove-Item -Path $CabPathIndexModel -Force}
     
-
+    
     Invoke-WebRequest -Uri "http://downloads.dell.com/$($DellSKU.URL)" -OutFile $CabPathIndexModel -UseBasicParsing
     if (Test-Path $CabPathIndexModel){
         $null = expand $CabPathIndexModel $DellCabExtractPath\CatalogIndexPCModel.xml
@@ -182,10 +405,10 @@ function Get-DCUUpdateList {
 function Get-DellDeviceDetails {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$False)]
-        [ValidateLength(4,4)]    
-        [string]$SystemSKUNumber,
-        [string]$ModelLike
+    [Parameter(Mandatory=$False)]
+    [ValidateLength(4,4)]    
+    [string]$SystemSKUNumber,
+    [string]$ModelLike
     )
     
     $Manufacturer = (Get-CimInstance -ClassName Win32_ComputerSystem).Manufacturer
@@ -197,10 +420,10 @@ function Get-DellDeviceDetails {
     }
     <#
     if (!($ModelLike)){
-        $DellSKU = Get-DellSupportedModels | Where-Object {$_.systemID -match $SystemSKUNumber} | Select-Object -First 1
+    $DellSKU = Get-DellSupportedModels | Where-Object {$_.systemID -match $SystemSKUNumber} | Select-Object -First 1
     }
     else {
-        $DellSKU = Get-DellSupportedModels | Where-Object { $_.Model -match $ModelLike}
+    $DellSKU = Get-DellSupportedModels | Where-Object { $_.Model -match $ModelLike}
     }
     
     return $DellSKU | Select-Object -Property SystemID,Model
@@ -260,11 +483,11 @@ function Get-DellDriverPackXML {
 function Get-DellDeviceDriverPack {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$False)]
-        [ValidateLength(4,4)]    
-        [string]$SystemSKUNumber,
-        [ValidateSet('Windows10','Windows11')]
-        [string]$OSVer
+    [Parameter(Mandatory=$False)]
+    [ValidateLength(4,4)]    
+    [string]$SystemSKUNumber,
+    [ValidateSet('Windows10','Windows11')]
+    [string]$OSVer
     )
     
     $Manufacturer = (Get-CimInstance -ClassName Win32_ComputerSystem).Manufacturer
@@ -274,7 +497,7 @@ function Get-DellDeviceDriverPack {
         if ($Manufacturer -notmatch "Dell"){return "This Function is only for Dell Systems, or please provide a SKU"}
         $SystemSKUNumber = (Get-CimInstance -ClassName Win32_ComputerSystem).SystemSKUNumber
     }
-
+    
     $MoreData = Get-DellDriverPackXML
     $DriverPacks = $MoreData.DriverPackManifest.DriverPackage | Where-Object {$_.SupportedSystems.brand.model.systemid -eq $SystemSKUNumber}
     $DeviceDetails = $MoreData.DriverPackManifest.DriverPackage.SupportedSystems.brand.model | Where-Object {$_.systemid -eq $SystemSKUNumber} | Select-Object -First 1
@@ -304,21 +527,23 @@ function Get-DellDeviceDriverPack {
     }
     
     return $DriverPacksOBject 
-
+    
 }
 
 function Invoke-DriverDownloadExpand {
-[CmdletBinding()]
-param (
+    [CmdletBinding()]
+    param (
     [Parameter(Mandatory=$true)]
     [string]$URL,
     [Parameter(Mandatory=$true)]
     [string]$Name,
     [Parameter(Mandatory=$true)]
+    [string]$ID,
+    [Parameter(Mandatory=$true)]
     [string]$ToolsPath,
     [Parameter(Mandatory=$false)]
     [string]$DestinationPath
-)
+    )
     if ($DestinationPath){
         $dest = $DestinationPath
     }
@@ -332,12 +557,12 @@ param (
     if (!(Test-Path -Path $dest)) {
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
     }
-
+    
     Write-Host "Downloading: $URL"
-    $destFile = Request-DeployRCustomContent -ContentName $Name -ContentFriendlyName $Name -URL $URL
+    $destFile = Request-DeployRCustomContent -ContentName $ID -ContentFriendlyName $Name -URL $URL
     # Invoke-WebRequest -Uri $driverPack.Url -OutFile $destFile
     $GetItemOutFile = Get-Item $destFile
-
+    
     # Expand
     $ExpandFile = $GetItemOutFile.FullName
     Write-Verbose -Message "DriverPack: $ExpandFile"
@@ -349,12 +574,12 @@ param (
         
         if (-NOT (Test-Path "$DestinationPath")) {
             New-Item $DestinationPath -ItemType Directory -Force -ErrorAction Ignore | Out-Null
-    
+            
             Write-Verbose -Verbose "Expanding CAB Driver Pack to $DestinationPath"
             Expand -R "$ExpandFile" -F:* "$DestinationPath" | Out-Null
         }
         Continue
-}
+    }
     #=================================================
     #   Dell
     #=================================================
@@ -362,9 +587,9 @@ param (
         if ($GetItemOutFile.VersionInfo.FileDescription -match 'Dell') {
             Write-Verbose -Verbose "FileDescription: $($GetItemOutFile.VersionInfo.FileDescription)"
             Write-Verbose -Verbose "ProductVersion: $($GetItemOutFile.VersionInfo.ProductVersion)"
-    
+            
             $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-    
+            
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding Dell Driver Pack to $DestinationPath"
                 $null = New-Item -Path $DestinationPath -ItemType Directory -Force -ErrorAction Ignore | Out-Null
@@ -382,9 +607,9 @@ param (
             Write-Verbose -Message "InternalName: $($GetItemOutFile.VersionInfo.InternalName)"
             Write-Verbose -Message "OriginalFilename: $($GetItemOutFile.VersionInfo.OriginalFilename)"
             Write-Verbose -Message "ProductVersion: $($GetItemOutFile.VersionInfo.ProductVersion)"
-                        
+            
             $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-    
+            
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding HP Driver Pack to $DestinationPath"
                 & "$ToolsPath\7za.exe" -y x "$ExpandFile" -o"$DestinationPath" | Out-Host
@@ -399,9 +624,9 @@ param (
         if (($GetItemOutFile.VersionInfo.FileDescription -match 'Lenovo') -or ($GetItemOutFile.Name -match 'tc_') -or ($GetItemOutFile.Name -match 'tp_') -or ($GetItemOutFile.Name -match 'ts_') -or ($GetItemOutFile.Name -match '500w') -or ($GetItemOutFile.Name -match 'sccm_') -or ($GetItemOutFile.Name -match 'm710e') -or ($GetItemOutFile.Name -match 'tp10') -or ($GetItemOutFile.Name -match 'tp8') -or ($GetItemOutFile.Name -match 'yoga')) {
             Write-Verbose -Message "FileDescription: $($GetItemOutFile.VersionInfo.FileDescription)"
             Write-Verbose -Message "ProductVersion: $($GetItemOutFile.VersionInfo.ProductVersion)"
-    
+            
             $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-    
+            
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding Lenovo Driver Pack to $DestinationPath"
                 & "$ToolsPath\innoextract.exe" -e -d "$DestinationPath" "$ExpandFile" | Out-Host
@@ -414,7 +639,7 @@ param (
     #=================================================
     if ($GetItemOutFile.Extension -eq '.msi') {
         $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-    
+        
         if (-NOT (Test-Path "$DestinationPath")) {
             Write-Verbose -Verbose "Extracting MSI file to $DestinationPath"
             & "$ToolsPath\ExtractMSI\TwoPint.DeployR.ExtractMSI.exe" "$ExpandFile" "$DestinationPath" | Out-Host
@@ -426,7 +651,7 @@ param (
     #=================================================
     if ($GetItemOutFile.Extension -eq '.zip') {
         $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-    
+        
         if (-NOT (Test-Path "$DestinationPath")) {
             Write-Verbose -Verbose "Expanding ZIP Driver Pack to $DestinationPath"
             Expand-Archive -Path $ExpandFile -DestinationPath $DestinationPath -Force
@@ -438,7 +663,157 @@ param (
     #=================================================
     Write-Warning "Unable to expand $ExpandFile"
 }
+
+function Migrate-WinPEDrivers {
+    [CmdletBinding()]
+    param(
+        [string]$OfflineOSPath
+    )
+
+    $startTime = Get-Date
+    $WindowsPath = $OfflineOSPath
+
+    function timeDuration() {
+        $totalSeconds = [int]$args[0]
+        if ($totalSeconds -gt 0) { $time = New-TimeSpan -Seconds $totalSeconds }
+        else { $time = New-TimeSpan -Seconds 600 }
+        if ($time.Hours -gt 0) {
+            if ($time.Hours -eq 1) { $output += "$($time.Hours) Hour" }
+            else { $output += "$($time.Hours) Hours" }
+        }
+        if ($time.Minutes -gt 0) { 
+            if ($time.Minutes -eq 1) { $output += " $($time.Minutes) Minute" } 
+            else { $output += " $($time.Minutes) Minutes" }
+        }
+        if ($time.Seconds -gt 0) { 
+            if ($time.Seconds -eq 1) { $output += " $($time.Seconds) Second" }
+            else { $output += " $($time.Seconds) Seconds" }
+        } 
+        $output
+    }
+    
+    Write-Host "Grabbing all the drivers..."
+    $windrivers = Get-WindowsDriver -Online
+    $runningDrivers = Get-CimInstance -ClassName win32_systemdriver | Where-Object State -eq 'Running'
+    Write-Host "Found $($windrivers.Count) imported drivers and $($runningDrivers.Count) running drivers"
+    
+    $matchedDrivers = [System.Collections.Generic.List[PSCustomObject]]::new()
+    Write-Host "Starting match driver process..."
+    foreach ($run in $runningDrivers) {
+        $runName = $run.Name                       # e.g. "iaStorVD"
+        $runPath = $run.PathName                   # e.g. X:\Windows\System32\drivers\iaStorVD.sys
+        $baseNoExt = [IO.Path]::GetFileNameWithoutExtension($runPath)
+        
+        # get the hash of the running .sys file
+        $runHash = (Get-FileHash -Path $runPath -Algorithm SHA256).Hash
+        
+        # Find all packages for this driver base name
+        $candidates = $windrivers | Where-Object {
+            [IO.Path]::GetFileNameWithoutExtension($_.CatalogFile) -ieq $baseNoExt
+        }
+        $foundOne = $false
+        foreach ($pkg in $candidates) {
+            # Derive the driver‐store folder from the INF path
+            $storeFolder = Split-Path -Path $pkg.OriginalFileName
+            
+            # Build the path to the .sys in that folder
+            $candidateSys = Join-Path $storeFolder ("$baseNoExt.sys")
+            if (-not (Test-Path $candidateSys)) {
+                Write-Host "Skipping $($pkg.CatalogFile) - no SYS file at $candidateSys" -Severity 2
+                continue
+            }
+            
+            try {
+                $candHash = (Get-FileHash -Path $candidateSys -Algorithm SHA256).Hash
+            }
+            catch {
+                Write-Host "ERROR: Could not hash $candidateSys : $_" -Severity 3
+                continue
+            }
+            
+            
+            if (Test-Path $candidateSys) {
+                $candHash = (Get-FileHash -Path $candidateSys -Algorithm SHA256).Hash
+                #We are doing a hash match as different versions of the same driver can be imported
+                if ($candHash -eq $runHash) {
+                    # WOW! (hubble reference)
+                    $matchedDrivers.Add([PSCustomObject]@{
+                        DriverName       = $runName
+                        DriverPath       = $runPath
+                        CatalogFile      = $pkg.CatalogFile
+                        OriginalFileName = $pkg.OriginalFileName
+                        ClassName        = $pkg.ClassName
+                        ClassGuid        = $pkg.ClassGuid
+                    })
+                    Write-Host "Matched $runName -> $($pkg.CatalogFile) (store = $storeFolder)"
+                    $foundOne = $true
+                    break
+                }
+            }
+        }
+        # You can uncomment this line for extreme verbose messages, but typically not needed
+        # if (-not $foundOne) {
+        #     Write-Host "WARNING: No hash match found for $runName among $($candidates.Count) candidates" -Severity 2
+        # }
+    }
+    if ($matchedDrivers.Count -eq 0) {
+        Write-Host "ERROR: No matched drivers at all. Exiting script." -Severity 3
+        exit 1
+    }
+    Write-Host "Completing matching imported and running drivers. Found $($matchedDrivers.count) matched drivers total."
+    # set up drivers folder
+    $exportRoot = "$($env:SystemDrive)\ExportedDrivers"
+    
+    # create it if it doesn't already exist
+    if (-not (Test-Path $exportRoot)) {
+        Write-Host "Creating $exportRoot to export drivers"
+        New-Item -Path $exportRoot -ItemType Directory | Out-Null
+    }
+    Write-Host "Starting export process for injection"
+    foreach ($m in $matchedDrivers) {
+        # OriginalFileName is the path to the .inf in its DriverStore folder
+        $storeFolder = Split-Path -Path $m.OriginalFileName
+        
+        # pull just the leaf folder name (i.e. "iastorvd.inf_amd64_da06297c4b8e9167")
+        $leafName = Split-Path -Path $storeFolder -Leaf
+        $destFolder = Join-Path $exportRoot $leafName
+        
+        # copy the entire folder 
+        Copy-Item -Path $storeFolder -Destination $destFolder -Recurse -Force
+        Write-Host "Copied $storeFolder -> $destFolder"
+    }
+    
+    Write-Host "Starting DISM injection: /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse"
+    & Dism /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: DISM exited with $LASTEXITCODE" -Severity 3
+    }
+    else {
+        Write-Host "DISM injection completed successfully."
+    }
+    $endTime = Get-Date
+    $ScriptDuration = timeDuration $((New-TimeSpan -Start $startTime -End $endTime).TotalSeconds)
+    $ScriptDuration = $ScriptDuration.Trim()
+    Write-Output "Total export process took: $ScriptDuration"
+    
+}
 #endregion
+
+Write-Host "Attempting to Migrate WInPE Drivers to Offline OS as fallback"
+Migrate-WinPEDrivers -OfflineOSPath "$($TargetSystemDrive)\"
+write-host "=============================================================="
+write-host "Continuing with OEM Feeds to Get Drivers"
+#Confirm compatibility with HP Model if HP Device
+if ($MakeAlias -eq "HP"){
+    if (Test-HPIASupport){
+        Write-Host "This Platform is supported by HPIA"
+    }
+    else {
+        Write-Host "This Platform is not supported by HPIA"
+        exit 0
+    }
+}
+
 
 #Find 7za.exe
 if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"){
@@ -474,13 +849,15 @@ if ($UseStandardDriverPack -eq "true") {
         if ($null -ne $DriverPack) {
             $URL = $DriverPack.'#text'
             $Name = ($DriverPack.'#text').split("/") | Select-Object -last 1
+            $ID = $Name
         }
     }
     if ($MakeAlias -eq "HP"){
-        $DriverPack = Get-HPDeviceDriverPack -OSVer Windows11
+        $DriverPack = Get-HPDriverPackLatest
         if ($null -ne $DriverPack) {
-            $URL = $DriverPack.'#text'
-            $Name = ($DriverPack.'#text').split("/") | Select-Object -last 1
+            $URL = "http://$($DriverPack.url)"
+            $Name = $DriverPack.Name
+            $ID = $DriverPack.id
         }
     }
     if ($MakeAlias -eq "Dell"){
@@ -488,14 +865,15 @@ if ($UseStandardDriverPack -eq "true") {
         if ($null -ne $DriverPack) {
             $URL = $DriverPack.URL
             $Name = $DriverPack.FileName
+            $ID = $DriverPack.ReleaseID
         }
     }
-
+    
     if ($null -ne $DriverPack) {
         Write-Host "Found Driver Pack"
         Write-Output $DriverPack
         Write-Host "Downloading and extracting  Driver Pack to $ExtractedDriverLocation"
-        Invoke-DriverDownloadExpand -URL $URL -Name $Name -ToolsPath $ToolsPath
+        Invoke-DriverDownloadExpand -URL $URL -Name $Name -ID $ID -ToolsPath $ToolsPath -DestinationPath $ExtractedDriverLocation
     } else {
         Write-Host "No Driver Pack found for the specified model."
     }
@@ -504,7 +882,7 @@ if ($UseStandardDriverPack -eq "true") {
 else {
     Write-Host "Scanning for $MakeAlias Drivers to Apply to Offline OS"
     if ($MakeAlias -eq "Dell") {
-
+        
         $Drivers = Get-DCUUpdateList -Latest -updateType driver
         #Prune Bluetooth, Wi-Fi, Firmware
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Bluetooth"}
@@ -520,8 +898,7 @@ else {
         Write-Host "Found $($Drivers.Count) drivers to process after Cleanup"
     }
     if ($MakeAlias -eq "HP") {
-        $Drivers = Get-SoftpaqList
-        $Drivers = $Drivers | Where-Object {$_.Name -notmatch "BIOS" -and $_.Name -notmatch "Firmware" -and $_.Name -notmatch "FW"}
+        $Drivers = Get-HPSoftpaqListLatest | where-object {$_.Category -match "Driver" -and $_.Category -notmatch "Firmware" -and $_.Category -notmatch "Manageability" -and $_.Category -notmatch "Enabling"}
         if ($IncludeGraphics -eq $false) {
             $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
         }
@@ -546,31 +923,33 @@ else {
     }
     Write-Host "Found $($Drivers.Count) drivers to process."
     Write-Output $Drivers.Name
-
+    
     
     Write-Host "Starting Downloading Drivers to $DownloadContentPath"
     Foreach ($Driver in $Drivers){
         #Generalize Variable Names
         if ($MakeAlias -eq "Dell") {
-            $Name = $Driver.FileName
-            $URL = $Driver.URL
-            $ID = $Driver.ReleaseID
+            $Name = $Driver.Name
+            $URL = $Driver.Path
+            $ID = $Driver.PackageID
         }
         if ($MakeAlias -eq "HP") {
-            $Driver.PackageExe = $Driver.URL
+            $Name = $Driver.Name
+            $URL = $Driver.Url
+            $ID = $Driver.Id
         }
         if ($MakeAlias -eq "Lenovo") {
             $Name = $Driver.Name
             $URL = $Driver.PackageExe
             $ID = $Driver.Id
         }
-
+        
         Write-Host "Driver: $NAME" -ForegroundColor Magenta
         if ($null -ne $URL){
             
             
             Write-Host "Downloading Driver from: $URL" -ForegroundColor Cyan
-
+            
             #Start-BitsTransfer -Source "https://$($Driver.PackageExe)" -Destination "$DownloadContentPath\$($Driver.id).exe" -DisplayName $Driver.Name -Description $Driver.Description -ErrorAction SilentlyContinue
             try {
                 #Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "$($Driver.PackageExe)" -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
@@ -604,7 +983,19 @@ else {
             }
             Write-Host "Expanding Driver to $ExtractedDriverPath"
             if ($MakeAlias -eq "Dell") {
-                Start-Process -FilePath $SevenZipPath -ArgumentList "x $ExpandFile -o$ExtractedDriverPath -y" -Wait -NoNewWindow -PassThru
+                try {
+                    Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$ExtractedDriverPath`"" -Wait -NoNewWindow -PassThru
+                } catch {
+                    try {
+                        Write-Host "Failed to expand Dell driver, trying with 7zip" -ForegroundColor Yellow
+                        Start-Process -FilePath $SevenZipPath -ArgumentList "x $ExpandFile -o$ExtractedDriverPath -y" -Wait -NoNewWindow -PassThru
+                    } catch {
+                        Write-Host "Failed to expand Dell driver with Inno" -ForegroundColor Red
+                        Start-Process -FilePath $InnoExtractPath -ArgumentList "-e -d $ExtractedDriverPath $ExpandFile" -Wait -NoNewWindow -PassThru
+                    }
+                }
+                #Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$ExtractedDriverPath`"" -Wait -NoNewWindow -PassThru
+                #Start-Process -FilePath $SevenZipPath -ArgumentList "x $ExpandFile -o$ExtractedDriverPath -y" -Wait -NoNewWindow -PassThru
             }
             if ($MakeAlias -eq "HP") {
                 Start-Process -FilePath $SevenZipPath -ArgumentList "x $ExpandFile -o$ExtractedDriverPath -y" -Wait -NoNewWindow -PassThru
@@ -627,6 +1018,6 @@ if ($ApplyDrivers -eq $false){
 else {
     Write-Host -ForegroundColor Cyan "Applying Drivers to Offline OS at $TargetSystemDrive from $ExtractedDriverLocation"
     #Add-WindowsDriver -Path "$($TargetSystemDrive)\" -Driver "$ExtractedDriverLocation" -Recurse -ErrorAction SilentlyContinue -LogPath $LogPath\AddDrivers.log
-
+    
     & Dism /Image:"$($TargetSystemDrive)\" /Add-Driver /Driver:$ExtractedDriverLocation /Recurse
 }
