@@ -1,15 +1,31 @@
 
-Import-Module DeployR.Utility
+try {
+    Import-Module DeployR.Utility
+    # Get the provided variables
+    [String]$IncludeGraphics = ${TSEnv:IncludeGraphics}
+    [String]$IncludeAudio = ${TSEnv:IncludeAudio}
+    [String]$TargetSystemDrive = ${TSEnv:OSDTARGETSYSTEMDRIVE}
+    [String]$LogPath = ${TSEnv:_DEPLOYRLOGS}
+    [String]$UseStandardDriverPack = ${TSEnv:UseStandardDriverPack}
+    [switch]$ApplyDrivers = $true
+    [String]$MakeAlias = ${TSEnv:MakeAlias}
+    [String]$ModelAlias = ${TSEnv:ModelAlias}
+}
+catch {
+    <#Do this if a terminating exception happens#>
+    [String]$IncludeGraphics = "False"
+    [String]$IncludeAudio = "False"
+    [String]$TargetSystemDrive = "C:"
+    [String]$LogPath = "C:\Windows\Temp\"
+    [String]$UseStandardDriverPack = "False"
+    [switch]$ApplyDrivers = $true
+    $Gather = iex (irm gather.garytown.com)
+    [String]$MakeAlias = $Gather.MakeAlias
+    [String]$ModelAlias = $Gather.ModelAlias
+}
 
-# Get the provided variables
-[String]$IncludeGraphics = ${TSEnv:IncludeGraphics}
-[String]$IncludeAudio = ${TSEnv:IncludeAudio}
-[String]$TargetSystemDrive = ${TSEnv:OSDTARGETSYSTEMDRIVE}
-[String]$LogPath = ${TSEnv:_DEPLOYRLOGS}
-[String]$UseStandardDriverPack = ${TSEnv:UseStandardDriverPack}
-[switch]$ApplyDrivers = $true
-[String]$MakeAlias = ${TSEnv:MakeAlias}
-[String]$ModelAlias = ${TSEnv:ModelAlias}
+
+
 
 
 
@@ -578,7 +594,7 @@ function Invoke-DriverDownloadExpand {
             Write-Verbose -Verbose "Expanding CAB Driver Pack to $DestinationPath"
             Expand -R "$ExpandFile" -F:* "$DestinationPath" | Out-Null
         }
-        Continue
+        return
     }
     #=================================================
     #   Dell
@@ -595,7 +611,7 @@ function Invoke-DriverDownloadExpand {
                 $null = New-Item -Path $DestinationPath -ItemType Directory -Force -ErrorAction Ignore | Out-Null
                 Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$DestinationPath`"" -Wait
             }
-            Continue
+            return
         }
     }
     #=================================================
@@ -614,7 +630,7 @@ function Invoke-DriverDownloadExpand {
                 Write-Verbose -Verbose "Expanding HP Driver Pack to $DestinationPath"
                 & "$ToolsPath\7za.exe" -y x "$ExpandFile" -o"$DestinationPath" | Out-Host
             }
-            Continue
+            return
         }
     }
     #=================================================
@@ -631,7 +647,7 @@ function Invoke-DriverDownloadExpand {
                 Write-Verbose -Verbose "Expanding Lenovo Driver Pack to $DestinationPath"
                 & "$ToolsPath\innoextract.exe" -e -d "$DestinationPath" "$ExpandFile" | Out-Host
             }
-            Continue
+            return
         }
     }
     #=================================================
@@ -644,7 +660,7 @@ function Invoke-DriverDownloadExpand {
             Write-Verbose -Verbose "Extracting MSI file to $DestinationPath"
             & "$ToolsPath\ExtractMSI\TwoPint.DeployR.ExtractMSI.exe" "$ExpandFile" "$DestinationPath" | Out-Host
         }
-        Continue
+        return
     }
     #=================================================
     #   Zip
@@ -656,7 +672,7 @@ function Invoke-DriverDownloadExpand {
             Write-Verbose -Verbose "Expanding ZIP Driver Pack to $DestinationPath"
             Expand-Archive -Path $ExpandFile -DestinationPath $DestinationPath -Force
         }
-        Continue
+        return
     }
     #=================================================
     #   Everything Else
@@ -861,7 +877,8 @@ if ($UseStandardDriverPack -eq "true") {
         }
     }
     if ($MakeAlias -eq "Dell"){
-        $DriverPack = Get-DellDeviceDriverPack -OSVer Windows11
+
+        $DriverPack = Get-DellDeviceDriverPack | Select-Object -first 1
         if ($null -ne $DriverPack) {
             $URL = $DriverPack.URL
             $Name = $DriverPack.FileName
@@ -876,6 +893,7 @@ if ($UseStandardDriverPack -eq "true") {
         Invoke-DriverDownloadExpand -URL $URL -Name $Name -ID $ID -ToolsPath $ToolsPath -DestinationPath $ExtractedDriverLocation
     } else {
         Write-Host "No Driver Pack found for the specified model."
+        exit 0
     }
 }
 #Downloading Driver Updates directly from the OEM, extracting and applying them to the Offline OS
