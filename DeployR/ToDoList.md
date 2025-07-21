@@ -6,5 +6,6 @@
 - Language stuff
 - Company Branding - Registered to: etc
 - Defender Updates
-- OEM Tools Offline Mode
-- 
+- OEM Tools Offline Mode (offline repo for updates)
+- create step to enable Features like HyperV with option to reboot.
+- create script for easy import and overwrite of updated steps and content for sharing 
