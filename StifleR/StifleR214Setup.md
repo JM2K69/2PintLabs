@@ -137,3 +137,11 @@ Registry: HKLM:\Software\2Pint Software\StilfeR\Dashboard
 
 Config File: C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json
 ![Image01](media/DashBoardConfig01.png)
+
+
+### Loop of Auth Prompt.
+
+I ran into this on my server as well as a couple of customers.  The fix was to add the FQDN into the registery as explained here:
+https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/accessing-server-locally-with-fqdn-cname-alias-denied#method-1-recommended-create-the-local-security-authority-host-names-that-can-be-referenced-in-a-ntlm-authentication-request
+
+![Image01](media/DashBoardTroubleShooting01.png)
