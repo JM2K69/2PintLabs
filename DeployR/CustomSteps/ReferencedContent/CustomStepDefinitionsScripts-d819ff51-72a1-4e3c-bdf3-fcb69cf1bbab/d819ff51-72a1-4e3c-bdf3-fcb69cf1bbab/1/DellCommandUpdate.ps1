@@ -15,6 +15,7 @@ try {
 }
 catch {}
 if (Get-Module -name "DeployR.Utility"){
+    $inTS = $true
     # Get the provided variables
     $updateTypeBIOSFirmware = ${TSEnv:updateTypeBIOSFirmware}
     $updateTypeDrivers = ${TSEnv:updateTypeDrivers}
@@ -286,9 +287,9 @@ Function Get-DCUAppUpdates {
                         Write-Progress -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete $PercentComplete
                     }
                     until ($Process.HasExited)
-
+                    
                     write-output "Update Complete with Exitcode: $($Process.ExitCode)"
-                    write-process -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 100
+                    Write-Progress -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 100
                     If($Process -ne $null -and $Process.ExitCode -eq '2'){
                         Write-Verbose "Reboot Required"
                     }
@@ -416,7 +417,7 @@ function Invoke-DCU {
         Start-Sleep -Milliseconds 300
         
         #Read in the DISM Logfile
-        $Content = Get-Content -Path $LogFile -ReadCount 1
+        $Content = Get-Content -Path $LogFile -ReadCount 1 -ErrorAction SilentlyContinue
         $LastLine = $Content | Select-Object -Last 1
         #$LastLine = ($LastLine.Split(':') | Select-Object -Last 1).Trim()
         if ($LastLine){
@@ -497,6 +498,7 @@ function Invoke-DCU {
         Write-Host "Description: $($ExitInfo.Description)"
         Write-Host "Resolution: $($ExitInfo.Resolution)"
     }
+    return $DCUApply.ExitCode
 }
 function Get-DCUUpdateList {
     [CmdletBinding()]
@@ -740,8 +742,20 @@ else {
     Write-Host "=============================================================================="
     Write-Host "Invoke Dell Command Update"
     write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityRating -LogPath $LogPath"
-    Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityRating -LogPath $LogPath
+    $RunDCU = Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityRating -LogPath $LogPath
     Write-Host "Run Dell Command Update Step Complete"
+    if ($RunDCU -eq 1){
+        Write-Host "Dell Command Update completed with exit code 1, indicating a reboot is required." -ForegroundColor Yellow
+        # If running in a task sequence, set the SMSTSRebootRequested variable
+        if ($inTS) {
+            Write-Host "Setting SMSTSRebootRequested to true for task sequence." -ForegroundColor Yellow
+            ${TSEnv:SMSTSRebootRequested} = $true
+        }
+        else {
+            Write-Host "Please reboot the system to apply changes." -ForegroundColor Yellow
+        }
+        
+    }
     Write-Host "=============================================================================="
 }
 

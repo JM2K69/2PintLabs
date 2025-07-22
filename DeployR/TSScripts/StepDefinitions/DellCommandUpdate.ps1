@@ -288,7 +288,7 @@ Function Get-DCUAppUpdates {
                     until ($Process.HasExited)
 
                     write-output "Update Complete with Exitcode: $($Process.ExitCode)"
-                    write-process -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 100
+                    Write-Progress -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 100
                     If($Process -ne $null -and $Process.ExitCode -eq '2'){
                         Write-Verbose "Reboot Required"
                     }
