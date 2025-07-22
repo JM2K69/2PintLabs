@@ -41,7 +41,7 @@ if ($DisableWindowsConsumerFeatures -eq $true) {
     try { $reg.Handle.Close() } catch {}
 
 }
-# Removes Widgets from the Taskbar
+# Removes Widgets from the Lock Screen
 if ($DisableWidgetsOnLockScreen -eq $true) {
     <#  This isn't working as I'd expected, so I'm going to try a different method
     Write-Host "Attempting to run: DisableWidgetsOnLockScreen"
@@ -52,10 +52,14 @@ if ($DisableWidgetsOnLockScreen -eq $true) {
     $reg = New-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenWidgetsEnabled" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
     #>
+    Write-Host "Attempting to run: DisableWidgetsOnLockScreen System Wide"
+    New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -ItemType directory -Force | Out-Null
+    New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "DisableWidgetsOnLockScreen" -PropertyType Dword -value 0 -Force | Out-Null
+
     [GC]::Collect()
     Write-Host "Mounting Default User Registry Hive (REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT)"
     REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
-    Write-Host "Attempting to run: DisableWidgetsOnLockScreen"
+    Write-Host "Attempting to run: DisableWidgetsOnLockScreen Default Profile"
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Lock Screen" -Name "LockScreenWidgetsEnabled" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
     Start-Sleep -Seconds 1
