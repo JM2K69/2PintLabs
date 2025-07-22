@@ -176,8 +176,13 @@ Set-DeployRHost "http://localhost:7282"
 #Import Content for Steps
 $DownloadPath = "D:\DeployRGitHubImports"
 
-Get-DeployRStepsFromGitHub -GitHubRepo "2PintLabs/DeployR" -GitHubPath "CustomSteps" -DownloadPath $DownloadPath
-
+try {
+    Get-DeployRStepsFromGitHub -DownloadPath $DownloadPath
+}
+catch {
+    Write-Error "Failed to download steps from GitHub: $_"
+    exit 0
+}
 #Get Steps info from the Download Path but Exclude the ReferencedContent folder 
 if (Test-Path -Path "$DownloadPath\ReferencedContent") {
     Get-ChildItem -Path "$DownloadPath\ReferencedContent" -Directory  | ForEach-Object {
@@ -209,6 +214,6 @@ Get-ChildItem -Path $DownloadPath -Directory | Where-Object {$_.Name -ne "Refere
     Get-ChildItem -path $StepFolder -File | Where-Object {$_.Extension -eq ".json"} | ForEach-Object {
         $StepFile = $_.FullName
         Write-Host "Importing step definition from file: $StepFile" -ForegroundColor Yellow
-        Import-DeployRStepDefinition -SourceFile $StepFile
+        Import-DeployRStepDefinition -SourceFile $StepFile -Force
     }
 }
