@@ -920,11 +920,11 @@ if (-not (Get-Module -Name DeployR.Utility)) {
 }
 
 #Build Download Content Location
-$DownloadContentPath = "$TargetSystemDrive\Drivers\Downloads"
+$DownloadContentPath = "$TargetSystemDrive\Drivers\Dls"
 if (!(Test-Path -Path $DownloadContentPath)) {
     New-Item -ItemType Directory -Path $DownloadContentPath -Force | Out-Null
 }
-$ExtractedDriverLocation = "$TargetSystemDrive\Drivers\Extracted"
+$ExtractedDriverLocation = "$TargetSystemDrive\Drivers\Ex"
 if (!(Test-Path -Path $ExtractedDriverLocation)) {
     New-Item -ItemType Directory -Path $ExtractedDriverLocation -Force | Out-Null
 }
@@ -937,7 +937,7 @@ if ($UseStandardDriverPack -eq "true") {
         if ($null -ne $DriverPack) {
             $URL = $DriverPack.'#text'
             $Name = ($DriverPack.'#text').split("/") | Select-Object -last 1
-            $ID = $Name
+            $ID = (Get-LnvMachineType)
         }
     }
     if ($MakeAlias -eq "HP"){
