@@ -1162,5 +1162,6 @@ else {
         
     }
     until (!(Get-Process -Name DISM -ErrorAction SilentlyContinue))
+    exit 0
     
 }
