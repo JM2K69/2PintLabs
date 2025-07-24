@@ -1,3 +1,16 @@
+# Requires -Version 7.0
+# Requires -RunAsAdministrator
+
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Error "This script requires PowerShell 7 or higher. Current version: $($PSVersionTable.PSVersion)"
+    exit 1
+}
+
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "This script must be run as Administrator."
+    exit 1
+}
+
 Function Get-DeployRStepsFromGitHub {<#
 .SYNOPSIS
     Downloads DeployR CustomSteps from GitHub repository and imports them into DeployR
@@ -40,7 +53,7 @@ Function Get-DeployRStepsFromGitHub {<#
     Write-Host "DeployR CustomSteps GitHub Importer" -ForegroundColor Green
     Write-Host "====================================" -ForegroundColor Green
     Write-Host "Repository: $GitHubBrowseUrl" -ForegroundColor Cyan
-    Write-Host "Download Path: $((Resolve-Path $DownloadPath -ErrorAction SilentlyContinue) ?? (Join-Path (Get-Location) $DownloadPath))" -ForegroundColor Cyan
+    #Write-Host "Download Path: $((Resolve-Path $DownloadPath -ErrorAction SilentlyContinue) ?? (Join-Path (Get-Location) $DownloadPath))" -ForegroundColor Cyan
     Write-Host ""
     
     # Create download directory if it doesn't exist
