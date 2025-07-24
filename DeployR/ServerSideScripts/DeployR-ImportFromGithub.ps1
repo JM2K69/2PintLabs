@@ -11,6 +11,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit 1
 }
 
+#Region Functions
 Function Get-DeployRStepsFromGitHub {<#
 .SYNOPSIS
     Downloads DeployR CustomSteps from GitHub repository and imports them into DeployR
@@ -177,6 +178,7 @@ Function Get-DeployRStepsFromGitHub {<#
     Write-Host "Script completed." -ForegroundColor Green
     
 }
+#EndRegion Functions
 
 <# for Import Reference
 dir c:\temp\ContentBackup -File | Import-DeployRContentItem 
@@ -202,10 +204,10 @@ if (Test-Path -Path "$DownloadPath\ReferencedContent") {
         $StepFolder = $_.FullName
         Write-Host "Importing Custom Step from: $StepFolder" -ForegroundColor Cyan
         Get-ChildItem -path $StepFolder -File | Where-Object {$_.Extension -eq ".json"} | ForEach-Object {
-            $StepFile = $_.FullName
-            Write-Host "Importing step definition from file: $StepFile" -ForegroundColor Yellow
+            $StepFile = $_.FullName           
             $StepJSON = Get-Content -Path $StepFile -Raw | ConvertFrom-Json
-            if (Get-DeployRContentItem -Id $StepJSON.id) {
+            write-host "Checking if step definition already exists: $StepFile" -ForegroundColor Yellow
+            if (Get-DeployRContentItem -Id $StepJSON.id -ErrorAction SilentlyContinue) {
                 Write-Host "Content item already exists: $($StepJSON.name) | $($StepJSON.id)" -ForegroundColor Yellow
                 $SourcePath = Join-Path -Path $StepFolder -ChildPath (Get-ChildItem $StepFolder -Directory).Name
                 $ContentVersions = Get-ChildItem -Path $SourcePath -Directory
@@ -214,6 +216,7 @@ if (Test-Path -Path "$DownloadPath\ReferencedContent") {
                     Update-DeployRContentItemContent -ContentId $StepJSON.id -SourceFolder $version.FullName -ContentVersion $version.Name
                 }
             } else {
+                Write-Host "Importing step definition from file: $StepFile" -ForegroundColor Yellow
                 Import-DeployRContentItem -SourceFile $StepFile
             }
         }
