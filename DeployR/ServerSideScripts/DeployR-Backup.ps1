@@ -30,9 +30,12 @@ function Get-ConnectionSpecificDNSSuffix {
 }
 
 # Usage
-$Suffix = Get-ConnectionSpecificDNSSuffix
+$Suffix = Get-ConnectionSpecificDNSSuffix | Select-Object -First 1
 $ComputerFQDN = "$env:COMPUTERNAME.$Suffix"
-
+#Only Do SYnc Backups from the OnPrem DeployR Server
+if ($ComputerFQDN -eq "214-DEPLOYR.2p.garytown.com") {
+    $EnableBackup2GitHub = $true
+}
 #OneDriveBackup
 $OneDriveBackupPath = "C:\Users\gary.blok\OneDrive - garytown\DeployR-Sync\$ComputerFQDN"
 
@@ -76,6 +79,7 @@ if ($LatestBackup) {
         Write-Host "Removing existing folder: $DestinationPath" -ForegroundColor Yellow
         Remove-Item -Path $DestinationPath -Recurse -Force
     }
+    Write-Host "Backing up to destination folder: $DestinationPath" -ForegroundColor Cyan
     Copy-Item -Path $LatestBackup.FullName -Destination $DestinationPath -Recurse
 } else {
     Write-Host "No backups found in $BackupLocation" -ForegroundColor Red
@@ -103,8 +107,8 @@ if ($EnableBackup2GitHub) {
             write-host "Backing up content item: $($ContentItemInfo.name) | $($ContentItemInfo.id)" -ForegroundColor Cyan
             $ExportContentFolderName = "$($ContentItemInfo.name)-$($ContentItemInfo.id)"
             if (Test-Path -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName") {
-                Write-Host "Removing existing folder: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Yellow
-                Remove-Item -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName" -Recurse -Force
+                #Write-Host "Removing existing folder: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Yellow
+                #Remove-Item -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName" -Recurse -Force
                 Start-Sleep -Milliseconds 100
             }
             Write-Host "Exporting content item to: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Cyan
