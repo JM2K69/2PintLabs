@@ -213,6 +213,7 @@ Get-ChildItem -Path $DownloadPath -Directory | Where-Object {$_.Name -ne "Refere
     Write-Host "Importing Custom Step from: $StepFolder" -ForegroundColor Cyan
     Get-ChildItem -path $StepFolder -File | Where-Object {$_.Extension -eq ".json"} | ForEach-Object {
         $StepFile = $_.FullName
+        $StepJSON = Get-Content -Path $StepFile -Raw | ConvertFrom-Json
         Write-Host "Importing step definition from file: $StepFile" -ForegroundColor Yellow
         Import-DeployRStepDefinition -SourceFile $StepFile -Force
     }
