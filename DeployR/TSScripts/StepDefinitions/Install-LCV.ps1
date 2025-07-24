@@ -25,21 +25,40 @@ write-host "TurnOffMicrophoneSettings: $TurnOffMicrophoneSettings"
 function Install-LenovoVantage {
     [CmdletBinding()]
     param (
-        [switch]$IncludeSUHelper = $true
+    [switch]$IncludeSUHelper = $true
     )
     # Define the URL and temporary file path - https://support.lenovo.com/us/en/solutions/hf003321-lenovo-vantage-for-enterprise
     #$url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2401.29.0.zip"
     $url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2501.15.0_v3.zip"
     $tempFilePath = "C:\Windows\Temp\lenovo_vantage.zip"
     $tempExtractPath = "C:\Windows\Temp\LenovoVantage"
-    # Create a new BITS transfer job
-    $bitsJob = Start-BitsTransfer -Source $url -Destination $tempFilePath -DisplayName "Downloading to $tempFilePath"
-
-    # Wait for the BITS transfer job to complete
-    while ($bitsJob.JobState -eq "Transferring") {
-        Start-Sleep -Seconds 2
+    $NAME = "Lenovo Vantage"
+    try {
+        #Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "$($Driver.PackageExe)" -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
+        $destFile = Request-DeployRCustomContent -ContentName "LCV" -ContentFriendlyName $NAME -URL $URL -DestinationPath $tempFilePath -ErrorAction SilentlyContinue
+        $GetItemOutFile = Get-Item $destFile
+        $ExpandFile = $GetItemOutFile.FullName
+        if (Test-Path -path $ExpandFile) {
+            Write-Host "Downloaded Content to: $ExpandFile" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "Failed to download Content: $Name" -ForegroundColor red
+        Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
+        $ExpandFile = Join-Path -Path $DownloadContentPath -ChildPath "$ID.exe"
+        Invoke-WebRequest -Uri $URL -OutFile $ExpandFile -UseBasicParsing
     }
+    <# switched to process above.  Will leave this here for reference for now
 
+        # Create a new BITS transfer job
+        $bitsJob = Start-BitsTransfer -Source $url -Destination $tempFilePath -DisplayName "Downloading to $tempFilePath"
+        
+        # Wait for the BITS transfer job to complete
+        while ($bitsJob.JobState -eq "Transferring") {
+            Start-Sleep -Seconds 2
+        }
+
+    #>
+    
     # Check if the transfer was successful
     if (Test-Path -Path $tempFilePath) {
         # Start the installation process
@@ -47,16 +66,16 @@ function Install-LenovoVantage {
         Write-Host -ForegroundColor Cyan " Extracting $tempFilePath to $tempExtractPath"
         if (test-path -path $tempExtractPath) {Remove-Item -Path $tempExtractPath -Recurse -Force}
         Expand-Archive -Path $tempFilePath -Destination $tempExtractPath
-
+        
     } else {
         Write-Host "Failed to download the file."
         return
     }
-
+    
     #Lenovo Vantage Service
     Write-Host -ForegroundColor Cyan " Installing Lenovo Vantage Service..."
     Invoke-Expression -command "$tempExtractPath\VantageService\Install-VantageService.ps1"
-
+    
     #Lenovo Vantage Batch File
     write-host -ForegroundColor Cyan " Installing Lenovo Vantage...batch file..."
     $ArgumentList = "/c $($tempExtractPath)\setup-commercial-vantage.bat"
@@ -70,7 +89,7 @@ function Install-LenovoVantage {
     } else {
         Write-Host -ForegroundColor Red "Lenovo Vantage failed with exit code $($InstallProcess.ExitCode)."
     }
-
+    
     if ($IncludeSUHelper){
         $InstallProcess = Start-Process -FilePath $tempExtractPath\SystemUpdate\SUHelperSetup.exe -ArgumentList "/VERYSILENT /NORESTART" -Wait -PassThru
         if ($InstallProcess.ExitCode -eq 0) {
@@ -85,24 +104,24 @@ function Install-LenovoVantage {
 function Set-LenovoVantage {
     [CmdletBinding()]
     param (
-        [ValidateSet('True','False')]
-        [string]$AcceptEULAAutomatically = 'True',
-        [ValidateSet('True','False')]
-        [string]$WarrantyInfoHide,
-        [ValidateSet('True','False')]
-        [string]$WarrantyWriteWMI = 'True',
-        [ValidateSet('True','False')]
-        [string]$MyDevicePageHide,
-        [ValidateSet('True','False')]
-        [string]$WiFiSecurityPageHide,
-        [ValidateSet('True','False')]
-        [string]$HardwareScanPageHide,
-        [ValidateSet('True','False')]
-        [string]$GiveFeedbackPageHide,
-        [ValidateSet('True','False')]
-        [string]$TurnOffMicrophoneSettings = 'True'    
+    [ValidateSet('True','False')]
+    [string]$AcceptEULAAutomatically = 'True',
+    [ValidateSet('True','False')]
+    [string]$WarrantyInfoHide,
+    [ValidateSet('True','False')]
+    [string]$WarrantyWriteWMI = 'True',
+    [ValidateSet('True','False')]
+    [string]$MyDevicePageHide,
+    [ValidateSet('True','False')]
+    [string]$WiFiSecurityPageHide,
+    [ValidateSet('True','False')]
+    [string]$HardwareScanPageHide,
+    [ValidateSet('True','False')]
+    [string]$GiveFeedbackPageHide,
+    [ValidateSet('True','False')]
+    [string]$TurnOffMicrophoneSettings = 'True'    
     )
-
+    
     
     $RegistryPath = "HKLM:\SOFTWARE\Policies\Lenovo\Commercial Vantage"
     if (!(Test-Path -Path $RegistryPath)){
@@ -133,7 +152,7 @@ function Set-LenovoVantage {
             New-ItemProperty -Path $RegistryPath -Name "AcceptEULAAutomatically" -Value 0 -PropertyType dword -Force | Out-Null
         }
     }
-
+    
     if ($WarrantyInfoHide) {
         if ($WarrantyInfoHide -eq $true){
             Write-Host "Setting WarrantyInfoHide to 1"
@@ -154,7 +173,7 @@ function Set-LenovoVantage {
             New-ItemProperty -Path $RegistryPath -Name "wmi.warranty" -Value 0 -PropertyType dword -Force | Out-Null
         }
     }
-
+    
     if ($MyDevicePageHide) {
         if ($MyDevicePageHide -eq $true){
             Write-Host "Setting MyDevicePageHide to 1"
@@ -165,7 +184,7 @@ function Set-LenovoVantage {
             New-ItemProperty -Path $RegistryPath -Name "page.myDevice" -Value 0 -PropertyType dword -Force | Out-Null
         }
     }
-
+    
     if ($WiFiSecurityPageHide) {
         if ($WiFiSecurityPageHide -eq $true){
             Write-Host "Setting WiFiSecurityPageHide to 1"
@@ -176,7 +195,7 @@ function Set-LenovoVantage {
             New-ItemProperty -Path $RegistryPath -Name "page.wifiSecurity" -Value 0 -PropertyType dword -Force | Out-Null
         }
     }
-
+    
     if ($HardwareScanPageHide) {
         if ($HardwareScanPageHide -eq $true){
             Write-Host "Setting HardwareScanPageHide to 1"
@@ -187,7 +206,7 @@ function Set-LenovoVantage {
             New-ItemProperty -Path $RegistryPath -Name "page.hardwareScan" -Value 0 -PropertyType dword -Force | Out-Null
         }
     }
-
+    
     if ($GiveFeedbackPageHide) {
         if ($GiveFeedbackPageHide -eq $true){
             Write-Host "Setting GiveFeedbackPageHide to 1"
@@ -220,11 +239,11 @@ Install-LenovoVantage
 Write-Host "Setting Lenovo Vantage Settings"
 
 Set-LenovoVantage -AcceptEULAAutomatically $true `
-    -WarrantyInfoHide $WarrantyInfoHide `
-    -WarrantyWriteWMI $true `
-    -MyDevicePageHide $MyDevicePageHide `
-    -WiFiSecurityPageHide $WiFiSecurityPageHide `
-    -HardwareScanPageHide $HardwareScanPageHide `
-    -GiveFeedbackPageHide $GiveFeedbackPageHide
+-WarrantyInfoHide $WarrantyInfoHide `
+-WarrantyWriteWMI $true `
+-MyDevicePageHide $MyDevicePageHide `
+-WiFiSecurityPageHide $WiFiSecurityPageHide `
+-HardwareScanPageHide $HardwareScanPageHide `
+-GiveFeedbackPageHide $GiveFeedbackPageHide
 
 
