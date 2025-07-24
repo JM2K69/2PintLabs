@@ -10,6 +10,18 @@ $HardwareScanPageHide = ${TSEnv:LCVHardwareScanPageHide}
 $GiveFeedbackPageHide = ${TSEnv:LCVGiveFeedbackPageHide}
 $TurnOffMicrophoneSettings = ${TSEnv:LCVTurnOffMicrophoneSettings}
 
+Write-Host "==================================================================="
+write-host "Installing LCV on  $MakeAlias $ModelAlias Devices"
+write-host "Reporting Variables:"
+write-host "WarrantyInfoHide: $WarrantyInfoHide"
+write-host "MyDevicePageHide: $MyDevicePageHide" 
+write-host "WiFiSecurityPageHide: $WiFiSecurityPageHide"
+write-host "HardwareScanPageHide: $HardwareScanPageHide"
+write-host "GiveFeedbackPageHide: $GiveFeedbackPageHide"
+write-host "TurnOffMicrophoneSettings: $TurnOffMicrophoneSettings"
+
+
+#region Functions
 function Install-LenovoVantage {
     [CmdletBinding()]
     param (
@@ -198,7 +210,15 @@ function Set-LenovoVantage {
     }   
 }
 
+#Endregion Functions
+
+# Install Lenovo Vantage
+Write-Host "Launching Install-LenovoVantage"
 Install-LenovoVantage
+
+# Set Lenovo Vantage Settings
+Write-Host "Setting Lenovo Vantage Settings"
+
 Set-LenovoVantage -AcceptEULAAutomatically $true `
     -WarrantyInfoHide $WarrantyInfoHide `
     -WarrantyWriteWMI $true `
