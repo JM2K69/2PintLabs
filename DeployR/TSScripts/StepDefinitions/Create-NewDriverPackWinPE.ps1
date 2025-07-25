@@ -653,8 +653,10 @@ function Invoke-DriverDownloadExpand {
             Write-Verbose -Message "FileDescription: $($GetItemOutFile.VersionInfo.FileDescription)"
             Write-Verbose -Message "ProductVersion: $($GetItemOutFile.VersionInfo.ProductVersion)"
             
-            $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-            
+            #$DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
+            $computer = Get-CimInstance -Class "Win32_ComputerSystemProduct" -Namespace "root/cimv2"
+            $MachineType = $computer.Name.Substring(0, 4)
+            $DestinationPath = Join-Path $dest $MachineType
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding Lenovo Driver Pack to $DestinationPath"
                 try {

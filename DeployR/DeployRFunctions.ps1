@@ -8,4 +8,26 @@ function Get-DeployRGather {
     iex (irm "https://gather.garytown.com")
 }
 
+write-host "Function: Invoke-DeployRTS" -ForegroundColor Green
+function Invoke-DeployRTS{
+    param(
+        [string]$ServerName,
+        [string]$TSID
+    )
 
+    Write-Host "Invoking DeployR TS" -ForegroundColor Cyan
+    if (-not $ServerName) {
+        Write-Host "ServerName is not provided, using default: 214-deployr.2p.garytown.com" -ForegroundColor Yellow
+        $ServerName = "214-deployr.2p.garytown.com"
+    }
+    if (($ServerName) -and (-not $TSID)) {
+        Write-Host "ServerName: $ServerName" -ForegroundColor Yellow
+        iex (irm "https://$($ServerName):7281/v1/Service/Bootstrap")
+    }
+    if (($ServerName) -and ($TSID)) {
+        Write-Host "ServerName: $ServerName" -ForegroundColor Yellow
+        Write-Host "TSID: $TSID" -ForegroundColor Yellow
+        iex (irm "https://$($ServerName):7281/v1/Service/Bootstrap?tsid=$($TSID):1")
+    }
+    # Add logic here to use $ServerName and $TSID as needed
+}

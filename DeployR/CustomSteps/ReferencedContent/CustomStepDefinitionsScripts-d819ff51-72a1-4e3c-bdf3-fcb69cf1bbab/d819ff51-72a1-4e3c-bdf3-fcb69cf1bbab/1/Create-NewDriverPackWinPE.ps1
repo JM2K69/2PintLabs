@@ -610,7 +610,12 @@ function Invoke-DriverDownloadExpand {
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding Dell Driver Pack to $DestinationPath"
                 $null = New-Item -Path $DestinationPath -ItemType Directory -Force -ErrorAction Ignore | Out-Null
-                Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$DestinationPath`"" -Wait
+                try {
+                    Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$DestinationPath`"" -Wait                
+                } catch {
+                    Write-Error "Failed to extract Dell driver pack: $ExpandFile"
+                }
+                
             }
             return
         }
@@ -629,7 +634,13 @@ function Invoke-DriverDownloadExpand {
             
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding HP Driver Pack to $DestinationPath"
-                & "$ToolsPath\7za.exe" -y x "$ExpandFile" -o"$DestinationPath" | Out-Host
+                try {
+                    & "$ToolsPath\7za.exe" -y x "$ExpandFile" -o"$DestinationPath" | Out-Host
+                }
+                catch {
+                    Write-Error "Failed to extract HP driver pack: $ExpandFile"
+                }
+                
             }
             return
         }
@@ -642,13 +653,28 @@ function Invoke-DriverDownloadExpand {
             Write-Verbose -Message "FileDescription: $($GetItemOutFile.VersionInfo.FileDescription)"
             Write-Verbose -Message "ProductVersion: $($GetItemOutFile.VersionInfo.ProductVersion)"
             
-            $DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
-            
+            #$DestinationPath = Join-Path $dest $GetItemOutFile.BaseName
+            $computer = Get-CimInstance -Class "Win32_ComputerSystemProduct" -Namespace "root/cimv2"
+            $MachineType = $computer.Name.Substring(0, 4)
+            $DestinationPath = Join-Path $dest $MachineType
             if (-NOT (Test-Path "$DestinationPath")) {
                 Write-Verbose -Verbose "Expanding Lenovo Driver Pack to $DestinationPath"
-                & "$ToolsPath\innoextract.exe" -e -d "$DestinationPath" "$ExpandFile" | Out-Host
+                try {
+                    & "$ToolsPath\innoextract.exe" -e -d "$DestinationPath" "$ExpandFile" | Out-Host
+                } catch {
+                    Write-Error "Failed to extract Lenovo driver pack: $ExpandFile"
+                }
+                return
+                #Rename the extracted folder to "Lenovo"
+                Get-ChildItem -Path "$DestinationPath" -Directory | ForEach-Object {
+                    $newName = Join-Path $DestinationPath "Lenovo"
+                    if (-not (Test-Path $newName)) {
+                        Rename-Item -Path $_.FullName -NewName "Lenovo" -Force
+                    } else {
+                        Write-Warning "Destination folder already exists: $newName"
+                    }
+                }
             }
-            return
         }
     }
     #=================================================
@@ -684,12 +710,12 @@ function Invoke-DriverDownloadExpand {
 function Migrate-WinPEDrivers {
     [CmdletBinding()]
     param(
-        [string]$OfflineOSPath
+    [string]$OfflineOSPath
     )
-
+    
     $startTime = Get-Date
     $WindowsPath = $OfflineOSPath
-
+    
     function timeDuration() {
         $totalSeconds = [int]$args[0]
         if ($totalSeconds -gt 0) { $time = New-TimeSpan -Seconds $totalSeconds }
@@ -775,7 +801,7 @@ function Migrate-WinPEDrivers {
     }
     if ($matchedDrivers.Count -eq 0) {
         Write-Host "ERROR: No matched drivers at all. Exiting script." -Severity 3
-        exit 1
+        exit 0
     }
     Write-Host "Completing matching imported and running drivers. Found $($matchedDrivers.count) matched drivers total."
     # set up drivers folder
@@ -807,7 +833,7 @@ function Migrate-WinPEDrivers {
     $SameLastLine = $null
     do {  #Continous loop while DISM is running
         Start-Sleep -Milliseconds 300
-
+        
         #Read in the DISM Logfile
         $Content = Get-Content -Path $Output -ReadCount 1
         $LastLine = $Content | Select-Object -Last 1
@@ -832,7 +858,7 @@ function Migrate-WinPEDrivers {
                         $Total = $Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still installing
                         $PercentComplete = [math]::Round(($Counter / $Total) * 100)
                         Write-Progress -Activity "Migrating Drivers" -Status $LastLine -PercentComplete $PercentComplete
-
+                        
                     }
                 }
                 elseif ($LastLine -match "The operation completed successfully."){
@@ -846,7 +872,7 @@ function Migrate-WinPEDrivers {
         
     }
     until (!(Get-Process -Name DISM -ErrorAction SilentlyContinue))
-
+    
     Write-Output "Dism Step Complete"
     Write-Output "See DISM log for more Details: $Output"
     if ($LASTEXITCODE -ne 0) {
@@ -896,11 +922,11 @@ if (-not (Get-Module -Name DeployR.Utility)) {
 }
 
 #Build Download Content Location
-$DownloadContentPath = "$TargetSystemDrive\Drivers\Downloads"
+$DownloadContentPath = "$TargetSystemDrive\Drivers\Dls"
 if (!(Test-Path -Path $DownloadContentPath)) {
     New-Item -ItemType Directory -Path $DownloadContentPath -Force | Out-Null
 }
-$ExtractedDriverLocation = "$TargetSystemDrive\Drivers\Extracted"
+$ExtractedDriverLocation = "$TargetSystemDrive\Drivers\Ex"
 if (!(Test-Path -Path $ExtractedDriverLocation)) {
     New-Item -ItemType Directory -Path $ExtractedDriverLocation -Force | Out-Null
 }
@@ -913,7 +939,7 @@ if ($UseStandardDriverPack -eq "true") {
         if ($null -ne $DriverPack) {
             $URL = $DriverPack.'#text'
             $Name = ($DriverPack.'#text').split("/") | Select-Object -last 1
-            $ID = $Name
+            $ID = (Get-LnvMachineType)
         }
     }
     if ($MakeAlias -eq "HP"){
@@ -925,7 +951,7 @@ if ($UseStandardDriverPack -eq "true") {
         }
     }
     if ($MakeAlias -eq "Dell"){
-
+        
         $DriverPack = Get-DellDeviceDriverPack | Select-Object -first 1
         if ($null -ne $DriverPack) {
             $URL = $DriverPack.URL
@@ -1087,14 +1113,19 @@ else {
     
     #& Dism /Image:"$($TargetSystemDrive)\" /Add-Driver /Driver:$ExtractedDriverLocation /Recurse
     $Output = "$env:systemdrive\_2p\Logs\DISMApplyDriversOutput.txt"
-    $DISM = Start-Process DISM.EXE -ArgumentList "/image:$($TargetSystemDrive)\ /Add-Driver /driver:$ExtractedDriverLocation /recurse" -PassThru -NoNewWindow -RedirectStandardOutput $Output
- 
-
+    try {
+        $DISM = Start-Process DISM.EXE -ArgumentList "/image:$($TargetSystemDrive)\ /Add-Driver /driver:$ExtractedDriverLocation /recurse" -PassThru -NoNewWindow -RedirectStandardOutput $Output
+    }
+    catch {
+        <#Do this if a terminating exception happens#>
+    }
+    
+    
     #& Dism /Image:$WindowsPath /Add-Driver /Driver:$exportRoot /Recurse
     $SameLastLine = $null
     do {  #Continous loop while DISM is running
         Start-Sleep -Milliseconds 300
-
+        
         #Read in the DISM Logfile
         $Content = Get-Content -Path $Output -ReadCount 1
         $LastLine = $Content | Select-Object -Last 1
@@ -1119,7 +1150,7 @@ else {
                         [int]$Total = [int]$Total + 1 #So that when it gets to 3 of 3, it doesn't show 100% complete while it is still installing
                         $PercentComplete = [math]::Round(($Counter / $Total) * 100)
                         Write-Progress -Activity "Applying Drivers" -Status $LastLine -PercentComplete $PercentComplete
-
+                        
                     }
                 }
                 elseif ($LastLine -match "The operation completed successfully."){
@@ -1133,5 +1164,6 @@ else {
         
     }
     until (!(Get-Process -Name DISM -ErrorAction SilentlyContinue))
-
+    exit 0
+    
 }

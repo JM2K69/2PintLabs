@@ -5,11 +5,39 @@ Import-Module 'C:\Program Files\2Pint Software\DeployR\Client\PSModules\DeployR.
 Set-DeployRHost "http://localhost:7282"
 
 #GitHubLocation, always overwrite with the latest version during a backup.
-$GitHubCustomSteps = "D:\GitHub\2PintLabs\DeployR\CustomSteps"
-$GitHubCustomStepsReferencedContent = "D:\GitHub\2PintLabs\DeployR\CustomSteps\ReferencedContent"
+$EnableBackup2GitHub = $false
+if ($EnableBackup2GitHub) {
+    $GitHubCustomSteps = "D:\GitHub\2PintLabs\DeployR\CustomSteps"
+    $GitHubCustomStepsReferencedContent = "D:\GitHub\2PintLabs\DeployR\CustomSteps\ReferencedContent"
+    if (-not (Test-Path -Path $GitHubCustomSteps)) {New-Item -Path $GitHubCustomSteps -ItemType Directory | Out-Null}
+    if (-not (Test-Path -Path $GitHubCustomStepsReferencedContent)) {New-Item -Path $GitHubCustomStepsReferencedContent -ItemType Directory | Out-Null}
+}
 
+
+# Create Variable that is the FQDN of the Machien:
+function Get-ConnectionSpecificDNSSuffix {
+    param (
+    [string]$AdapterDescription = "Microsoft Hyper-V Network Adapter"
+    )
+    $config = Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter "IPEnabled=TRUE AND Description='$AdapterDescription'"
+    if ($config.DNSDomain) {
+        return $config.DNSDomain
+    } else {
+        $ipconfig = ipconfig /all
+        $suffix = ($ipconfig | Select-String "Connection-specific DNS Suffix").Line -replace ".*:\s*",""
+        return $suffix
+    }
+}
+
+# Usage
+$Suffix = Get-ConnectionSpecificDNSSuffix | Select-Object -First 1
+$ComputerFQDN = "$env:COMPUTERNAME.$Suffix"
+#Only Do SYnc Backups from the OnPrem DeployR Server
+if ($ComputerFQDN -eq "214-DEPLOYR.2p.garytown.com") {
+    $EnableBackup2GitHub = $true
+}
 #OneDriveBackup
-$OneDriveBackupPath = "C:\Users\gary.blok\OneDrive - garytown\DeployR-Sync"
+$OneDriveBackupPath = "C:\Users\gary.blok\OneDrive - garytown\DeployR-Sync\$ComputerFQDN"
 
 # Ensure the backup directory exists
 if (-not (Test-Path -Path $BackupLocation)) {New-Item -Path $BackupLocation -ItemType Directory | Out-Null}
@@ -18,8 +46,7 @@ if (-not (Test-Path -Path "$BackupLocation\$DateStamp")) {New-Item -Path "$Backu
 if (-not (Test-Path -Path "$BackupLocation\$DateStamp\ContentItems")) {New-Item -Path "$BackupLocation\$DateStamp\ContentItems" -ItemType Directory | Out-Null}
 if (-not (Test-Path -Path "$BackupLocation\$DateStamp\StepDefinitions")) {New-Item -Path "$BackupLocation\$DateStamp\StepDefinitions" -ItemType Directory | Out-Null}
 if (-not (Test-Path -Path "$BackupLocation\$DateStamp\TaskSequences")) {New-Item -Path "$BackupLocation\$DateStamp\TaskSequences" -ItemType Directory | Out-Null}
-if (-not (Test-Path -Path $GitHubCustomSteps)) {New-Item -Path $GitHubCustomSteps -ItemType Directory | Out-Null}
-if (-not (Test-Path -Path $GitHubCustomStepsReferencedContent)) {New-Item -Path $GitHubCustomStepsReferencedContent -ItemType Directory | Out-Null}
+
 
 Write-Host "Starting DeployR backup at $DateStamp" -ForegroundColor Green
 #Backup DeployR content items
@@ -52,41 +79,43 @@ if ($LatestBackup) {
         Write-Host "Removing existing folder: $DestinationPath" -ForegroundColor Yellow
         Remove-Item -Path $DestinationPath -Recurse -Force
     }
+    Write-Host "Backing up to destination folder: $DestinationPath" -ForegroundColor Cyan
     Copy-Item -Path $LatestBackup.FullName -Destination $DestinationPath -Recurse
 } else {
     Write-Host "No backups found in $BackupLocation" -ForegroundColor Red
 }
 
-#Backup DeployR step definitions for GitHub Custom Steps
-Write-Host "Exporting DeployR step definitions to GitHub..." -ForegroundColor Yellow
-$StepDefinitions = Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'}
-foreach ($stepDef in $StepDefinitions) {
-    write-host "Backing up step definition: $($stepDef.name) | $($stepDef.id)" -ForegroundColor Cyan
-    $ExportFolderName = "$($stepDef.name)-$($stepDef.id)"
-    if (Test-Path -Path "$GitHubCustomSteps\$ExportFolderName") {
-        Write-Host "Removing existing folder: $GitHubCustomSteps\$ExportFolderName" -ForegroundColor Yellow
-        Remove-Item -Path "$GitHubCustomSteps\$ExportFolderName" -Recurse -Force
-    }
-    New-Item -Path "$GitHubCustomSteps\$ExportFolderName" -ItemType Directory -Force | Out-Null
-    write-host "Exporting step definition to: $GitHubCustomSteps\$ExportFolderName" -ForegroundColor Cyan
-    Export-DeployRStepDefinition -Id $stepDef.id -DestinationFolder "$GitHubCustomSteps\$ExportFolderName"
-    $versions = $stepDef.versions
-    foreach ($version in $versions) {
-        $Options = $version.options
-        $ContentID = (($Options | Where-Object {$_.type -eq "Content"}).defaultValue).split(':') | Select-Object -first 1
-        $ContentItemInfo = Get-DeployRContentItem | Where-Object {$_.id -eq $ContentID}
-        write-host "Backing up content item: $($ContentItemInfo.name) | $($ContentItemInfo.id)" -ForegroundColor Cyan
-        $ExportContentFolderName = "$($ContentItemInfo.name)-$($ContentItemInfo.id)"
-        if (Test-Path -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName") {
-            Write-Host "Removing existing folder: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Yellow
-            Remove-Item -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName" -Recurse -Force
-            Start-Sleep -Milliseconds 100
+if ($EnableBackup2GitHub) {
+    #Backup DeployR step definitions for GitHub Custom Steps
+    Write-Host "Exporting DeployR step definitions to GitHub..." -ForegroundColor Yellow
+    $StepDefinitions = Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'}
+    foreach ($stepDef in $StepDefinitions) {
+        write-host "Backing up step definition: $($stepDef.name) | $($stepDef.id)" -ForegroundColor Cyan
+        $ExportFolderName = "$($stepDef.name)-$($stepDef.id)"
+        if (Test-Path -Path "$GitHubCustomSteps\$ExportFolderName") {
+            Write-Host "Removing existing folder: $GitHubCustomSteps\$ExportFolderName" -ForegroundColor Yellow
+            Remove-Item -Path "$GitHubCustomSteps\$ExportFolderName" -Recurse -Force
         }
-        Write-Host "Exporting content item to: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Cyan
-        Export-DeployRContentItem -Id $ContentItemInfo.id -DestinationFolder "$GitHubCustomStepsReferencedContent\$ExportContentFolderName"
+        New-Item -Path "$GitHubCustomSteps\$ExportFolderName" -ItemType Directory -Force | Out-Null
+        write-host "Exporting step definition to: $GitHubCustomSteps\$ExportFolderName" -ForegroundColor Cyan
+        Export-DeployRStepDefinition -Id $stepDef.id -DestinationFolder "$GitHubCustomSteps\$ExportFolderName"
+        $versions = $stepDef.versions
+        foreach ($version in $versions) {
+            $Options = $version.options
+            $ContentID = (($Options | Where-Object {$_.type -eq "Content"}).defaultValue).split(':') | Select-Object -first 1
+            $ContentItemInfo = Get-DeployRContentItem | Where-Object {$_.id -eq $ContentID}
+            write-host "Backing up content item: $($ContentItemInfo.name) | $($ContentItemInfo.id)" -ForegroundColor Cyan
+            $ExportContentFolderName = "$($ContentItemInfo.name)-$($ContentItemInfo.id)"
+            if (Test-Path -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName") {
+                #Write-Host "Removing existing folder: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Yellow
+                #Remove-Item -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName" -Recurse -Force
+                Start-Sleep -Milliseconds 100
+            }
+            Write-Host "Exporting content item to: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Cyan
+            Export-DeployRContentItem -Id $ContentItemInfo.id -DestinationFolder "$GitHubCustomStepsReferencedContent\$ExportContentFolderName"
+        }
     }
 }
-
 <# for Import Reference
 dir c:\temp\ContentBackup -File | Import-DeployRContentItem 
 dir c:\temp\StepDefinitionBackup -File | Import-DeployRStepDefinition 
@@ -96,10 +125,10 @@ dir c:\temp\TaskSequenceBackup -File | Import-DeployRTaskSequence
 #Create Duplicate of Sample Step Definition with new GUID
 Function Duplicate-DeployRStepDefinition {
     param (
-        [Parameter(Mandatory = $true)]
-        [string]$StepDefinitionId,
-        [string]$NewNameSuffix = "-Copy",
-        [string]$NewCIName
+    [Parameter(Mandatory = $true)]
+    [string]$StepDefinitionId,
+    [string]$NewNameSuffix = "-Copy",
+    [string]$NewCIName
     )
     $Sample = (Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -eq $StepDefinitionId})
     if ($null -eq $Sample) {
@@ -127,10 +156,10 @@ Function Duplicate-DeployRStepDefinition {
 #THIS DOES NOT WORKING.... Still messing around
 Function Duplicate-DeployRTaskSequence {
     param (
-        [Parameter(Mandatory = $true)]
-        [string]$TaskSequenceId,
-        [string]$NewNameSuffix = "-Copy",
-        [string]$NewCIName
+    [Parameter(Mandatory = $true)]
+    [string]$TaskSequenceId,
+    [string]$NewNameSuffix = "-Copy",
+    [string]$NewCIName
     )
     $Sample = (Get-DeployRMetadata -Type TaskSequence | Where-Object {$_.id -eq $TaskSequenceId})
     if ($null -eq $Sample) {
@@ -149,9 +178,11 @@ Function Duplicate-DeployRTaskSequence {
     $SampleVersions = $Sample.versions
     $SampleVersions[0].id = $NewVersionGuid
     $SampleVersions[0].taskSequenceId = $NewItemGuid
-
+    
     $TempFilePath = "$TempLocation\TempDuplicateTaskSeq.json"
     $Sample | ConvertTo-Json -Depth 50 | Out-File $TempFilePath -Force
     Import-DeployRTaskSequence -SourceFile $TempFilePath
     Write-Host "Duplicated Task Sequence as $($Sample.name) with ID $NewGuid" -ForegroundColor Green
 }
+
+
