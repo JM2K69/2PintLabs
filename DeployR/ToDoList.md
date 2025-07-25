@@ -9,3 +9,5 @@
 - OEM Tools Offline Mode (offline repo for updates)
 - create step to enable Features like HyperV with option to reboot.
 - create script for easy import and overwrite of updated steps and content for sharing 
+
+- Test custom actions scripts in Windows, see if I can leverage that for customizations.
