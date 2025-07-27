@@ -4,10 +4,12 @@
   - or check a box to enable location services (should this be it's own setting somewhere else)
 
 - Language stuff
-- Company Branding - Registered to: etc
+- Company Branding - Registered to: etc | Complete
 - Defender Updates
 - OEM Tools Offline Mode (offline repo for updates)
-- create step to enable Features like HyperV with option to reboot.
-- create script for easy import and overwrite of updated steps and content for sharing 
+- create step to enable Features like HyperV with option to reboot. | Complete for Client
+- create script for easy import and overwrite of updated steps and content for sharing
+- OSD Stamp 
 
 - Test custom actions scripts in Windows, see if I can leverage that for customizations.
+  - This doesn't work

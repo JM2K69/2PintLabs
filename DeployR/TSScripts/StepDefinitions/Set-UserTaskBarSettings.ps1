@@ -14,6 +14,7 @@ $TaskBarMoveStartLeft = ${TSEnv:TaskBarMoveStartLeft}
 $TaskBarRemoveSearch = ${TSEnv:TaskBarRemoveSearch}
 $TaskBarStartMorePins = ${TSEnv:TaskBarStartMorePins}
 $TaskBarStartMoreRecommendations = ${TSEnv:TaskBarStartMoreRecommendations}
+$SetDarkMode = ${TSEnv:SetDarkMode}
 
 write-host "==================================================================="
 write-host "User Taskbar Settings for Windows 11 UI"
@@ -26,7 +27,7 @@ write-host "TaskBarMoveStartLeft: $TaskBarMoveStartLeft"
 write-host "TaskBarRemoveSearch: $TaskBarRemoveSearch"
 write-host "TaskBarStartMorePins: $TaskBarStartMorePins"
 write-host "TaskBarStartMoreRecommendations: $TaskBarStartMoreRecommendations"
-
+Write-Host "SetDarkMode: $SetDarkMode"
 
 
 <#
@@ -100,6 +101,20 @@ if ($TaskBarRemoveSearch -eq $true) {
     }
     $reg = New-ItemProperty $RegKey -Name "SearchboxTaskbarMode"  -Value "0" -PropertyType String -Force
     try { $reg.Handle.Close() } catch {}
+}
+$EnableDarkMode = $true
+if ($EnableDarkMode -eq $true) {
+    Write-Host "Attempting to run: Set Dark Mode RunOnce"
+    $RegKey = "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+    if (-not(Test-Path $RegKey )) {
+        $reg = New-Item $RegKey -Force | Out-Null
+        try { $reg.Handle.Close() } catch {}
+    }
+    $reg = New-ItemProperty $RegKey -Name "DarkModeSystem"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v SystemUsesLightTheme /d 0 /f" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
+        $reg = New-ItemProperty $RegKey -Name "DarkModeApps"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v AppsUseLightTheme /d 0 /f & taskkill /IM explorer.exe" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
+
 }
 
 [GC]::Collect()
