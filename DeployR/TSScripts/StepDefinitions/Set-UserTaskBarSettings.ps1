@@ -112,9 +112,10 @@ if ($EnableDarkMode -eq $true) {
     }
     $reg = New-ItemProperty $RegKey -Name "DarkModeSystem"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v SystemUsesLightTheme /d 0 /f" -PropertyType String -Force
     try { $reg.Handle.Close() } catch {}
-        $reg = New-ItemProperty $RegKey -Name "DarkModeApps"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v AppsUseLightTheme /d 0 /f & taskkill /IM explorer.exe" -PropertyType String -Force
+    $reg = New-ItemProperty $RegKey -Name "DarkModeApps"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v AppsUseLightTheme /d 0 /f" -PropertyType String -Force
     try { $reg.Handle.Close() } catch {}
-
+    $reg = New-ItemProperty $RegKey -Name "RestartExplorer"  -Value "powershell.exe -command start-sleep -s 5; stop-process -name explorer" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
 }
 
 [GC]::Collect()
