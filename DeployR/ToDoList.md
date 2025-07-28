@@ -10,9 +10,11 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 - OEM Tools Offline Mode (offline repo for updates)
 
 - OSD Stamp
-  - TS ID
-  - DeployR Server
-  - OS Build Media UBR
+  - TS ID:                  TSID
+  - DeployR Server:         DEPLOYRHOST
+  - OS Build Media UBR:     OSIMAGEVERSION
+  - OS Edition:             OSIMAGENAME
+  - Computer Name:          
   - WinPE Info?
   - Start | Finish Times
 
@@ -36,7 +38,7 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 
 - Company Branding - Registered to: etc
   - COMPLETED
-  - https://github.com/gwblok/2PintLabs/blob/main/DeployR/TSScripts/StepDefinitions/Set-WindowsSettings.ps1
+  - <https://github.com/gwblok/2PintLabs/blob/main/DeployR/TSScripts/StepDefinitions/Set-WindowsSettings.ps1>
 
 ## Not Doing | Just doesn't work
 
