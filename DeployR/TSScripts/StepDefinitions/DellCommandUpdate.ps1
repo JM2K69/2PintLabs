@@ -34,6 +34,13 @@ else {
 
 $LogPath = "$env:SystemDrive\_2P\Logs"
 
+
+[String]$MakeAlias = ${TSEnv:MakeAlias}
+if ($MakeAlias -ne "Dell") {
+    Write-Host "MakeAlias must be Dell. Exiting script."
+    Exit 0
+}
+
 #Convert the string values to boolean
 if ($updateTypeBIOSFirmware -eq "true") {[bool]$updateTypeBIOSFirmware = $true} 
 else {[bool]$updateTypeBIOSFirmware = $false}

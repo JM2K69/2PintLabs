@@ -1,6 +1,10 @@
 #Pull Vars from TS:
 Import-Module DeployR.Utility
-$LogPath = "$env:SystemDrive\_2P\Logs"
+[String]$MakeAlias = ${TSEnv:MakeAlias}
+if ($MakeAlias -ne "HP") {
+    Write-Host "MakeAlias must be HP. Exiting script."
+    Exit 0
+}
 
 # Get the provided variables
 $updateCategoryBIOS = ${TSEnv:updateCategoryBIOS}
