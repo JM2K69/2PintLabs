@@ -30,12 +30,13 @@ function Install-LenovoVantage {
     # Define the URL and temporary file path - https://support.lenovo.com/us/en/solutions/hf003321-lenovo-vantage-for-enterprise
     #$url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2401.29.0.zip"
     $url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2501.15.0_v3.zip"
-    $tempFilePath = "C:\Windows\Temp\lenovo_vantage.zip"
-    $tempExtractPath = "C:\Windows\Temp\LenovoVantage"
+    #$tempFilePath = "C:\Windows\Temp\lenovo_vantage.zip"
+    $tempExtractPath = "C:\Windows\Temp\LCV\Extract"
+    $tempDownloadPath = "C:\Windows\Temp\LCV\Download"
     $NAME = "Lenovo Vantage"
     try {
         #Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "$($Driver.PackageExe)" -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
-        $destFile = Request-DeployRCustomContent -ContentName "LCV" -ContentFriendlyName $NAME -URL $URL -DestinationPath $tempFilePath -ErrorAction SilentlyContinue
+        $destFile = Request-DeployRCustomContent -ContentName "LCV" -ContentFriendlyName $NAME -URL $URL -DestinationPath $tempDownloadPath -ErrorAction SilentlyContinue
         $GetItemOutFile = Get-Item $destFile
         $ExpandFile = $GetItemOutFile.FullName
         if (Test-Path -path $ExpandFile) {
@@ -60,12 +61,12 @@ function Install-LenovoVantage {
     #>
     
     # Check if the transfer was successful
-    if (Test-Path -Path $tempFilePath) {
+    if (Test-Path -Path $ExpandFile) {
         # Start the installation process
         Write-Host -ForegroundColor Green "Installation file downloaded successfully. Starting installation..."
-        Write-Host -ForegroundColor Cyan " Extracting $tempFilePath to $tempExtractPath"
+        Write-Host -ForegroundColor Cyan " Extracting $ExpandFile to $tempExtractPath"
         if (test-path -path $tempExtractPath) {Remove-Item -Path $tempExtractPath -Recurse -Force}
-        Expand-Archive -Path $tempFilePath -Destination $tempExtractPath
+        Expand-Archive -Path $ExpandFile -Destination $tempExtractPath
         
     } else {
         Write-Host "Failed to download the file."
