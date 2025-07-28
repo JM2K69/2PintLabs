@@ -1,15 +1,43 @@
-# Stuff I want to work on yet
+# Deploy R - Gary's Build List
 
-- Build Step Definition for Apply Time zone | Drop down menu of time zone
-  - or check a box to enable location services (should this be it's own setting somewhere else)
+List of items I'd like to build for DeployR.  This list is not in order of priority or any order at all, just thrown together based on random ideas that pop in my head.
+
+## Not Started
+
 
 - Language stuff
-- Company Branding - Registered to: etc | Complete
+
 - Defender Updates
 - OEM Tools Offline Mode (offline repo for updates)
-- create step to enable Features like HyperV with option to reboot. | Complete for Client
+
 - create script for easy import and overwrite of updated steps and content for sharing
+  - MVP Created: https://github.com/gwblok/2PintLabs/blob/main/DeployR/ServerSideScripts/DeployR-ImportFromGithub.ps1
 - OSD Stamp 
+  - TS ID
+  - DeployR Server
+  - OS Build Media UBR
+  - WinPE Info?
+  - Start | Finish Times
+
+
+
+## In Progress
+- Build Step Definition for Apply Time zone | Drop down menu of time zone
+  - or check a box to enable location services (should this be it's own setting somewhere else)
+  - Created: https://github.com/gwblok/2PintLabs/blob/main/DeployR/TSScripts/StepDefinitions/Set-TimeZoneStep.ps1
+  - Should add more logic around this for WinPE vs Full OS
+
+- create step to enable Features like HyperV with option to reboot.
+  - CLIENT OS | COMPLETE
+  - SERVER OS | NOT STARTED
+
+## Completed
+
+- Company Branding - Registered to: etc
+  - COMPLETED
+
+
+## Not Doing | Just doesn't work
 
 - Test custom actions scripts in Windows, see if I can leverage that for customizations.
-  - This doesn't work
+  - After much testing, Custom Action Scripts do not get triggered in OSD

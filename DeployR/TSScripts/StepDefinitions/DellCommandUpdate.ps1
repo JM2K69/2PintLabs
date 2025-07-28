@@ -34,6 +34,7 @@ else {
 
 $LogPath = "$env:SystemDrive\_2P\Logs"
 
+#Convert the string values to boolean
 if ($updateTypeBIOSFirmware -eq "true") {[bool]$updateTypeBIOSFirmware = $true} 
 else {[bool]$updateTypeBIOSFirmware = $false}
 if ($updateTypeDrivers -eq "true") {[bool]$updateTypeDrivers = $true} 
@@ -43,7 +44,7 @@ else {[bool]$updateTypeApplications = $false}
 if ($ScanOnly -eq "true") {[bool]$ScanOnly = $true} 
 else {[bool]$ScanOnly = $false}
 
-
+#Write Info to Log
 Write-Host "=============================================================================="
 Write-Host "Current DCU Settings selected from Task Sequence" 
 Write-Host "updateTypeBIOSFirmware: $updateTypeBIOSFirmware"
