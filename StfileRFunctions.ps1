@@ -1,8 +1,12 @@
 ﻿<#
-Needs Function that:
-Takes a current Network, can removes it from the current NetworkGroup, then creates a new network group specifically for the network.
-Inputs: Location ID, Network Name (IP Address), Network Group Name Optional, Network Group Description Optional
+Several functions to manage StifleR via PowerShell
+Many are interdependent, so please load the entire file.
+Look at the individual functions for details.
 
+Ones I use the most:
+- Clear-RoamingForeverFlag                | Clear the RoamingForever flag on all clients in the StifleR database. 
+- Move-StifleRNetworkToDifferentGroup     | Move a network to a different existing group + Will create the network if it does not exist. 
+- Move-StifleRNetworkToNewGroup           | Creates a new group for a network to move into. 
 
 #>
 
@@ -36,7 +40,7 @@ function Add-Location($LocationName, $LocationDescription) {
         return , $Location
     }
 }
-
+#Private function to compare the parameters passed to a method with the actual method parameters, you should not call this directly
 Function Compare-StifleRMethodParameters($WMIClass, $Method, $CALLINGParams) {
     
     $Class = Get-CimClass -Namespace root\StifleR -ClassName "$WMIClass"
@@ -196,7 +200,29 @@ function Get-StifleRLocations{
     $Locations = Get-CimInstance -Namespace root\StifleR -Query "SELECT * FROM $class"
     return $Locations
 }
+function Get-StifleRTemplates {
+    [CmdletBinding()]
+    Param (
+    [Parameter(Mandatory=$false)]
+    [String]$TemplateID,
+    [Parameter(Mandatory=$false)]
+    [String]$TemplateName
+    )
 
+    $class = "NetworkGroupTemplates"
+    if ($TemplateID) {
+        $Templates = Get-CimInstance -Namespace root\StifleR -Query "SELECT * FROM $class WHERE id = '$TemplateID'"
+        return $Templates
+    }
+    if ($TemplateName) {
+        $Templates = Get-CimInstance -Namespace root\StifleR -Query "SELECT * FROM $class WHERE Name = '$TemplateName'"
+        return $Templates
+    }
+    $Templates = Get-CimInstance -Namespace root\StifleR -Query "SELECT * FROM $class"
+
+
+    return $Templates
+}
 function Get-StifleRNetworkGroupSupportServers {
     $NetworkGroups = Get-CimInstance -Namespace root\stifler -Query "Select * From NetworkGroups" 
     #Create table to hold the results
@@ -253,6 +279,102 @@ function Clear-RoamingForeverFlag {
     Write-Host "Total RoamingForever flags on clients: $roamingForever" -ForegroundColor Green
 }
 
+function Move-StifleRNetworkToDifferentGroup {
+    [CmdletBinding()]
+    param (
+    [Parameter(Mandatory = $true)]
+    [string]$NetworkIdToMove,
+    
+    
+    [Parameter(Mandatory = $false)]
+    [string]$DestinationNetworkGroupName,
+    
+    [Parameter(Mandatory = $false)]
+    [string]$DestinationNetworkGroupID
+    )
+    
+    # Get network settings from the network to move, needed later
+    # Abort if the network does not exist, no point in continuing
+    $NetworkToMove = Get-CimInstance -Namespace root\StifleR -ClassName Networks -Filter "NetworkId = '$NetworkIdToMove'"
+    If ($NetworkToMove){
+        $NetworkMask = $NetworkToMove.SubnetMask
+        $NetworkGatewayMAC = $NetworkToMove.GatewayMAC
+        $Id = $NetworkToMove.id
+    }
+    Else {
+        #Ask in the COnsole if the user would like to create the network first, Y or N
+        $answer = Read-Host "Network with NetworkId: $NetworkIdToMove cannot be found. Would you like to create it? (Y/N) [Default: Y]"
+        if ([string]::IsNullOrWhiteSpace($answer) -or $answer.Trim().ToUpper() -eq 'Y') {
+            Write-Host "User chose to create the network.. additional info required..."
+            $NetworkMask = Read-Host "Please enter the network mask (e.g., 255.255.255.0)"
+            while (-not ($NetworkMask -match '^(\d{1,3}\.){3}\d{1,3}$')) {
+                $NetworkMask = Read-Host "Invalid format. Please enter the network mask in the form of 255.255.255.0"
+            }
+            write-host "Planning to ad Network $NetworkToMove with Mask set to: $NetworkMask"
+            #Network doesn't exist, Set Variable to Skip Deletion Later
+            $NetworkToMoveSkipDeletion = $true
+        } else {
+            Write-Warning "User chose not to create the network. Aborting script..."
+            break
+        }
+    }
+    if ($DestinationNetworkGroupName){
+        $NetworkGroupToJoin = Get-CimInstance -Namespace root\StifleR -ClassName NetworkGroups -Filter "Name = '$DestinationNetworkGroupName'"
+        If ($NetworkGroupToJoin){
+            $NetworkGroupId = $NetworkGroupToJoin.id
+        }
+        Else {
+            Write-Warning "NetworkGroup with GroupID: $NetworkGroupId can not be found, aborting script..."
+            Break
+        }
+    }
+    if ($DestinationNetworkGroupID){
+        $NetworkGroupToJoin = Get-CimInstance -Namespace root\StifleR -ClassName NetworkGroups -Filter "ID = '$DestinationNetworkGroupID'"
+        If ($NetworkGroupToJoin){
+            $NetworkGroupId = $NetworkGroupToJoin.id
+        }
+        Else {
+            Write-Warning "NetworkGroup with GroupID: $NetworkGroupId can not be found, aborting script..."
+            Break
+        }
+    }
+    if ($NetworkToMove.NetworkGroupId -eq $NetworkGroupId) {
+        Write-Warning "Network with NetworkId: $NetworkIdToMove is already in NetworkGroup with GroupID: $NetworkGroupId, aborting attempt to move..."
+        Break
+    }
+    # Delete the existing network (requirement in 2.10)
+    $Arguments = @{
+        Force = $true
+        NetworkId = $id # The GUID id
+    }
+    if ($NetworkToMoveSkipDeletion -eq $true){
+        #Skip deletion, network does not exist
+    }
+    else {
+        $RemoveNetworkusingIdResult = Invoke-CimMethod -InputObject $NetworkToMove -MethodName RemoveNetworkusingId -Arguments $Arguments
+    }
+    
+    
+    # Create the new network 
+    If ($RemoveNetworkusingIdResult.ReturnValue -eq 0 -or $NetworkToMoveSkipDeletion -eq $true) {
+        # Deletion successful, creating the new network
+        [System.Object]$Network = Add-NetworkToNetworkGroup $NetworkGroupToJoin $NetworkIdToMove $NetworkMask $NetworkGatewayMAC
+        If ($Network) {
+            Write-Host "========================================================================" -ForegroundColor DarkGray
+            Write-Host "SUCCESS:Network $NetworkIdToMove moved to Network Group Name $($NetworkGroupToJoin.Name) | ID: $($NetworkGroupId)" -ForegroundColor Green
+            
+        }
+        Else {
+            Write-Warning "Could not create the network. Script failed..."
+        }
+    }
+    Else {
+        Write-Warning "Could not delete the network. Script failed..."
+    }
+    
+}
+
+
 
 function Move-StifleRNetworkToNewGroup {
     <#
@@ -264,6 +386,15 @@ function Move-StifleRNetworkToNewGroup {
     $NetworkGroupName - The name of the new network group
     $NetworkGroupDescription - The description of the new network group
     $TemplateName - The name of the template to assign to the new network group
+
+    Examples:
+        This will create a new Network Group based on the name of the network being moved, in the same location as the existing network, and use the default template
+    Move-StifleRNetworkToNewGroup -NetworkIdToMove "192.168.129.0"
+
+        This will move the network to new Network Group based on the Name you provided, and the location you provided, and the template you provided
+    Move-StifleRNetworkToNewGroup -NetworkIdToMove "192.168.129.0" -DestinationLocationID "d68994b2-c476-455e-9944-0109bd850c07" -NewNetworkGroupName "TestNG1" -TemplateID "00000000-0000-0000-0000-000000000012"
+    
+    
     #>
     [CmdletBinding()]
     Param (
@@ -274,25 +405,54 @@ function Move-StifleRNetworkToNewGroup {
     [Parameter(Mandatory=$false)]
     [string]$DestinationLocationDescription = "Created by Move-StifleRNetworkToNewGroup",
     [Parameter(Mandatory=$false)]
-    [string]$NewNetworkGroupName = "Script Generated Network Group",
+    [string]$NewNetworkGroupName,
     [Parameter(Mandatory=$false)]
-    [string]$NewNetworkGroupDescription = "Script Generated Network Group Description"
-    #[Parameter(Mandatory=$false)]
-    #[string]$TemplateName = "Default Template"
+    [string]$NewNetworkGroupDescription = "Script Generated Network Group Description",
+    [Parameter(Mandatory=$false)]
+    [string]$TemplateID = "00000000-0000-0000-0000-000000000012" #Default Template GUID
     )
     
+    #Get the Network to move
     $NetworkToMove = Get-CimInstance -Namespace root\StifleR -ClassName Networks -Filter "NetworkId = '$NetworkIdToMove'"
     If ($NetworkToMove){
-        $NetworkMask = $NetworkToMove.SubnetMask
-        $NetworkGatewayMAC = $NetworkToMove.GatewayMAC
-        $Id = $NetworkToMove.id
+        #$NetworkMask = $NetworkToMove.SubnetMask
+        #$NetworkGatewayMAC = $NetworkToMove.GatewayMAC
+        #$Id = $NetworkToMove.id
     }
     Else {
-        Write-Warning "Network $NetworkToMove does not exist, Aborting script..."
+        Write-Warning "Network $NetworkIdToMove does not exist, Aborting script..."
         break
     }
+    #Check if User provided a location ID, if not, use the location of the network to move
+    if ($DestinationLocationID){
+        $Location = Get-StifleRLocations | Where-Object { $_.id -eq $DestinationLocationID}
+        if (-not $Location) {
+            Write-Warning "Location with ID: $DestinationLocationID not found. Aborting script..."
+            break
+        }
+    }
+    else{
+        $Location = Get-StifleRLocations | Where-Object { $_.id -eq $($NetworkToMove.LocationID)}
+    }
     
+    #Create new Group in the location based on user's params, or create generic name
+    if ($null -eq $NewNetworkGroupName -or $NewNetworkGroupName -eq ""){
+        $NewNetworkGroupName = "NG for $($NetworkToMove.NetworkID)"
+        Write-Host "No Network Group Name provided, using default name: $NewNetworkGroupName"
+    }
+    else {
+        Write-Host "Using provided Network Group Name: $NewNetworkGroupName"
+    }
+    $NewNG = Add-NetworkGroupToLocation -Location $Location -NetworkGroupName $NewNetworkGroupName -NetworkGroupDescription $NewNetworkGroupDescription
     
+    #Assign the template to the new network group
+    $Arguments = @{
+        TemplateId = Get-StifleRTemplates -TemplateID $TemplateID | Select-Object -ExpandProperty id
+    }
+    $AssignTemplate = Invoke-CimMethod -InputObject $NewNG -MethodName SetTemplate -Arguments $Arguments
+    
+    #Move the network to the new group
+    Move-StifleRNetworkToDifferentGroup -NetworkIdToMove $NetworkIdToMove -DestinationNetworkGroupID $NewNG.id
 }
 
 #-----------------------------------------------------------[Execution]------------------------------------------------------------
