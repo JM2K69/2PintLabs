@@ -15,22 +15,43 @@ Write-Output "Var EnableLocationServices: $EnableLocationServices"
 
 if ($SetTimeZoneName -ne "") {
     Write-Output "Setting Time Zone Name to: $SetTimeZoneName"
-    try {
-        Set-TimeZone -Id $SetTimeZoneName
-    } catch {
-        Write-Output "Failed to set Time Zone Name $SetTimeZoneName | $_"
+    ${TSEnv:TimeZone} = $SetTimeZoneName
+    if ($env:SystemDrive -eq "X:") {
+        Write-Output "Running in WinPE, set TIMEZONE Variable for DeployR to add to unattended.xml"
     }
+    else {
+        try {
+            Set-TimeZone -Id $SetTimeZoneName
+        } catch {
+            Write-Output "Failed to set Time Zone Name $SetTimeZoneName | $_"
+        }
+    }
+
 } else {
     Write-Output "No Time Zone Name provided. Skipping time zone setting."
 }
 
 if ($EnableLocationServices -eq "true") {
-    Write-Output "Enabling Location Services..."
+    if ($env:SystemDrive -eq "X:"){
+        Write-Output "Running in WinPE, Mounting offline Registry to enable Location Services..."
+        #Mounting the Offline Software Hive
+        $offlineSoftwareHive = "$env:SystemDrive\Windows\System32\config\SOFTWARE"
+        REG LOAD HKLM\OfflineSoftware $offlineSoftwareHive
+        Set-ItemProperty -Path "HKLM:\OfflineSoftware\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Type "String" -Value "Allow" -Force
+	    Set-ItemProperty -Path "HKLM:\OfflineSoftware\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type "DWord" -Value 1 -Force
+        #unload the offline registry hive
+        REG UNLOAD HKLM\OfflineSoftware
+        [GC]::Collect()
+    }
+    else{
+            Write-Output "Enabling Location Services..."
 	# Enable location services so the time zone will be set automatically (even when skipping the privacy page in OOBE) when an administrator signs in
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Type "String" -Value "Allow" -Force
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type "DWord" -Value 1 -Force
 	Start-Service -Name "lfsvc" -ErrorAction SilentlyContinue
     Write-Output "Location Services enabled."
+    }
+
 } else {
     Write-Output "Location Services not enabled."
 }
