@@ -1,3 +1,4 @@
+$UpdateScript = @'
 # Based on: https://github.com/jantari/LSUClient
 
 
@@ -96,3 +97,12 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
 
 Write-Host -ForegroundColor Green "Lenovo updates completed."
 
+
+'@
+
+$UpdateScript | Out-File -FilePath $env:Temp\Invoke-PSLenovoUpdater.ps1 -Encoding UTF8 -Force
+
+write-host -ForegroundColor Cyan "Starting Invoke-PSLenovoUpdater..."
+write-host 'cmd.exe /c pwsh.exe -NoProfile -ExecutionPolicy Bypass -File $env:Temp\Invoke-PSLenovoUpdater.ps1 -Wait -NoNewWindow -PassThru '
+
+cmd.exe /c pwsh.exe -NoProfile -ExecutionPolicy Bypass -File $env:Temp\Invoke-PSLenovoUpdater.ps1 -Wait -NoNewWindow -PassThru 

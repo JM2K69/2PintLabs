@@ -118,8 +118,30 @@ For me the URL is: https://214-stifler.2p.garytown.com/StifleRDashboard
 
 It will prompt for credintials, I'm going to use what I'm logged in as, which I know is also in the correct groups for permissions:
 
-![Image01](media/Dashboard01.png)
-![Image02](media/Dashboard02.png)
+![Image01](media/DashBoard01.png)
+![Image02](media/DashBoard02.png)
 
 Once you're logged in, it will be a bit underwhelming, as you have no clients yet reporting in Data.  So the next thing... deploy your 2.14 clients.
 
+
+## Troubleshooting
+
+Confirm the following:
+- Dashboard Settings in Registry for proper FQDN 
+- Dashboard Server.config file fr proper FQDN
+- Ensure the Config Editor has the correct thumbprints for the Certificate used
+- Ensure the Certificate subject name matches the FQDN of the server and that you're IIS is bound for HTTPS on 443.
+
+Registry: HKLM:\Software\2Pint Software\StilfeR\Dashboard
+![Image01](media/DashBoardRegistry01.png)
+
+Config File: C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json
+![Image01](media/DashBoardConfig01.png)
+
+
+### Loop of Auth Prompt.
+
+I ran into this on my server as well as a couple of customers.  The fix was to add the FQDN into the registery as explained here:
+https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/accessing-server-locally-with-fqdn-cname-alias-denied#method-1-recommended-create-the-local-security-authority-host-names-that-can-be-referenced-in-a-ntlm-authentication-request
+
+![Image01](media/DashBoardTroubleShooting01.png)

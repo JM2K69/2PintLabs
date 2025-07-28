@@ -2,6 +2,8 @@
 
 This is my lab setup, super simple.
 
+I've already installed StifleR 2.14 but just slightly different then the guide I posted in the StifleR folder her on GitHub.  This server is Workgroup, so the certs I'm using are Self Signed based on a CA cert that comes with the 2PXE server from 2Pint Software.  If you're looking for help with StilfeR Setup, check out the StifleR folder here on GitHub
+
 - Windows Server 2025 Standard
   - HyperV VM | 8GB RAM | C: = 120GB | D: = 400 GB (DeployR Content Items)
 - Name: 214-DeployR
@@ -48,6 +50,9 @@ New-NetFirewallRule -DisplayName "2Pint DeployR HTTP 7282" -Direction Inbound -L
 
 NOTE:  I installed 2PXE on the same server, which created self-signed certificates using the 2PintSoftware CA.  I then used Intune to push the 2PintSoftware CA Cert to all of my devices.
 2Pint CA Cert located: "C:\Program Files\2Pint Software\2PXE\x64\ca.crt"
+
+I set 2PXE to override and create the cert based on the FQDN, then deleted the certificate from Personal Certificates, and the Certificates folder from C:\ProgramData\2Pint Software\2PXE\Certificates, and restarted the 2PXE service so it would regenerate those certs for me based on the 2PintSoftware CA included in 2PXE
+![Image01](media/DRCert01-iPXEOverride.png)
 
  I setup IIS to use the certificate in the
 ![Image01](media/DRCert01.png)
