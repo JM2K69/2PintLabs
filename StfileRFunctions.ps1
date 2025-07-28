@@ -93,6 +93,9 @@ function Add-NetworkGroupToLocation([System.Object]$Location, $NetworkGroupName,
         #$netGrp = Invoke-CimMethod -Namespace root\StifleR -ClassName $class -Name $method -Arguments $args
     }
 }
+# Get-StifleRLocations
+# $L = Get-StifleRLocations | Where-Object {$_.id -eq "d68994b2-c476-455e-9944-0109bd850c07"}
+#Add-NetworkGroupToLocation -Location $L -NetworkGroupName "Test1" -NetworkGroupDescription "Tst1Des"
 
 # Function to add a network to a network group
 function Add-NetworkToNetworkGroup([System.Object]$NetGrp, $NetworkId, $NetworkMask, $GatewayMAC) {
@@ -168,8 +171,16 @@ function Add-StifleRNetwork {
 
 #basic functions to get information from the stifler database
 function Get-StifleRNetworkGroups {
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory=$false)]
+        [String]$TemplateID
+    )
     $class = "NetworkGroups"
     $NetworkGroups = Get-CimInstance -Namespace root\stifler -Query "Select * FROM $class"
+    if ($TemplateID){
+        $NetworkGroups = $NetworkGroups | Where-Object { $_.Template -eq $TemplateID }
+    }
     return $NetworkGroups
 }
 function Get-StifleRLocations{

@@ -14,6 +14,9 @@ $TaskBarMoveStartLeft = ${TSEnv:TaskBarMoveStartLeft}
 $TaskBarRemoveSearch = ${TSEnv:TaskBarRemoveSearch}
 $TaskBarStartMorePins = ${TSEnv:TaskBarStartMorePins}
 $TaskBarStartMoreRecommendations = ${TSEnv:TaskBarStartMoreRecommendations}
+$SetDarkMode = ${TSEnv:SetDarkMode}
+$StartMenuAddMore = ${TSEnv:StartMenuAddMore}
+
 
 write-host "==================================================================="
 write-host "User Taskbar Settings for Windows 11 UI"
@@ -26,8 +29,8 @@ write-host "TaskBarMoveStartLeft: $TaskBarMoveStartLeft"
 write-host "TaskBarRemoveSearch: $TaskBarRemoveSearch"
 write-host "TaskBarStartMorePins: $TaskBarStartMorePins"
 write-host "TaskBarStartMoreRecommendations: $TaskBarStartMoreRecommendations"
-
-
+Write-Host "SetDarkMode: $SetDarkMode"
+Write-Host "StartMenuAddMore: $StartMenuAddMore"
 
 <#
 Customize Taskbar in Windows 11
@@ -69,6 +72,25 @@ if ($TaskBarMoveStartLeft -eq $true) {
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
+
+#Start Menu Size, add more pins or recommendations?
+if ($StartMenuAddMore -eq "default"){
+    Write-Host "Attempting to run: StartMenuAddMore, but it's set to default, so nothing will happen"
+}
+elseif ($StartMenuAddMore -eq "Pins") {
+    Write-Host "Attempting to run: TaskBarStartMorePins"
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_Layout" -Value "1" -PropertyType Dword -Force
+    try { $reg.Handle.Close() } catch {}
+}
+elseif  ($StartMenuAddMore -eq "Recommendations"){
+    Write-Host "Attempting to run: TaskBarStartMoreRecommendations"
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_Layout" -Value "2" -PropertyType Dword -Force
+    try { $reg.Handle.Close() } catch {}
+}
+else {
+    Write-Host "You should never see this message in the log, if you do... my logic is broken"
+}
+<#  Moved this into the logic above, but leaving here for reference
 # Default StartMenu pins layout 0=Default, 1=More Pins, 2=More Recommendations (requires Windows 11 22H2)
 if ($TaskBarStartMorePins -eq $true) {
     Write-Host "Attempting to run: TaskBarStartMorePins"
@@ -81,7 +103,9 @@ if ($TaskBarStartMoreRecommendations -eq $true) {
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Start_Layout" -Value "2" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
     
-}    # Removes search from the Taskbar
+}    
+#>
+# Removes search from the Taskbar
 if ($TaskBarRemoveSearch -eq $true) {
     Write-Host "Attempting to run: TaskBarRemoveSearch RunOnce"
     $RegKey = "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\RunOnce"
@@ -99,6 +123,21 @@ if ($TaskBarRemoveSearch -eq $true) {
         try { $reg.Handle.Close() } catch {}
     }
     $reg = New-ItemProperty $RegKey -Name "SearchboxTaskbarMode"  -Value "0" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
+}
+#$EnableDarkMode = $true
+if ($EnableDarkMode -eq $true) {
+    Write-Host "Attempting to run: Set Dark Mode RunOnce"
+    $RegKey = "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+    if (-not(Test-Path $RegKey )) {
+        $reg = New-Item $RegKey -Force | Out-Null
+        try { $reg.Handle.Close() } catch {}
+    }
+    $reg = New-ItemProperty $RegKey -Name "DarkModeSystem"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v SystemUsesLightTheme /d 0 /f" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
+    $reg = New-ItemProperty $RegKey -Name "DarkModeApps"  -Value "reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize /t REG_DWORD /v AppsUseLightTheme /d 0 /f" -PropertyType String -Force
+    try { $reg.Handle.Close() } catch {}
+    $reg = New-ItemProperty $RegKey -Name "RestartExplorer"  -Value "powershell.exe -WindowStyle hidden -command Start-Sleep -Milliseconds 100; stop-process -name explorer" -PropertyType String -Force
     try { $reg.Handle.Close() } catch {}
 }
 

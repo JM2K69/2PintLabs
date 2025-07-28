@@ -1,4 +1,44 @@
-﻿function Move-StifleRNetworkToDifferentGroup {
+﻿<#
+.SYNOPSIS
+    RUN FROM ON YOUR STIFLER SERVER
+    Moves (OR CREATES) a StifleR network to a different group within the StifleR management system.
+
+.DESCRIPTION
+    This script facilitates the reassignment of a specified StifleR network to a different group. 
+    It connects to the StifleR server, locates the target network, and updates its group membership 
+    according to the provided parameters. This is useful for reorganizing network groupings or 
+    implementing changes in network management structure.
+
+.PARAMETER NetworkIdToMove
+    [String] The name of the StifleR network to be moved. ex: 192.168.10.1 
+
+.PARAMETER DestinationNetworkGroupName
+    [String] The name of the group to which the network should be moved. ex "VPN Networks Chicago"
+
+.PARAMETER DestinationNetworkGroupID
+    [String] The address or hostname of the StifleR server to connect to. ex c44bc7a8-25c2-4c5d-973f-d480ba4dd741
+    I RECOMMEND USING THE NAME INSTEAD OF THE the NAME, you can have multiple groups with the same name, but not the same ID.
+
+.OUTPUTS
+    None. The script performs the move operation and writes status messages to the output.
+
+.EXAMPLE
+    .\Move-StifleRNetworkToDifferentGroup.ps1 NetworkIdToMove "192.168.155.0" DestinationNetworkGroupID c44bc7a8-25c2-4c5d-973f-d480ba4dd741
+    Moves the "192.168.155.0" network to the "c44bc7a8-25c2-4c5d-973f-d480ba4dd741" group on the specified StifleR server.
+
+.NOTES
+    Author: Gary Blok
+    Date: 2024-06-08
+    Notes: Ensure you have the necessary permissions to modify network groups on the StifleR server. 
+
+
+    Changes:
+    2025.07.29 - Added logic to prompt for network mask when creating a new network if the move network does not exist.
+
+
+#>
+
+function Move-StifleRNetworkToDifferentGroup {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -191,8 +231,21 @@
         $Id = $NetworkToMove.id
     }
     Else {
-        Write-Warning "Network with NetworkId: $NetworkIdToMove can not be found, aborting script..."
-        Break
+        #Ask in the COnsole if the user would like to create the network first, Y or N
+        $answer = Read-Host "Network with NetworkId: $NetworkIdToMove cannot be found. Would you like to create it? (Y/N) [Default: Y]"
+        if ([string]::IsNullOrWhiteSpace($answer) -or $answer.Trim().ToUpper() -eq 'Y') {
+            Write-Host "User chose to create the network.. additional info required..."
+            $NetworkMask = Read-Host "Please enter the network mask (e.g., 255.255.255.0)"
+            while (-not ($NetworkMask -match '^(\d{1,3}\.){3}\d{1,3}$')) {
+                $NetworkMask = Read-Host "Invalid format. Please enter the network mask in the form of 255.255.255.0"
+            }
+            write-host "Planning to ad Network $NetworkToMove with Mask set to: $NetworkMask"
+            #Network doesn't exist, Set Variable to Skip Deletion Later
+            $NetworkToMoveSkipDeletion = $true
+        } else {
+            Write-Warning "User chose not to create the network. Aborting script..."
+            break
+        }
     }
     if ($DestinationNetworkGroupName){
         $NetworkGroupToJoin = Get-CimInstance -Namespace root\StifleR -ClassName NetworkGroups -Filter "Name = '$DestinationNetworkGroupName'"
@@ -223,10 +276,16 @@
         Force = $true
         NetworkId = $id # The GUID id
     }
-    $RemoveNetworkusingIdResult = Invoke-CimMethod -InputObject $NetworkToMove -MethodName RemoveNetworkusingId -Arguments $Arguments
+    if ($NetworkToMoveSkipDeletion -eq $true){
+        #Skip deletion, network does not exist
+    }
+    else {
+        $RemoveNetworkusingIdResult = Invoke-CimMethod -InputObject $NetworkToMove -MethodName RemoveNetworkusingId -Arguments $Arguments
+    }
+    
 
     # Create the new network 
-    If ($RemoveNetworkusingIdResult.ReturnValue -eq 0){
+    If ($RemoveNetworkusingIdResult.ReturnValue -eq 0 -or $NetworkToMoveSkipDeletion -eq $true) {
         # Deletion successful, creating the new network
         [System.Object]$Network = Add-NetworkToNetworkGroup $NetworkGroupToJoin $NetworkIdToMove $NetworkMask $NetworkGatewayMAC
         If ($Network) {
