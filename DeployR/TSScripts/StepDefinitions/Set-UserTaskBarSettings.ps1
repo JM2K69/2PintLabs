@@ -18,9 +18,6 @@ $SetDarkMode = ${TSEnv:SetDarkMode}
 $StartMenuAddMore = ${TSEnv:StartMenuAddMore}
 
 
-StartMenuMoreDefault
-
-
 write-host "==================================================================="
 write-host "User Taskbar Settings for Windows 11 UI"
 write-host "Reporting Variables:"
@@ -33,7 +30,7 @@ write-host "TaskBarRemoveSearch: $TaskBarRemoveSearch"
 write-host "TaskBarStartMorePins: $TaskBarStartMorePins"
 write-host "TaskBarStartMoreRecommendations: $TaskBarStartMoreRecommendations"
 Write-Host "SetDarkMode: $SetDarkMode"
-
+Write-Host "StartMenuAddMore: $StartMenuAddMore"
 
 <#
 Customize Taskbar in Windows 11
