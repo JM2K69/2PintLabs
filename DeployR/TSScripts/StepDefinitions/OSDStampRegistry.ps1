@@ -12,7 +12,10 @@ Author: Generated Script
 Date: July 28, 2025
 Requires: Administrator privileges, DeployR Task Sequence environment
 #>
-
+if ($env:SystemDrive -eq "X:"){
+    Write-Host "Running in WinPE, this step requires a full Windows environment to run properly."
+    exit 0
+}
 # Adding Support for DeployR Task Sequence Variables
 try {
     Import-Module DeployR.Utility
