@@ -125,8 +125,8 @@ if ($TaskBarRemoveSearch -eq $true) {
     $reg = New-ItemProperty $RegKey -Name "SearchboxTaskbarMode"  -Value "0" -PropertyType String -Force
     try { $reg.Handle.Close() } catch {}
 }
-#$EnableDarkMode = $true
-if ($EnableDarkMode -eq $true) {
+#$SetDarkMode = $true
+if ($SetDarkMode -eq $true) {
     Write-Host "Attempting to run: Set Dark Mode RunOnce"
     $RegKey = "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\RunOnce"
     if (-not(Test-Path $RegKey )) {
