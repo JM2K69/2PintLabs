@@ -201,6 +201,26 @@ Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value $sta
 $finishTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentFinishTime" -Value $finishTime
 
+# Calculate Task Sequence Duration
+try {
+    $duration = $null
+    if ($startTime -and $finishTime) {
+        # Parse times to DateTime objects
+        $startDT = [datetime]::ParseExact($startTime, 'yyyy-MM-dd HH:mm:ss', $null)
+        $finishDT = [datetime]::ParseExact($finishTime, 'yyyy-MM-dd HH:mm:ss', $null)
+        $durationSpan = $finishDT - $startDT
+        $duration = $durationSpan.ToString()
+    } else {
+        $duration = "Unknown"
+    }
+    Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value $duration
+    Write-Host "Task Sequence Duration: $duration" -ForegroundColor Green
+}
+catch {
+    Write-Warning "Could not calculate Task Sequence Duration: $($_.Exception.Message)"
+    Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value "Unknown"
+}
+
 # Additional useful information
 Write-Host "`nAdditional Information:" -ForegroundColor Yellow
 Set-RegistryValue -Path $StampOSDRegPath -Name "LastStampUpdate" -Value $finishTime
