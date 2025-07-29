@@ -9,11 +9,17 @@ function Get-DeployRGather {
 }
 
 write-host "Function: Invoke-DeployRTS" -ForegroundColor Green
+write-host" Common Servers I Use:" -ForegroundColor magenta
+write-host "  - 214-deployr.2p.garytown.com" -ForegroundColor Green
+write-host "  - recover01.2pintsoftware.com" -ForegroundColor Green
+write-host "  - dr.2pintlabs.com" -ForegroundColor Green
+write-host "===================================================================="
 function Invoke-DeployRTS{
     param(
         [string]$ServerName,
         [string]$TSID
     )
+
 
     Write-Host "Invoking DeployR TS" -ForegroundColor Cyan
     if (-not $ServerName) {

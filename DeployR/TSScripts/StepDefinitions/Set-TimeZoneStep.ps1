@@ -35,12 +35,15 @@ if ($EnableLocationServices -eq "true") {
     if ($env:SystemDrive -eq "X:"){
         Write-Output "Running in WinPE, Mounting offline Registry to enable Location Services..."
         #Mounting the Offline Software Hive
-        $offlineSoftwareHive = "$env:SystemDrive\Windows\System32\config\SOFTWARE"
+        [GC]::Collect()
+        Start-Sleep -Milliseconds 500
+        $offlineSoftwareHive = "S:\Windows\System32\config\SOFTWARE"
         REG LOAD HKLM\OfflineSoftware $offlineSoftwareHive
         Set-ItemProperty -Path "HKLM:\OfflineSoftware\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Type "String" -Value "Allow" -Force
 	    Set-ItemProperty -Path "HKLM:\OfflineSoftware\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type "DWord" -Value 1 -Force
         #unload the offline registry hive
         REG UNLOAD HKLM\OfflineSoftware
+        Start-Sleep -Milliseconds 500
         [GC]::Collect()
     }
     else{
