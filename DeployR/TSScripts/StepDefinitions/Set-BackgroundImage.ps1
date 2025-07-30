@@ -27,12 +27,13 @@ if ($ImageFileContentItem -ne ""){
     Write-Output "Background Image Content Item: $ImageFileContentItem"
 }
 if ($BrandingBackgroundImageSystemMode -eq "True"){
-    Write-Output "Background Image System Mode: $BrandingBackgroundImageSystemMode"
+    
     $SystemMode = "Dark"
 }
 else {
     $SystemMode = "Light"
 }
+Write-Output "Background Image System Mode: $SystemMode"
 
 Function Set-BackgroundImage {
     <#
