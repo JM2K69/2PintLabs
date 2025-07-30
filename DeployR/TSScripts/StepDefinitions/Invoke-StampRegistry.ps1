@@ -40,12 +40,12 @@ $StampOSDRegPath = if (Get-Module -Name "DeployR.Utility") {
 
 #Get the Task Sequence Environment Variables
 if (Get-Module -Name "DeployR.Utility") {
-    $StampWinPEInfo =       ${TSEnv:WinPEBuildInfo}
-    $StampOSIMAGENAME =     ${TSEnv:OSIMAGENAME}
-    $StampDEPLOYRHOST =     ${TSEnv:DEPLOYRHOST}
-    $StampOSIMAGEVERSION =  ${TSEnv:OSIMAGEVERSION}
-    $StampTSID =            ${TSEnv:TSID}
-    $StampCOMPUTERNAME =    ${TSEnv:COMPUTERNAME}
+    $StampWinPEInfo =       ${TSEnv:StampWinPEBuildInfo}
+    $StampOSIMAGENAME =     ${TSEnv:StampOSIMAGENAME}
+    $StampDEPLOYRHOST =     ${TSEnv:StampDEPLOYRHOST}
+    $StampOSIMAGEVERSION =  ${TSEnv:StampOSIMAGEVERSION}
+    $StampTSID =            ${TSEnv:StampTSID}
+    $StampCOMPUTERNAME =    ${TSEnv:StampCOMPUTERNAME}
     $StampDurationTime =    ${TSEnv:StampDurationTime}
     $StampStartTime =       ${TSEnv:StampStartTime}
 }
