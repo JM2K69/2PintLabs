@@ -20,6 +20,7 @@ if ($env:SystemDrive -eq "X:"){
 try {
     Import-Module DeployR.Utility
     Write-Host "DeployR.Utility module loaded successfully" -ForegroundColor Green
+    
 }
 catch {
     Write-Warning "Failed to load DeployR.Utility module: $($_.Exception.Message)"
@@ -37,8 +38,32 @@ $StampOSDRegPath = if (Get-Module -Name "DeployR.Utility") {
     "HKLM:\SOFTWARE\2Pint Software\DeployR\OSD"
 }
 
-Write-Host "Using registry path: $StampOSDRegPath" -ForegroundColor Cyan
+#Get the Task Sequence Environment Variables
+if (Get-Module -Name "DeployR.Utility") {
+    $StampWinPEInfo =       ${TSEnv:WinPEBuildInfo}
+    $StampOSIMAGENAME =     ${TSEnv:OSIMAGENAME}
+    $StampDEPLOYRHOST =     ${TSEnv:DEPLOYRHOST}
+    $StampOSIMAGEVERSION =  ${TSEnv:OSIMAGEVERSION}
+    $StampTSID =            ${TSEnv:TSID}
+    $StampCOMPUTERNAME =    ${TSEnv:COMPUTERNAME}
+    $StampDurationTime =    ${TSEnv:StampDurationTime}
+    $StampStartTime =       ${TSEnv:StampStartTime}
+}
 
+#Write out all Vars
+Write-Host "==============================================================="
+Write-Host "StampOSDRegPath:        $StampOSDRegPath" -ForegroundColor Cyan
+Write-Host "StampStartTime:         $StampStartTime" -ForegroundColor Cyan
+Write-Host "StampDurationTime:      $StampDurationTime" -ForegroundColor Cyan
+Write-Host "StampWinPEInfo:         $StampWinPEInfo" -ForegroundColor Cyan
+Write-Host "StampOSIMAGENAME:       $StampOSIMAGENAME" -ForegroundColor Cyan
+Write-Host "StampDEPLOYRHOST:       $StampDEPLOYRHOST" -ForegroundColor Cyan
+Write-Host "StampOSIMAGEVERSION:    $StampOSIMAGEVERSION" -ForegroundColor Cyan
+Write-Host "StampTSID:              $StampTSID" -ForegroundColor Cyan
+Write-Host "StampCOMPUTERNAME:      $StampCOMPUTERNAME" -ForegroundColor Cyan
+Write-Host "==============================================================="
+
+#region Helper Functions
 # Function to create registry path if it doesn't exist
 function New-RegistryPath {
     param([string]$Path)
@@ -59,10 +84,10 @@ function New-RegistryPath {
 # Function to write registry value with error handling
 function Set-RegistryValue {
     param(
-        [string]$Path,
-        [string]$Name,
-        [string]$Value,
-        [string]$Type = "String"
+    [string]$Path,
+    [string]$Name,
+    [string]$Value,
+    [string]$Type = "String"
     )
     
     try {
@@ -131,6 +156,8 @@ function Get-OSEdition {
     }
 }
 
+#endregion
+
 # Main execution
 Write-Host "`n=== OSD Registry Stamp Started ===" -ForegroundColor Magenta
 Write-Host "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Yellow
@@ -148,24 +175,33 @@ if (Get-Module -Name "DeployR.Utility") {
     Write-Host "`nTask Sequence Information:" -ForegroundColor Yellow
     
     # 1. TS ID
-    $tsID = ${TSEnv:TSID}
-    if (-not $tsID) { $tsID = "Unknown" }
-    Set-RegistryValue -Path $StampOSDRegPath -Name "TSID" -Value $tsID | Out-Null
+    if ($StampTSID -eq "True"){
+        $tsID = ${TSEnv:TSID}
+        if (-not $tsID) { $tsID = "Unknown" }
+        Set-RegistryValue -Path $StampOSDRegPath -Name "TSID" -Value $tsID | Out-Null
+    }
     
     # 2. DeployR Server
-    $deployRHost = ${TSEnv:DEPLOYRHOST}
-    if (-not $deployRHost) { $deployRHost = "Unknown" }
-    Set-RegistryValue -Path $StampOSDRegPath -Name "DeployRServer" -Value $deployRHost | Out-Null
+    if ($StampDEPLOYRHOST -eq "True"){
+        $deployRHost = ${TSEnv:DEPLOYRHOST}
+        if (-not $deployRHost) { $deployRHost = "Unknown" }
+        Set-RegistryValue -Path $StampOSDRegPath -Name "DeployRServer" -Value $deployRHost | Out-Null
+    }
     
     # 3. OS Image Version
-    $osImageVersion = ${TSEnv:OSIMAGEVERSION}
-    if (-not $osImageVersion) { $osImageVersion = Get-OSBuildInfo }
-    Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageVersion" -Value $osImageVersion | Out-Null
+    if ($StampOSIMAGEVERSION -eq "True"){
+        $osImageVersion = ${TSEnv:OSIMAGEVERSION}
+        if (-not $osImageVersion) { $osImageVersion = Get-OSBuildInfo }
+        Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageVersion" -Value $osImageVersion | Out-Null
+    }
     
     # 4. OS Image Name/Edition
-    $osImageName = ${TSEnv:OSIMAGENAME}
-    if (-not $osImageName) { $osImageName = Get-OSEdition }
-    Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageName" -Value $osImageName | Out-Null
+    if ($StampOSIMAGENAME -eq "True"){
+        $osImageName = ${TSEnv:OSIMAGENAME}
+        if (-not $osImageName) { $osImageName = Get-OSEdition }
+        Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageName" -Value $osImageName | Out-Null
+    }
+    
     
 } else {
     Write-Host "`nNon-Task Sequence Environment - Using local system information:" -ForegroundColor Yellow
@@ -180,35 +216,44 @@ if (Get-Module -Name "DeployR.Utility") {
 Write-Host "`nSystem Information:" -ForegroundColor Yellow
 
 # 5. Computer Name
-$computerName = $env:COMPUTERNAME
-if (-not $computerName) { $computerName = "Unknown" }
-Set-RegistryValue -Path $StampOSDRegPath -Name "ComputerName" -Value $computerName | Out-Null
+if ($StampCOMPUTERNAME -eq "True"){
+    $computerName = $env:COMPUTERNAME
+    if (-not $computerName) { $computerName = "Unknown" }
+    Set-RegistryValue -Path $StampOSDRegPath -Name "ComputerName" -Value $computerName | Out-Null
+}
+
 
 # 6. WinPE Information
-write-host "Setting WinPE Information..."
-if (${TSEnv:WinPEBuildInfo}){
-    $winPEInfo = ${TSEnv:WinPEBuildInfo}
-    Write-Host "WinPE Information: $winPEInfo"
-    Set-RegistryValue -Path $StampOSDRegPath -Name "WinPEInfo" -Value $winPEInfo | Out-Null
-} else {
-    Write-Host "WinPE Information not available, skipping..." -ForegroundColor Yellow
+if ($StampWinPEInfo -eq "True"){
+    write-host "Setting WinPE Information..."
+    if (${TSEnv:WinPEBuildInfo}){
+        $winPEInfo = ${TSEnv:WinPEBuildInfo}
+        Write-Host "WinPE Information: $winPEInfo"
+        Set-RegistryValue -Path $StampOSDRegPath -Name "WinPEBuild" -Value $winPEInfo | Out-Null
+    } else {
+        Write-Host "WinPE Information not available, skipping..." -ForegroundColor Yellow
+    }
 }
+
 
 
 # 7. Start Time (if available from TS, otherwise current time)
-$startTime = if (Get-Module -Name "DeployR.Utility") {
-    ${TSEnv:OSDStartTime}
-} else {
-    $null
+if ($StampStartTime -eq "True") {
+    $startTime = if (Get-Module -Name "DeployR.Utility") {
+        ${TSEnv:OSDStartTime}
+    } else {
+        $null
+    }
+    if ($startTime) {
+        Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value $startTime 
+        Write-Host "Setting DeploymentStartTime to: $startTime" -ForegroundColor Green
+    }
+    else {
+        Write-Host "No OSDStartTime found, Please add Step Definition 'Tweaks - Set Initial Variables' into the beginning of your Task Sequence" -ForegroundColor Yellow
+        Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value "Missing Element, See Log File"
+    }
 }
-if ($startTime) {
-    Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value $startTime 
-    Write-Host "Setting DeploymentStartTime to: $startTime" -ForegroundColor Green
-}
-else {
-    Write-Host "No OSDStartTime found, Please add Step Definition 'Tweaks - Set Initial Variables' into the beginning of your Task Sequence" -ForegroundColor Yellow
-    Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value "Missing Element, See Log File"
-}
+
 
 
 
@@ -218,24 +263,27 @@ Write-Host "Setting DeploymentFinishTime to: $finishTime" -ForegroundColor Green
 Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentFinishTime" -Value $finishTime
 
 # Calculate Task Sequence Duration
-try {
-    $duration = $null
-    if ($startTime -and $finishTime) {
-        # Parse times to DateTime objects
-        $startDT = [datetime]::ParseExact($startTime, 'yyyy-MM-dd HH:mm:ss', $null)
-        $finishDT = [datetime]::ParseExact($finishTime, 'yyyy-MM-dd HH:mm:ss', $null)
-        $durationSpan = $finishDT - $startDT
-        $duration = $durationSpan.ToString()
-    } else {
-        $duration = "Unknown"
+if ($StampDurationTime -eq "True") {
+    try {
+        $duration = $null
+        if ($startTime -and $finishTime) {
+            # Parse times to DateTime objects
+            $startDT = [datetime]::ParseExact($startTime, 'yyyy-MM-dd HH:mm:ss', $null)
+            $finishDT = [datetime]::ParseExact($finishTime, 'yyyy-MM-dd HH:mm:ss', $null)
+            $durationSpan = $finishDT - $startDT
+            $duration = $durationSpan.ToString()
+        } else {
+            $duration = "Unknown"
+        }
+        Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value $duration | Out-Null
+        Write-Host "Task Sequence Duration: $duration" -ForegroundColor Green
     }
-    Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value $duration | Out-Null
-    Write-Host "Task Sequence Duration: $duration" -ForegroundColor Green
+    catch {
+        Write-Warning "Could not calculate Task Sequence Duration: $($_.Exception.Message)"
+        Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value "Unknown" | Out-Null
+    }
 }
-catch {
-    Write-Warning "Could not calculate Task Sequence Duration: $($_.Exception.Message)"
-    Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value "Unknown" | Out-Null
-}
+
 
 # Additional useful information
 Write-Host "`nAdditional Information:" -ForegroundColor Yellow
