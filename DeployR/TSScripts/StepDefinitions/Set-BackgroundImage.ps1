@@ -14,6 +14,7 @@ Import-Module DeployR.Utility
 [String]$URL = ${TSEnv:BrandingBackgroundImageURL}
 [String]$ImageFileName = ${TSEnv:BrandingBackgroundImageFileName}
 [String]$ImageFileContentItem = ${TSEnv:CONTENT-BrandingBackgroundImageCI}
+[String]$BrandingBackgroundImageSystemMode = ${TSEnv:BrandingBackgroundImageSystemMode}
 
 #Report Variables:
 if ($URL -ne ""){
@@ -25,7 +26,13 @@ if ($ImageFileName -ne ""){
 if ($ImageFileContentItem -ne ""){
     Write-Output "Background Image Content Item: $ImageFileContentItem"
 }
-
+if ($BrandingBackgroundImageSystemMode -eq "True"){
+    Write-Output "Background Image System Mode: $BrandingBackgroundImageSystemMode"
+    $SystemMode = "Dark"
+}
+else {
+    $SystemMode = "Light"
+}
 
 Function Set-BackgroundImage {
     <#
@@ -42,11 +49,13 @@ Function Set-BackgroundImage {
     param(
     [String]$ImageURL,
     [String]$ImageFileName, 
-    [String]$ImageFileContentItem
+    [String]$ImageFileContentItem,
+    [String]$SystemMode = "Dark" # Default to Dark Mode
 
     )
     
-$ThemeFile = @'
+$ThemeFile = @"
+
 ; Copyright  Microsoft Corp.
 
 [Theme]
@@ -90,7 +99,7 @@ DefaultValue=Windows Default
 DefaultValue.MUI=@main.cpl,-1020
 
 [Control Panel\Desktop]
-Wallpaper=%SystemRoot%\web\wallpaper\Autopilot\Autopilot.jpg
+Wallpaper=%SystemRoot%\web\wallpaper\DeployROSD\DeployROSD.jpg
 TileWallpaper=0
 WallpaperStyle=10
 Pattern=
@@ -101,7 +110,7 @@ ColorStyle=NormalColor
 Size=NormalSize
 AutoColorization=0
 ColorizationColor=0XC40078D7
-SystemMode=Dark
+SystemMode=$SystemMode
 
 [boot]
 SCRNSAVE.EXE=
@@ -113,7 +122,7 @@ MTSM=RJSPBS
 ; IDS_SCHEME_DEFAULT
 SchemeName=@%SystemRoot%\System32\mmres.dll,-800
 
-'@
+"@
 
     $StoragePath = "$env:SystemDrive\_2P\content"
     
@@ -173,7 +182,7 @@ SchemeName=@%SystemRoot%\System32\mmres.dll,-800
 
 if ($URL -ne ""){
     Write-Output "Background Image URL is set to $URL"
-    Set-BackgroundImage -ImageURL $URL
+    Set-BackgroundImage -ImageURL $URL -SystemMode $SystemMode
 }
 if ($ImageFileName -ne ""){
     Write-Output "Background Image File Name is set to $ImageFileName"
@@ -181,6 +190,6 @@ if ($ImageFileName -ne ""){
 }
 if ($ImageFileContentItem -ne ""){
     Write-Output "Background Image Content Item is set to $ImageFileContentItem"
-    Set-BackgroundImage -ImageFileName $ImageFileName -ImageFileContentItem $ImageFileContentItem
+    Set-BackgroundImage -ImageFileName $ImageFileName -ImageFileContentItem $ImageFileContentItem -SystemMode $SystemMode
 }
 
