@@ -48,6 +48,7 @@ if (Get-Module -Name "DeployR.Utility") {
     $StampCOMPUTERNAME =    ${TSEnv:StampCOMPUTERNAME}
     $StampDurationTime =    ${TSEnv:StampDurationTime}
     $StampStartTime =       ${TSEnv:StampStartTime}
+    $StampApps =            ${TSEnv:StampApps}
 }
 
 #Write out all Vars
@@ -155,7 +156,19 @@ function Get-OSEdition {
         return "Unknown"
     }
 }
-
+function Get-InstalledApps
+{
+    if (![Environment]::Is64BitProcess) {
+        $regpath = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    }
+    else {
+        $regpath = @(
+            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+            'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        )
+    }
+    Get-ItemProperty $regpath | .{process{if($_.DisplayName -and $_.UninstallString) { $_ } }} | Select DisplayName, Publisher, InstallDate, DisplayVersion, UninstallString |Sort DisplayName
+}
 #endregion
 
 # Main execution
@@ -281,6 +294,21 @@ if ($StampDurationTime -eq "True") {
     catch {
         Write-Warning "Could not calculate Task Sequence Duration: $($_.Exception.Message)"
         Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value "Unknown" | Out-Null
+    }
+}
+
+if ($StampApps -eq "True") {
+    Write-Host "`nInstalled Applications:" -ForegroundColor Yellow
+    $installedApps = Get-InstalledApps
+    $recordApps = $installedapps | Where-Object {$_.DisplayName -ne "Remote Desktop Connection"}
+    if ($recordApps) {
+        New-Item -Path "$StampOSDRegPath\Apps" -ItemType Directory -Force | Out-Null
+        $recordApps | ForEach-Object {
+            Set-RegistryValue -Path "$StampOSDRegPath\Apps" -Name "App_$($_.DisplayName)" -Value "$($_.DisplayVersion) by $($_.Publisher)" | Out-Null
+            Write-Host "  Installed: $($_.DisplayName) - Version: $($_.DisplayVersion) by $($_.Publisher)" -ForegroundColor Green
+        }
+    } else {
+        Write-Warning "No installed applications found."
     }
 }
 
