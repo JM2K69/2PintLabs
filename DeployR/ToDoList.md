@@ -9,14 +9,7 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 - Defender Updates
 - OEM Tools Offline Mode (offline repo for updates)
 
-- OSD Stamp
-  - TS ID:                  TSID
-  - DeployR Server:         DEPLOYRHOST
-  - OS Build Media UBR:     OSIMAGEVERSION
-  - OS Edition:             OSIMAGENAME
-  - Computer Name:          
-  - WinPE Info?
-  - Start | Finish Times
+
 
 ## In Progress
 
@@ -33,6 +26,15 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
   - MVP Created: <https://github.com/gwblok/2PintLabs/blob/main/DeployR/ServerSideScripts/DeployR-ImportFromGithub.ps1>
   - Overwrite doesn't seem to work, this is a Dev side issue I'm waiting on.
   - Works good on new setups, but after I've modifed them the new changes don't import into other systems.
+
+- OSD Stamp
+  - TS ID:                  TSID
+  - DeployR Server:         DEPLOYRHOST
+  - OS Build Media UBR:     OSIMAGEVERSION
+  - OS Edition:             OSIMAGENAME
+  - Computer Name:          $env:ComputerName
+  - WinPE Info?             Info Generated in Set Initial Variables Step
+  - Start | Finish Times    Start Info Generated in Set Initial Variables Step
 
 ## Completed
 
