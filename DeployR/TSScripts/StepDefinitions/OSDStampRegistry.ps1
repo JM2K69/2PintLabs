@@ -185,8 +185,15 @@ if (-not $computerName) { $computerName = "Unknown" }
 Set-RegistryValue -Path $StampOSDRegPath -Name "ComputerName" -Value $computerName
 
 # 6. WinPE Information
-$winPEInfo = Get-WinPEInfo
-Set-RegistryValue -Path $StampOSDRegPath -Name "WinPEInfo" -Value $winPEInfo
+write-host "Setting WinPE Information..."
+if (${TSEnv:WinPEBuildInfo}){
+    $winPEInfo = ${TSEnv:WinPEBuildInfo}
+    Write-Host "WinPE Information: $winPEInfo"
+    Set-RegistryValue -Path $StampOSDRegPath -Name "WinPEInfo" -Value $winPEInfo
+} else {
+    Write-Host "WinPE Information not available, skipping..." -ForegroundColor Yellow
+}
+
 
 # 7. Start Time (if available from TS, otherwise current time)
 $startTime = if (Get-Module -Name "DeployR.Utility") {
