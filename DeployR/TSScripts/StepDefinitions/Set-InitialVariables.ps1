@@ -1,7 +1,8 @@
 Import-Module DeployR.Utility
 
 #Set the initial variables for the DeployR Task Sequence environment
-${TSEnv:OSDStartTime} = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+${TSEnv:OSDStartTime} = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
+Write-Host "Setting OSDStartTime to: ${TSEnv:OSDStartTime}" -ForegroundColor Green
 
 # Get the provided variables
 [String]$SetTimeZoneName = ${TSEnv:SetTimeZoneName}

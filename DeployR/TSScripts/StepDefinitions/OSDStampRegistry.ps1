@@ -194,11 +194,20 @@ $startTime = if (Get-Module -Name "DeployR.Utility") {
 } else {
     $null
 }
-if (-not $startTime) { $startTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss' }
-Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value $startTime
+if ($startTime) {
+    Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value $startTime 
+    Write-Host "Setting DeploymentStartTime to: $startTime" -ForegroundColor Green
+}
+else {
+    Write-Host "No OSDStartTime found, Please add Step Definition 'Tweaks - Set Initial Variables' into the beginning of your Task Sequence" -ForegroundColor Yellow
+    Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value "Missing Element, See Log File"
+}
+
+
 
 # 8. Finish Time (current time as this is when the stamp is being written)
-$finishTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+$finishTime = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
+Write-Host "Setting DeploymentFinishTime to: $finishTime" -ForegroundColor Green
 Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentFinishTime" -Value $finishTime
 
 # Calculate Task Sequence Duration
@@ -223,7 +232,6 @@ catch {
 
 # Additional useful information
 Write-Host "`nAdditional Information:" -ForegroundColor Yellow
-Set-RegistryValue -Path $StampOSDRegPath -Name "LastStampUpdate" -Value $finishTime
 Set-RegistryValue -Path $StampOSDRegPath -Name "ScriptVersion" -Value "1.0"
 
 # Summary
