@@ -146,7 +146,7 @@ SchemeName=@%SystemRoot%\System32\mmres.dll,-800
     $ThemeFile | Out-File -FilePath "C:\Windows\Resources\OEM Themes\DeployROSD.theme" -Force -Encoding UTF8
     New-Item -Path  "C:\Windows\web\wallpaper\DeployROSD" -ItemType Directory -Force | Out-Null
     Copy-Item "$StoragePath\Background.jpg" "C:\Windows\web\wallpaper\DeployROSD\DeployROSD.jpg" -Force
-    Log "Setting DeployROSD theme as the new user default"
+    Write-Host "Setting DeployROSD theme as the new user default"
     
     [GC]::Collect()
     start-sleep -Milliseconds 500
