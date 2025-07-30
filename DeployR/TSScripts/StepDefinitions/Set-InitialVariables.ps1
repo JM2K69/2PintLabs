@@ -6,7 +6,8 @@ This should be one of the very first steps in the Task Sequence, before you even
 Import-Module DeployR.Utility
 
 #Set the initial variables for the DeployR Task Sequence environment
-${TSEnv:OSDStartTime} = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+#This is in UTC, so it can be used for logging and other purposes
+${TSEnv:OSDStartTime} = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 # Get the provided variables
 [String]$SetTimeZoneName = ${TSEnv:SetTimeZoneName}
