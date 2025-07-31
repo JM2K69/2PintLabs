@@ -5,18 +5,28 @@ This should be one of the very first steps in the Task Sequence, before you even
 #>
 Import-Module DeployR.Utility
 
+
+Write-Host "================================================================================"
 #Set the initial variables for the DeployR Task Sequence environment
 #This is in UTC, so it can be used for logging and other purposes
-${TSEnv:OSDStartTime} = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
-Write-Host "Setting OSDStartTime to: ${TSEnv:OSDStartTime}" -ForegroundColor Green
 
 # Get the provided variables
 [String]$SetTimeZoneName = ${TSEnv:SetTimeZoneName}
+[String]$InitialProgressTimeout = ${TSEnv:InitialProgressTimeout}
+[String]$InitialPeering = ${TSEnv:InitialPeering}
+[String]$InitialFinishAction = ${TSEnv:InitialFinishAction}
 
+Write-Host "Recording initial variables for the Task Sequence environment"
 #Report Variables:
 Write-Output "Var SetTimeZoneName: $SetTimeZoneName"
+Write-Output "Var InitialProgressTimeout: $InitialProgressTimeout"
+Write-Output "Var InitialPeering: $InitialPeering"
+Write-Output "Var InitialFinishAction: $InitialFinishAction"
+Write-Host "================================================================================"
+write-host "Doing the work...."
 
-
+${TSEnv:OSDStartTime} = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
+Write-Host "Setting OSDStartTime to: ${TSEnv:OSDStartTime}" -ForegroundColor Green
 
 if ($SetTimeZoneName -ne "") {
     Write-Output "Setting Time Zone Name to: $SetTimeZoneName"
@@ -34,6 +44,30 @@ if ($SetTimeZoneName -ne "") {
 
 } else {
     Write-Output "No Time Zone Name provided. Skipping time zone setting."
+}
+
+if ($InitialProgressTimeout -ne "") {
+    Write-Output "Setting Progress Timeout to: $InitialProgressTimeout"
+    ${TSEnv:ProgressTimeout} = $InitialProgressTimeout
+}
+else {
+    Write-Output "No Progress Timeout provided. Skipping progress timeout setting."
+}
+
+if ($InitialPeering -ne "") {
+    Write-Output "Setting Peering to: $InitialPeering"
+    ${TSEnv:Peering} = $InitialPeering
+}
+else {
+    Write-Output "No Peering provided. Skipping peering setting."
+}
+
+if ($InitialFinishAction -ne "") {
+    Write-Output "Setting Finish Action to: $InitialFinishAction"
+    ${TSEnv:FinishAction} = $InitialFinishAction
+}
+else {
+    Write-Output "No Finish Action provided. Skipping finish action setting."
 }
 
 #Function to get full OS Build & UBR
@@ -56,5 +90,6 @@ function Get-WinPEBuildInfo {
 
 }
 
-
+Write-Host "Setting WinPE Build Info"
 ${TSEnv:WinPEBuildInfo} = Get-WinPEBuildInfo
+Write-Host "WinPE Build Info set to: ${TSEnv:WinPEBuildInfo}"
