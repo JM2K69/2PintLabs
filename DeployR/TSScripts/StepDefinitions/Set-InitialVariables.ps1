@@ -63,8 +63,12 @@ else {
 }
 
 if ($InitialFinishAction -ne "") {
-    Write-Output "Setting Finish Action to: $InitialFinishAction"
-    ${TSEnv:FinishAction} = $InitialFinishAction
+    if ($InitialFinishAction -eq "blank") {
+        # Don't set this at all if left blank, don't even set it to null, that will break it too
+        #${TSEnv:FinishAction} = $null
+    } else {
+        ${TSEnv:FinishAction} = $InitialFinishAction
+    }
 }
 else {
     Write-Output "No Finish Action provided. Skipping finish action setting."
