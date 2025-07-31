@@ -1,35 +1,50 @@
-<#
-DeployR
-#>
+# Set-WinNetworkSettings.ps1
+
+if ($env:SystemDrive -eq "X:"){
+    Write-Host "Running in WinPE, this step requires a full Windows environment to run properly."
+    exit 0
+}
 
 Import-Module DeployR.Utility
 
-# Get the provided variables
-[String]$SetTimeZoneName = ${TSEnv:SetTimeZoneName}
-[String]$EnableLocationServices = ${TSEnv:EnableLocationServices}
 
-#Report Variables:
-Write-Output "Var SetTimeZoneName: $SetTimeZoneName"
-Write-Output "Var EnableLocationServices: $EnableLocationServices"
+# Variables - Set these to $true or $false as needed
+[string]$EnableRDP = ${TSEnv:EnableRDP}
+[string]$EnableICMP = ${TSEnv:EnableICMP}
+[string]$EnableLocationServices = ${TSEnv:EnableLocationServices}
+
+# Write out which script is running, and the variables being used
+write-host "==================================================================="
+write-host "Set-WinNetworkSettings Script" 
+write-host "Reporting Variables:"
+write-host "EnableRDP: $EnableRDP"  
+write-host "EnableICMP: $EnableICMP"
 
 
-if ($SetTimeZoneName -ne "") {
-    Write-Output "Setting Time Zone Name to: $SetTimeZoneName"
-    ${TSEnv:TimeZone} = $SetTimeZoneName
-    if ($env:SystemDrive -eq "X:") {
-        Write-Output "Running in WinPE, set TIMEZONE Variable for DeployR to add to unattended.xml"
-    }
-    else {
-        try {
-            Set-TimeZone -Id $SetTimeZoneName
-        } catch {
-            Write-Output "Failed to set Time Zone Name $SetTimeZoneName | $_"
-        }
-    }
-
-} else {
-    Write-Output "No Time Zone Name provided. Skipping time zone setting."
+# Enable RDP if requested
+if ($EnableRDP -eq "True") {
+    Write-Host "Enabling RDP..."
+    # Enable Remote Desktop
+    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0  | Out-Null
+    # Enable RDP firewall rule
+    Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 }
+
+# Enable ICMP (Ping) if requested
+if ($EnableICMP -eq "True") {
+    Write-Host "Enabling ICMP (Ping)..."
+# Run as Administrator
+# Enable ICMP Echo Request (Ping) for both IPv4 and IPv6
+
+# Enable ICMPv4-In
+New-NetFirewallRule -DisplayName "Allow ICMPv4-In" -Protocol ICMPv4 -IcmpType 8 -Action Allow -Profile Any -Enabled True  | Out-Null
+
+# Enable ICMPv6-In
+New-NetFirewallRule -DisplayName "Allow ICMPv6-In" -Protocol ICMPv6 -IcmpType 8 -Action Allow -Profile Any -Enabled True  | Out-Null
+
+Write-Host "ICMP (Ping) has been enabled in Windows Firewall for both IPv4 and IPv6"
+}
+
 
 if ($EnableLocationServices -eq "true") {
     if ($env:SystemDrive -eq "X:"){
@@ -61,7 +76,6 @@ if ($EnableLocationServices -eq "true") {
 	Start-Service -Name "lfsvc" -ErrorAction SilentlyContinue
     Write-Output "Location Services enabled."
     }
-
-} else {
-    Write-Output "Location Services not enabled."
 }
+Write-Host "Network settings updated."
+write-host "==================================================================="

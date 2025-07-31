@@ -4,14 +4,7 @@ $DateStamp = (Get-Date).ToString("yyyyMMdd-HHmmss")
 Import-Module 'C:\Program Files\2Pint Software\DeployR\Client\PSModules\DeployR.Utility'
 Set-DeployRHost "http://localhost:7282"
 
-#GitHubLocation, always overwrite with the latest version during a backup.
-$EnableBackup2GitHub = $false
-if ($EnableBackup2GitHub) {
-    $GitHubCustomSteps = "D:\GitHub\2PintLabs\DeployR\CustomSteps"
-    $GitHubCustomStepsReferencedContent = "D:\GitHub\2PintLabs\DeployR\CustomSteps\ReferencedContent"
-    if (-not (Test-Path -Path $GitHubCustomSteps)) {New-Item -Path $GitHubCustomSteps -ItemType Directory | Out-Null}
-    if (-not (Test-Path -Path $GitHubCustomStepsReferencedContent)) {New-Item -Path $GitHubCustomStepsReferencedContent -ItemType Directory | Out-Null}
-}
+
 
 
 # Create Variable that is the FQDN of the Machien:
@@ -36,6 +29,15 @@ $ComputerFQDN = "$env:COMPUTERNAME.$Suffix"
 if ($ComputerFQDN -eq "214-DEPLOYR.2p.garytown.com") {
     $EnableBackup2GitHub = $true
 }
+#GitHubLocation, always overwrite with the latest version during a backup.
+#$EnableBackup2GitHub = $false
+if ($EnableBackup2GitHub) {
+    $GitHubCustomSteps = "D:\GitHub\2PintLabs\DeployR\CustomSteps"
+    $GitHubCustomStepsReferencedContent = "D:\GitHub\2PintLabs\DeployR\CustomSteps\ReferencedContent"
+    if (-not (Test-Path -Path $GitHubCustomSteps)) {New-Item -Path $GitHubCustomSteps -ItemType Directory | Out-Null}
+    if (-not (Test-Path -Path $GitHubCustomStepsReferencedContent)) {New-Item -Path $GitHubCustomStepsReferencedContent -ItemType Directory | Out-Null}
+}
+
 #OneDriveBackup
 $OneDriveBackupPath = "C:\Users\gary.blok\OneDrive - garytown\DeployR-Sync\$ComputerFQDN"
 
@@ -85,7 +87,7 @@ if ($LatestBackup) {
     Write-Host "No backups found in $BackupLocation" -ForegroundColor Red
 }
 
-if ($EnableBackup2GitHub) {
+if ($EnableBackup2GitHub -and $GitHubCustomSteps -and $GitHubCustomStepsReferencedContent) {
     #Backup DeployR step definitions for GitHub Custom Steps
     Write-Host "Exporting DeployR step definitions to GitHub..." -ForegroundColor Yellow
     $StepDefinitions = Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'}
@@ -109,7 +111,7 @@ if ($EnableBackup2GitHub) {
             if (Test-Path -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName") {
                 #Write-Host "Removing existing folder: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Yellow
                 #Remove-Item -Path "$GitHubCustomStepsReferencedContent\$ExportContentFolderName" -Recurse -Force
-                Start-Sleep -Milliseconds 100
+                Start-Sleep -Milliseconds 200
             }
             Write-Host "Exporting content item to: $GitHubCustomStepsReferencedContent\$ExportContentFolderName" -ForegroundColor Cyan
             Export-DeployRContentItem -Id $ContentItemInfo.id -DestinationFolder "$GitHubCustomStepsReferencedContent\$ExportContentFolderName"
