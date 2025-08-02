@@ -4,7 +4,10 @@ Replaces Default Windows Lock Screen with your own
 
 DeployR
 #>
-
+if ($env:SystemDrive -eq "X:"){
+    Write-Host "Running in WinPE, this step requires a full Windows environment to run properly."
+    exit 0
+}
 Import-Module DeployR.Utility
 
 # Get the provided variables

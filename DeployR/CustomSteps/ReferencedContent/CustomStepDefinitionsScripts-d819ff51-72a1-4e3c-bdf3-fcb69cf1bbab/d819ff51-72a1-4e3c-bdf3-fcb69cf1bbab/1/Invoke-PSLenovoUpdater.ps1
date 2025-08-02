@@ -1,11 +1,27 @@
-# Based on: https://github.com/jantari/LSUClient
+if ($env:SystemDrive -eq "X:"){
+    Write-Host "Running in WinPE, this step requires a full Windows environment to run properly."
+    exit 0
+}
 
+# Based on: https://github.com/jantari/LSUClient
+Write-Host "==================================================================="
+Write-Host "Lenovo Update Script"
+Write-Host "Importing DeployR.Utility module..."
+Import-Module DeployR.Utility
+$LSUDrivers = ${TSEnv:updateTypeDrivers}
+$LSUBIOS = ${TSEnv:updateTypeBIOS}
+$LSUScanOnly = ${TSEnv:scanonly}
+
+[String]$MakeAlias = ${TSEnv:MakeAlias}
+if ($MakeAlias -ne "Lenovo") {
+    Write-Host "MakeAlias must be Lenovo. Exiting script."
+    Exit 0
+}
 
 #Setup LOCALAPPDATA Variable
 [System.Environment]::SetEnvironmentVariable('LOCALAPPDATA',"$env:SystemDrive\Windows\system32\config\systemprofile\AppData\Local")
 
-Write-Host "==================================================================="
-Write-Host "Lenovo Update Script"
+
 
 #Check For Module & Install if not present
 $ModuleFile = Get-ChildItem -path 'C:\Program Files\WindowsPowerShell\Modules\LSUClient' -ErrorAction SilentlyContinue -Filter "*.psd1" -recurse
@@ -26,17 +42,14 @@ try {
     exit 0
 }
 
-Write-Host "Importing DeployR.Utility module..."
-Import-Module DeployR.Utility
-$LSUDrivers = ${TSEnv:updateTypeDrivers}
-$LSUBIOS = ${TSEnv:updateTypeBIOS}
-$LSUScanOnly = ${TSEnv:scanonly}
 
+Write-Host "==================================================================="
+write-host "Reporting Variables"
 Write-Host "LSUDrivers: $LSUDrivers"
 Write-Host "LSUBIOS: $LSUBIOS"
 Write-Host "LSUScanOnly: $LSUScanOnly"
 
-Write-Host "==================================================================="
+
 Write-Host ""
 Write-Host "Checking for Lenovo updates..." -ForegroundColor Cyan
 #Find and Report Updates

@@ -1,3 +1,7 @@
+if ($env:SystemDrive -eq "X:"){
+    Write-Host "Running in WinPE, this step requires a full Windows environment to run properly."
+    exit 0
+}
 <# Set Default Generic User Image
 
 Replaces Default Windows Lock Screen with your own

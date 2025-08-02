@@ -54,13 +54,12 @@ else {
     Write-Output "No Progress Timeout provided. Skipping progress timeout setting."
 }
 
-if ($InitialPeering -eq "True") {
-    Write-Output "Setting Peering to: $InitialPeering"
-    #${TSEnv:Peering} = $InitialPeering - Don't need to set this, it is already set in the Task Sequence environment by default
-}
-else {
+if ($InitialPeering -ne "") {
     Write-Output "Setting Peering to: $InitialPeering"
     ${TSEnv:Peering} = $InitialPeering
+}
+else {
+    Write-Output "No Peering provided. Skipping peering setting."
 }
 
 if ($InitialFinishAction -ne "") {

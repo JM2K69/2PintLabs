@@ -9,6 +9,11 @@ ALL INFORMATION IS PUBLICLY AVAILABLE ON THE INTERNET. I JUST CONSOLIDATED IT IN
 
 
 #>
+if ($env:SystemDrive -eq "X:"){
+    Write-Host "Running in WinPE, this step requires a full Windows environment to run properly."
+    exit 0
+}
+
 #Pull Vars from TS:
 try {
     Import-Module DeployR.Utility
@@ -34,6 +39,14 @@ else {
 
 $LogPath = "$env:SystemDrive\_2P\Logs"
 
+
+[String]$MakeAlias = ${TSEnv:MakeAlias}
+if ($MakeAlias -ne "Dell") {
+    Write-Host "MakeAlias must be Dell. Exiting script."
+    Exit 0
+}
+
+#Convert the string values to boolean
 if ($updateTypeBIOSFirmware -eq "true") {[bool]$updateTypeBIOSFirmware = $true} 
 else {[bool]$updateTypeBIOSFirmware = $false}
 if ($updateTypeDrivers -eq "true") {[bool]$updateTypeDrivers = $true} 
@@ -43,7 +56,7 @@ else {[bool]$updateTypeApplications = $false}
 if ($ScanOnly -eq "true") {[bool]$ScanOnly = $true} 
 else {[bool]$ScanOnly = $false}
 
-
+#Write Info to Log
 Write-Host "=============================================================================="
 Write-Host "Current DCU Settings selected from Task Sequence" 
 Write-Host "updateTypeBIOSFirmware: $updateTypeBIOSFirmware"

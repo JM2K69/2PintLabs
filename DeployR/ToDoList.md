@@ -46,3 +46,8 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 
 - Test custom actions scripts in Windows, see if I can leverage that for customizations.
   - After much testing, Custom Action Scripts do not get triggered in OSD
+
+## NOTES FOR Step Defs
+
+Customize - Configure
+Windows Customization
