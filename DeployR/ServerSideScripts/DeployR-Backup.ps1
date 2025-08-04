@@ -7,7 +7,7 @@ Set-DeployRHost "http://localhost:7282"
 
 
 
-# Create Variable that is the FQDN of the Machien:
+# Create Variable that is the FQDN of the Machine:
 function Get-ConnectionSpecificDNSSuffix {
     param (
     [string]$AdapterDescription = "Microsoft Hyper-V Network Adapter"
