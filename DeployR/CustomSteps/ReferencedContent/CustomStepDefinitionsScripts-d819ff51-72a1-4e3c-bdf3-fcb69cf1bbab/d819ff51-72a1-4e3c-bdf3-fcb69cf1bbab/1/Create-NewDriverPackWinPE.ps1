@@ -10,6 +10,7 @@ try {
     [switch]$ApplyDrivers = $true
     [String]$MakeAlias = ${TSEnv:MakeAlias}
     [String]$ModelAlias = ${TSEnv:ModelAlias}
+    [int]$OSImageBuild = ${TSEnv:OSImageBuild}
 }
 catch {
     <#Do this if a terminating exception happens#>
@@ -22,6 +23,7 @@ catch {
     $Gather = iex (irm gather.garytown.com)
     [String]$MakeAlias = $Gather.MakeAlias
     [String]$ModelAlias = $Gather.ModelAlias
+    [int]$OSImageBuild = $Gather.OSCurrentBuild
 }
 
 
@@ -30,8 +32,8 @@ catch {
 
 
 # Validate the Device Manufacturer
-if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP") {
-    Write-Host "MakeAlias must be Dell, Lenovo or HP. Exiting script."
+if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -and $MakeAlias -ne "Panasonic Corporation") {
+    Write-Host "MakeAlias must be Dell, Lenovo, Panasonic or HP. Exiting script."
     Exit 0
 }
 
@@ -665,6 +667,7 @@ function Invoke-DriverDownloadExpand {
                     Write-Error "Failed to extract Lenovo driver pack: $ExpandFile"
                 }
                 return
+                <# This doesn't work as the extracted folder name is too long to even extract to, so this is too late to help.
                 #Rename the extracted folder to "Lenovo"
                 Get-ChildItem -Path "$DestinationPath" -Directory | ForEach-Object {
                     $newName = Join-Path $DestinationPath "Lenovo"
@@ -674,6 +677,7 @@ function Invoke-DriverDownloadExpand {
                         Write-Warning "Destination folder already exists: $newName"
                     }
                 }
+                #>
             }
         }
     }
@@ -905,6 +909,21 @@ if ($MakeAlias -eq "HP"){
 }
 
 
+if ($MakeAlias -eq "Panasonic Corporation"){
+    $PanasonicCatalogURL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/Catalog/Panasonic.json"
+    $JSONCatalog = Invoke-RestMethod -Uri $PanasonicCatalogURL
+    $PanasonicDriverPacks = $JSONCatalog.PanasonicModels.$ModelAlias
+    if ($null -eq $PanasonicDriverPacks) {
+        Write-Host "No Panasonic Driver Packs found for the specified model $ModelAlias."
+        exit 0
+    }
+    if ($OSImageBuild -lt 22000){
+        $PanasonicDriverPack = $PanasonicDriverPacks.URL10
+    }
+    else {
+        $PanasonicDriverPack = $PanasonicDriverPacks.URL11
+    }
+}
 #Find 7za.exe
 if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"){
     $ToolsPath = "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
@@ -932,7 +951,8 @@ if (!(Test-Path -Path $ExtractedDriverLocation)) {
 }
 
 #Using the Traditional Driver Pack from the OEM
-if ($UseStandardDriverPack -eq "true") {
+#Panasonic Corporation is a special case, as it does not have a Driver Update Catalog Option yet, but rather a single driver download
+if ($UseStandardDriverPack -eq "true" -or $MakeAlias -eq "Panasonic Corporation") {
     Write-Host "Using Standard Driver Pack for WinPE"
     if ($MakeAlias -eq "Lenovo"){
         $DriverPack = Find-LnvDriverPack -MachineType (Get-LnvMachineType) -Latest
@@ -959,7 +979,16 @@ if ($UseStandardDriverPack -eq "true") {
             $ID = $DriverPack.ReleaseID
         }
     }
-    
+    if ($MakeAlias -eq "Panasonic Corporation"){
+        
+        $DriverPack = $PanasonicDriverPack
+        if ($null -ne $DriverPack) {
+            $URL = $DriverPack
+            $NameChunks = (($DriverPack.split("/") | Select-Object -last 1).split("_") | select-object -first 2)
+            $Name = $NameChunks -join "_"
+            $ID = $ModelAlias
+        }
+    }    
     if ($null -ne $DriverPack) {
         Write-Host "Found Driver Pack"
         Write-Output $DriverPack
