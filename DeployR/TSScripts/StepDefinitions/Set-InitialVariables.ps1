@@ -12,6 +12,7 @@ Write-Host "====================================================================
 
 # Get the provided variables
 [String]$SetTimeZoneName = ${TSEnv:SetTimeZoneName}
+[String]$TimeZoneDropDown = ${TSEnv:TimeZoneDropDown}
 [String]$InitialProgressTimeout = ${TSEnv:InitialProgressTimeout}
 [String]$InitialPeering = ${TSEnv:InitialPeering}
 [String]$InitialFinishAction = ${TSEnv:InitialFinishAction}
@@ -39,6 +40,7 @@ write-host "Doing the work...."
 ${TSEnv:OSDStartTime} = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
 Write-Host "Setting OSDStartTime to: ${TSEnv:OSDStartTime}" -ForegroundColor Green
 
+
 if ($SetTimeZoneName -ne "") {
     Write-Output "Setting Time Zone Name to: $SetTimeZoneName"
     ${TSEnv:TimeZone} = $SetTimeZoneName
@@ -55,6 +57,22 @@ if ($SetTimeZoneName -ne "") {
 
 } else {
     Write-Output "No Time Zone Name provided. Skipping time zone setting."
+}
+if ($TimeZoneDropDown -ne "") {
+    Write-Output "Setting Time Zone Name to: $TimeZoneDropDown"
+    ${TSEnv:TimeZone} = $TimeZoneDropDown
+    if ($env:SystemDrive -eq "X:") {
+        Write-Output "Running in WinPE, set TIMEZONE Variable for DeployR to add to unattended.xml"
+    }
+    else {
+        try {
+            Set-TimeZone -Id $TimeZoneDropDown
+        } catch {
+            Write-Output "Failed to set Time Zone Name $TimeZoneDropDown | $_"
+        }
+    }
+} else {
+    Write-Output "No Time Zone Drop Down provided. Skipping time zone drop down setting."
 }
 
 if ($InitialProgressTimeout -ne "") {
