@@ -30,7 +30,7 @@ catch {
 
 
 # Validate the Device Manufacturer
-if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP") {
+if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -or $MakeAlias -eq "Panasonic Corporation") {
     Write-Host "MakeAlias must be Dell, Lenovo or HP. Exiting script."
     Exit 0
 }
@@ -907,6 +907,11 @@ if ($MakeAlias -eq "HP"){
 }
 
 
+if ($MakeAlias -eq "Panasonic Corporation"){
+    $PanasonicCatalogURL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/Catalog/Panasonic.json"
+    $JSONCatalog = Invoke-RestMethod -Uri $PanasonicCatalogURL
+    $PanasonicDriverPack = $JSONCatalog | Where-Object {$_.Model -eq $MakeModel}
+}
 #Find 7za.exe
 if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"){
     $ToolsPath = "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
