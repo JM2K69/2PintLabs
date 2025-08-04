@@ -90,6 +90,19 @@ if ($LatestBackup) {
 if ($EnableBackup2GitHub -and $GitHubCustomSteps -and $GitHubCustomStepsReferencedContent) {
     #Backup DeployR step definitions for GitHub Custom Steps
     Write-Host "Exporting DeployR step definitions to GitHub..." -ForegroundColor Yellow
+    write-host "Cleanup $GitHubCustomSteps and $GitHubCustomStepsReferencedContent first" -ForegroundColor Yellow
+    if (Test-Path -Path $GitHubCustomSteps) {
+        Write-Host "Removing existing folder: $GitHubCustomSteps" -ForegroundColor Yellow
+        Remove-Item -Path "$GitHubCustomSteps\*" -Recurse -Force
+        Start-Sleep -Milliseconds 200
+    }
+    if (Test-Path -Path $GitHubCustomStepsReferencedContent) {
+        Write-Host "Removing existing folder: $GitHubCustomStepsReferencedContent" -ForegroundColor Yellow
+        Remove-Item -Path "$GitHubCustomStepsReferencedContent\*" -Recurse -Force
+        Start-Sleep -Milliseconds 200
+    }
+    #Get all step definitions except the built-in ones
+    write-host "Getting all step definitions..." -ForegroundColor Yellow
     $StepDefinitions = Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'}
     foreach ($stepDef in $StepDefinitions) {
         write-host "Backing up step definition: $($stepDef.name) | $($stepDef.id)" -ForegroundColor Cyan
