@@ -27,6 +27,7 @@ Write-Host "====================================================================
 Write-Host "Recording initial variables for the Task Sequence environment"
 #Report Variables:
 Write-Output "Var SetTimeZoneName: $SetTimeZoneName"
+Write-Output "Var TimeZoneDropDown: $TimeZoneDropDown"
 Write-Output "Var InitialProgressTimeout: $InitialProgressTimeout"
 Write-Output "Var InitialPeering: $InitialPeering"
 Write-Output "Var InitialFinishAction: $InitialFinishAction"
