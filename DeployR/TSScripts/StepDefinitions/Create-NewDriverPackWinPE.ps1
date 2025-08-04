@@ -665,6 +665,7 @@ function Invoke-DriverDownloadExpand {
                     Write-Error "Failed to extract Lenovo driver pack: $ExpandFile"
                 }
                 return
+                <# This doesn't work as the extracted folder name is too long to even extract to, so this is too late to help.
                 #Rename the extracted folder to "Lenovo"
                 Get-ChildItem -Path "$DestinationPath" -Directory | ForEach-Object {
                     $newName = Join-Path $DestinationPath "Lenovo"
@@ -674,6 +675,7 @@ function Invoke-DriverDownloadExpand {
                         Write-Warning "Destination folder already exists: $newName"
                     }
                 }
+                #>
             }
         }
     }
