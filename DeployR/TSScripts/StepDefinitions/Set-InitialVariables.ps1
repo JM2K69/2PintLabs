@@ -16,12 +16,23 @@ Write-Host "====================================================================
 [String]$InitialPeering = ${TSEnv:InitialPeering}
 [String]$InitialFinishAction = ${TSEnv:InitialFinishAction}
 
+[String]$InitialSystemLocale = ${TSEnv:InitialSystemLocale}
+[String]$InitialUserLocale = ${TSEnv:InitialUserLocale}
+[String]$InitialUILanguage = ${TSEnv:InitialUILanguage}
+[String]$InitialInputLocale = ${TSEnv:InitialInputLocale}
+
+
+
 Write-Host "Recording initial variables for the Task Sequence environment"
 #Report Variables:
 Write-Output "Var SetTimeZoneName: $SetTimeZoneName"
 Write-Output "Var InitialProgressTimeout: $InitialProgressTimeout"
 Write-Output "Var InitialPeering: $InitialPeering"
 Write-Output "Var InitialFinishAction: $InitialFinishAction"
+Write-Output "Var InitialSystemLocale: $InitialSystemLocale"
+Write-Output "Var InitialUserLocale: $InitialUserLocale"
+Write-Output "Var InitialUILanguage: $InitialUILanguage"
+Write-Output "Var InitialInputLocale: $InitialInputLocale"
 Write-Host "================================================================================"
 write-host "Doing the work...."
 
@@ -73,6 +84,36 @@ if ($InitialFinishAction -ne "") {
 }
 else {
     Write-Output "No Finish Action provided. Skipping finish action setting."
+}
+
+if ($InitialSystemLocale -ne "") {
+    Write-Output "Setting System Locale to: $InitialSystemLocale"
+    ${TSEnv:SystemLocale} = $InitialSystemLocale
+}
+else {
+    Write-Output "No System Locale provided. Skipping system locale setting."
+}
+if ($InitialUserLocale -ne "") {
+    Write-Output "Setting User Locale to: $InitialUserLocale"
+    ${TSEnv:UserLocale} = $InitialUserLocale
+}
+else {
+    Write-Output "No User Locale provided. Skipping user locale setting."
+}
+if ($InitialUILanguage -ne "") {
+    Write-Output "Setting UI Language to: $InitialUILanguage"
+    ${TSEnv:UILanguage} = $InitialUILanguage
+}
+else {
+    Write-Output "No UI Language provided. Skipping UI language setting."
+}
+if ($InitialInputLocale -ne "") {
+    $InitialInputLocale = ($InitialInputLocale.Split('-')[1]).TrimStart()
+    Write-Output "Setting Input Locale to: $InitialInputLocale"
+    ${TSEnv:InputLocale} = $InitialInputLocale
+}
+else {
+    Write-Output "No Input Locale provided. Skipping input locale setting."
 }
 
 #Function to get full OS Build & UBR
