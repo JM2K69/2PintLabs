@@ -24,8 +24,7 @@ $PanasonicModels = @(
     @{ ModelAlias = "FZG2-2"; URL10 = "https://na.panasonic.com/computer/cab/Win10_22H2/G2EGKM_Mk2_Win10_22H2_V3_CAB.zip"; URL11 = "https://na.panasonic.com/computer/cab/G2EGKM_Mk2_Win11_24H2_V3_CAB.zip" }
 )
 
-$JSON = @'
-{
+$JSON = '{
     "PanasonicModels": {
         "FZ55-3": {
             "URL10": "https://na.panasonic.com/computer/cab/55GJ_Mk3_Win10_22H2_V3_CAB.zip",
@@ -68,8 +67,8 @@ $JSON = @'
             "URL11": "https://na.panasonic.com/computer/cab/G2EGKM_Mk2_Win11_24H2_V3_CAB.zip"
         }
     }
-}
-'@
+}'
+
 
 $WorkingPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Data = $JSON | Out-File "$WorkingPath\Panasonic.json"
+$Data = $JSON | Out-File "$WorkingPath\Panasonic.json" -Encoding utf8
