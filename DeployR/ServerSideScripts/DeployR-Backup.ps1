@@ -142,9 +142,18 @@ Function Duplicate-DeployRStepDefinition {
     param (
     [Parameter(Mandatory = $true)]
     [string]$StepDefinitionId,
+    [string]$TempLocation,
     [string]$NewNameSuffix = "-Copy",
     [string]$NewCIName
     )
+    if ($null -eq $TempLocation -or $TempLocation -eq "") {
+        Write-Host "No TempLocation specified, setting it to C:\Windows\Temp" -ForegroundColor Yellow
+        $TempLocation = "C:\Windows\Temp"
+    }
+    if (-not (Test-Path -Path $TempLocation)) {
+        Write-Host "Temp location $TempLocation does not exist. Creating it." -ForegroundColor Yellow
+        New-Item -Path $TempLocation -ItemType Directory | Out-Null
+    }
     $Sample = (Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -eq $StepDefinitionId})
     if ($null -eq $Sample) {
         Write-Host "Step Definition with ID $StepDefinitionId not found." -ForegroundColor Red
@@ -172,6 +181,7 @@ Function Duplicate-DeployRStepDefinition {
 Function Duplicate-DeployRTaskSequence {
     param (
     [Parameter(Mandatory = $true)]
+    [string]$TempLocation,
     [string]$TaskSequenceId,
     [string]$NewNameSuffix = "-Copy",
     [string]$NewCIName
@@ -201,3 +211,17 @@ Function Duplicate-DeployRTaskSequence {
 }
 
 
+<# Testing of Importing of Steps to Overwrite.
+Duplicate a step so you can modify it and re-import it (to avoid messing with prod steps)
+
+#This will duplicate your step and add it back to DeployR under the new name, and leave the JSON in the templocation
+Duplicate-DeployRStepDefinition -StepDefinitionId ce8e43c9-27a9-431a-a25b-eae716ac601a -NewCIName "1 TESTING OVERWRITE" -TempLocation "C:\Windows\Temp"
+
+# Now edit the file C:\Windows\Temp\TempDuplicateStepDef.json to make changes
+# Then import it back to DeployR    
+Import-DeployRStepDefinition -SourceFile "C:\Windows\Temp\TempDuplicateStepDef.json" -Force
+
+#Go and confirm the changes you made in JSON are now in the step definition in the Console.
+
+
+#>
