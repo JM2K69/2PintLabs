@@ -32,8 +32,8 @@ catch {
 
 
 # Validate the Device Manufacturer
-if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -or $MakeAlias -ne "Panasonic Corporation") {
-    Write-Host "MakeAlias must be Dell, Lenovo or HP. Exiting script."
+if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -and $MakeAlias -ne "Panasonic Corporation") {
+    Write-Host "MakeAlias must be Dell, Lenovo, Panasonic or HP. Exiting script."
     Exit 0
 }
 
@@ -993,6 +993,7 @@ if ($UseStandardDriverPack -eq "true" -or $MakeAlias -eq "Panasonic Corporation"
         Write-Host "Found Driver Pack"
         Write-Output $DriverPack
         Write-Host "Downloading and extracting  Driver Pack to $ExtractedDriverLocation"
+        write-host "Invoke-DriverDownloadExpand -URL $URL -Name $Name -ID $ID -ToolsPath $ToolsPath -DestinationPath $ExtractedDriverLocation"
         Invoke-DriverDownloadExpand -URL $URL -Name $Name -ID $ID -ToolsPath $ToolsPath -DestinationPath $ExtractedDriverLocation
     } else {
         Write-Host "No Driver Pack found for the specified model."
