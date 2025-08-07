@@ -1,0 +1,284 @@
+[
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 11th Edition, Intel processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=108013&msockid=28a850520e226efc1ba245090f0f6f14",
+    "DownloadId": "108013"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 11th Edition, Snapdragon processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=106119",
+    "DownloadId": "106119"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 10",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=105947",
+    "DownloadId": "105947"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 10 with 5G",
+    "MsiDownloadUrl": "https://www.microsoft.com/en-us/download/details.aspx?id=106292",
+    "DownloadId": "106292"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 9 with Intel processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=104680",
+    "DownloadId": "104680"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 9 with 5G (SQ3 processor)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=105941",
+    "DownloadId": "105941"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 8",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=103503",
+    "DownloadId": "103503"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 7+ and Surface Pro 7+ (LTE)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=102633",
+    "DownloadId": "102633"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 7",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=100419",
+    "DownloadId": "100419"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 6",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=57514",
+    "DownloadId": "57514"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 5 (LTE)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=56278",
+    "DownloadId": "56278"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 5 (Wi-Fi)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=55484",
+    "DownloadId": "55484"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 4",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49498",
+    "DownloadId": "49498"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 3",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=38826",
+    "DownloadId": "38826"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro 2",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49042",
+    "DownloadId": "49042"
+  },
+  {
+    "Category": "Surface Pro",
+    "Device": "Surface Pro",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49038",
+    "DownloadId": "49038"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 7th Edition, Intel processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=108014",
+    "DownloadId": "108014"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 7th Edition, Snapdragon processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=106120",
+    "DownloadId": "106120"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 6",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=105946",
+    "DownloadId": "105946"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 5",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=104679",
+    "DownloadId": "104679"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 4 with Intel processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=102924",
+    "DownloadId": "102924"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 4 with AMD processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=102923",
+    "DownloadId": "102923"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 3 with Intel processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=100429",
+    "DownloadId": "100429"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 3 with AMD processor",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=100428",
+    "DownloadId": "100428"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop 2",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=57515",
+    "DownloadId": "57515"
+  },
+  {
+    "Category": "Surface Laptop",
+    "Device": "Surface Laptop",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=55489",
+    "DownloadId": "55489"
+  },
+  {
+    "Category": "Surface Laptop Go",
+    "Device": "Surface Laptop Go 3",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=105608",
+    "DownloadId": "105608"
+  },
+  {
+    "Category": "Surface Laptop Go",
+    "Device": "Surface Laptop Go 2",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=104251",
+    "DownloadId": "104251"
+  },
+  {
+    "Category": "Surface Laptop Go",
+    "Device": "Surface Laptop Go",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=102261",
+    "DownloadId": "102261"
+  },
+  {
+    "Category": "Surface Book",
+    "Device": "Surface Book 3",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=101315",
+    "DownloadId": "101315"
+  },
+  {
+    "Category": "Surface Book",
+    "Device": "Surface Book 2",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=56261",
+    "DownloadId": "56261"
+  },
+  {
+    "Category": "Surface Book",
+    "Device": "Surface Book",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49497",
+    "DownloadId": "49497"
+  },
+  {
+    "Category": "Surface Go",
+    "Device": "Surface Go 4",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=105609",
+    "DownloadId": "105609"
+  },
+  {
+    "Category": "Surface Go",
+    "Device": "Surface Go 3",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=103504",
+    "DownloadId": "103504"
+  },
+  {
+    "Category": "Surface Go",
+    "Device": "Surface Go 2",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=101304",
+    "DownloadId": "101304"
+  },
+  {
+    "Category": "Surface Go",
+    "Device": "Surface Go (Wi-Fi)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=57439",
+    "DownloadId": "57439"
+  },
+  {
+    "Category": "Surface Go",
+    "Device": "Surface Go (LTE)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=57601",
+    "DownloadId": "57601"
+  },
+  {
+    "Category": "Surface Studio",
+    "Device": "Surface Studio 2+",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=104681",
+    "DownloadId": "104681"
+  },
+  {
+    "Category": "Surface Studio",
+    "Device": "Surface Studio 2",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=57593",
+    "DownloadId": "57593"
+  },
+  {
+    "Category": "Surface Studio",
+    "Device": "Surface Studio",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=54311",
+    "DownloadId": "54311"
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "Surface 3 (Wi-Fi)",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49040",
+    "DownloadId": "49040"
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "Surface 3 (LTE) - ATT",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49039",
+    "DownloadId": "49039"
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "Surface 3 (LTE) - Verizon",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49920",
+    "DownloadId": "49920"
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "Surface 3 (LTE) - Outside of North America and Y!mobile in Japan",
+    "MsiDownloadUrl": "https://www.microsoft.com/download/details.aspx?id=49041",
+    "DownloadId": "49041"
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "ATT](https://www.microsoft.com/download/details.aspx?id=49039)<br>",
+    "MsiDownloadUrl": null,
+    "DownloadId": null
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "Verizon](https://www.microsoft.com/download/details.aspx?id=49920)<br>",
+    "MsiDownloadUrl": null,
+    "DownloadId": null
+  },
+  {
+    "Category": "Surface 3",
+    "Device": "Outside of North America and Y!mobile in Japan](https://www.microsoft.com/download/details.aspx?id=49041)",
+    "MsiDownloadUrl": null,
+    "DownloadId": null
+  }
+]
