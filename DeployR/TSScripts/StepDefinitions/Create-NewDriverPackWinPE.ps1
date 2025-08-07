@@ -910,7 +910,7 @@ if ($MakeAlias -eq "HP"){
 
 
 if ($MakeAlias -eq "Panasonic Corporation"){
-    $PanasonicCatalogURL = "https://raw.githubusercontent.com/gwblok/2PintLabs/refs/heads/main/DeployR/Catalog/Panasonic.json"
+    $PanasonicCatalogURL = "https://na.panasonic.com/computer/software/apps/Panasonic.json"
     $JSONCatalog = Invoke-RestMethod -Uri $PanasonicCatalogURL
     $PanasonicDriverPacks = $JSONCatalog.PanasonicModels.$ModelAlias
     if ($null -eq $PanasonicDriverPacks) {
