@@ -55,9 +55,10 @@ if (!(Test-Path -Path $dest)) {
 write-host "==================================================================="
 write-host "Creating Driver Pack for WinPE for $MakeAlias $ModelAlias Devices"
 write-host "Reporting Variables:"
-write-host "IncludeGraphics: $IncludeGraphics"
-write-host "IncludeAudio: $IncludeAudio"
-write-host "DriverPackOption: $DriverPackOption"
+write-host "IncludeGraphics (All):          $IncludeGraphics"
+Write-Host "IncludeGraphics (Intel Only):   $IncludeGraphicsIntel"
+write-host "IncludeAudio (All):             $IncludeAudio"
+write-host "DriverPackOption:               $DriverPackOption"
 
 #OEM Modules:
 # Install Lenovo.Client.Scripting module
@@ -2158,25 +2159,44 @@ else {
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Wi-Fi"}
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Firmware"}
         Write-Host "Found $($Drivers.Count) drivers to process. [Including Graphics & Audio]"
-        if ($IncludeGraphicsIntel -eq $true) {
-            $IntelGraphics = $Drivers | Where-Object {($_.Category -match "Video" -and $_.Name -match "Intel")}
-            $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
-            $Drivers += $IntelGraphics
+        #Graphics
+        if ($IncludeGraphicsIntel -eq "true") {
+            $Graphics = $Drivers | Where-Object {($_.Category -match "Video" -and $_.Name -match "Intel")}
         }
-        if ($IncludeGraphics -ne $true) {
-            $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
+        if ($IncludeGraphics -eq "true") {
+            $Graphics = $Drivers | Where-Object {$_.Category -match "Video" }
         }
-        if ($IncludeAudio -ne $true) {
+        #Clear out Graphics Drivers from Object
+        $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
+        #If Graphics are supposed to be there, put them back in.
+        if ($Graphics){
+            $Drivers += $Graphics
+        }
+        
+        #Audio
+        if ($IncludeAudio -ne "true") {
             $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Audio"}
         }
         Write-Host "Found $($Drivers.Count) drivers to process after Cleanup"
     }
     if ($MakeAlias -eq "HP") {
         $Drivers = Get-HPSoftpaqListLatest | where-object {$_.Category -match "Driver" -and $_.Category -notmatch "Firmware" -and $_.Category -notmatch "Manageability" -and $_.Category -notmatch "Enabling"}
-        if ($IncludeGraphics -eq $false) {
-            $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
+        #Graphics
+        if ($IncludeGraphicsIntel -eq "true") {
+            $Graphics = $Drivers | Where-Object {($_.Category -match "Graphics" -and $_.Name -match "Intel")}
         }
-        if ($IncludeAudio -eq $false) {
+        if ($IncludeGraphics -eq "true") {
+            $Graphics = $Drivers | Where-Object {$_.Category -match "Graphics" }
+        }
+        #Clear out Graphics Drivers from Object
+        $Drivers = $Drivers | Where-Object {$_.Category -notmatch "Graphics"}
+        #If Graphics are supposed to be there, put them back in.
+        if ($Graphics){
+            $Drivers += $Graphics
+        }
+        
+        #Audio
+        if ($IncludeAudio -ne "true") {
             $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Audio"}
         }
         Write-Host "Found $($Drivers.Count) drivers to process after Cleanup"
@@ -2184,11 +2204,22 @@ else {
     if ($MakeAlias -eq "Lenovo") {
         $Drivers = Find-LnvUpdate -MachineType (Get-LnvMachineType) -ListAll -WindowsVersion 11
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "BIOS" -and $_.Name -notmatch "Firmware" -and $_.Name -notmatch "FW"  -and $_.Name -notmatch "Lenovo Base Utility"  -and $_.Name -notmatch "WAN"}
-        if ($IncludeGraphics -ne $true) {
-            $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Graphics"}
+        #Graphics
+        if ($IncludeGraphicsIntel -eq "true") {
+            $Graphics = $Drivers | Where-Object {($_.Category -match "Graphics" -and $_.Name -match "Intel")}
         }
-        if ($IncludeAudio -ne $true) {
-            $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Audio"}
+        if ($IncludeGraphics -eq "true") {
+            $Graphics = $Drivers | Where-Object {$_.Category -match "Graphics" }
+        }
+        #Clear out Graphics Drivers from Object
+        $Drivers = $Drivers | Where-Object {$_.Category -notmatch "Graphics"}
+        #If Graphics are supposed to be there, put them back in.
+        if ($Graphics){
+            $Drivers += $Graphics
+        }
+        #Audio
+        if ($IncludeAudio -ne "true") {
+            $Drivers = $Drivers | Where-Object {$_.Category -notmatch "Audio"}
         }
     }
     if ($Drivers.Count -eq 0) {
@@ -2209,7 +2240,7 @@ else {
         }
         if ($MakeAlias -eq "HP") {
             $Name = $Driver.Name
-            $URL = $Driver.Url
+            $URL = "https://$($Driver.Url)"
             $ID = $Driver.Id
         }
         if ($MakeAlias -eq "Lenovo") {
@@ -2294,7 +2325,7 @@ else {
     #Add-WindowsDriver -Path "$($TargetSystemDrive)\" -Driver "$ExtractedDriverLocation" -Recurse -ErrorAction SilentlyContinue -LogPath $LogPath\AddDrivers.log
     
     #& Dism /Image:"$($TargetSystemDrive)\" /Add-Driver /Driver:$ExtractedDriverLocation /Recurse
-    $Output = "$env:systemdrive\_2p\Logs\DISMApplyDriversOutput.txt"
+    $Output = "S:\_2p\Logs\DISMApplyDriversOutput.txt"
     try {
         $DISM = Start-Process DISM.EXE -ArgumentList "/image:$($TargetSystemDrive)\ /Add-Driver /driver:$ExtractedDriverLocation /recurse" -PassThru -NoNewWindow -RedirectStandardOutput $Output
     }
