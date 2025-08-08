@@ -1,105 +1,22 @@
-# Script to build complete Surface driver pack download list by running all prerequisite scripts
-
-function Build-CompleteSurfaceDriverPackList {
-    Write-Host "`nSurface Driver Pack Complete Build Process" -ForegroundColor Cyan
-    Write-Host "==========================================" -ForegroundColor Cyan
-    
-    # Step 1: Build Surface SKU List
-    Write-Host "`n[Step 1/4] Building Surface SKU List..." -ForegroundColor Yellow
-    $skuScriptPath = Join-Path $PSScriptRoot "Build-MSSurfaceSKUList.ps1"
-    
-    if (-not (Test-Path $skuScriptPath)) {
-        Write-Error "SKU script not found: $skuScriptPath"
-        return
-    }
-    
-    # Execute the SKU script and capture the data
-    $skuData = & $skuScriptPath
-    
-    if (-not $skuData -or $skuData.Count -eq 0) {
-        Write-Error "Failed to generate SKU data"
-        return
-    }
-    
-    Write-Host "  Generated $($skuData.Count) SKUs" -ForegroundColor Green
-    
-    # Step 2: Build Surface URL List
-    Write-Host "`n[Step 2/4] Building Surface URL List..." -ForegroundColor Yellow
-    $urlScriptPath = Join-Path $PSScriptRoot "Build-MSSurfaceURLList.ps1"
-    
-    if (-not (Test-Path $urlScriptPath)) {
-        Write-Error "URL script not found: $urlScriptPath"
-        return
-    }
-    
-    # Execute the URL script and capture the data
-    $urlData = & $urlScriptPath
-    
-    if (-not $urlData -or $urlData.Count -eq 0) {
-        Write-Error "Failed to generate URL data"
-        return
-    }
-    
-    Write-Host "  Generated $($urlData.Count) driver pack URLs" -ForegroundColor Green
-    
-    # Step 3: Build Combined Device Details
-    Write-Host "`n[Step 3/4] Building Surface Device Details..." -ForegroundColor Yellow
-    $detailsScriptPath = Join-Path $PSScriptRoot "Build-MSSurfaceDeviceDetails.ps1"
-    
-    if (-not (Test-Path $detailsScriptPath)) {
-        Write-Error "Device details script not found: $detailsScriptPath"
-        return
-    }
-    
-    # Execute the device details script with the in-memory data
-    # Note: We need to pass the data to the script if it supports parameters
-    # Otherwise, it will read from the JSON files that were already created
-    $combinedData = & $detailsScriptPath
-    
-    if (-not $combinedData -or $combinedData.Count -eq 0) {
-        Write-Error "Failed to generate combined device data"
-        return
-    }
-    
-    Write-Host "  Combined $($combinedData.Count) device records" -ForegroundColor Green
-    
-    # Step 4: Extract MSI URLs
-    Write-Host "`n[Step 4/4] Extracting MSI Download URLs..." -ForegroundColor Yellow
-    
-    # Now use the in-memory combined data for MSI extraction
-    $msiResults = Get-SurfaceDriverPackMSIUrls -CombinedData $combinedData
-    
-    return $msiResults
-}
+# Script to extract Windows 10 and 11 driver pack MSI URLs from Surface download pages
 
 function Get-SurfaceDriverPackMSIUrls {
     param(
-        [Parameter(Mandatory=$false)]
-        [object[]]$CombinedData,
-        
-        [Parameter(Mandatory=$false)]
-        [string]$CombinedDataPath = (Join-Path $PSScriptRoot "SurfaceCombinedData.json")
+        [string]$CombinedDataPath = (Join-Path $PSScriptRoot "SurfaceDeviceDetails.json")
     )
     
     Write-Host "`nSurface Driver Pack MSI URL Extractor" -ForegroundColor Cyan
     Write-Host "=====================================" -ForegroundColor Cyan
     
-    # Use provided data or load from file
-    if ($CombinedData) {
-        Write-Host "Using in-memory combined Surface data..." -ForegroundColor Yellow
-        $combinedData = $CombinedData
+    # Load the combined data
+    if (-not (Test-Path $CombinedDataPath)) {
+        Write-Error "Combined data file not found: $CombinedDataPath"
+        Write-Host "Please run MSSurface.ps1 first" -ForegroundColor Yellow
+        return
     }
-    else {
-        # Load the combined data from file
-        if (-not (Test-Path $CombinedDataPath)) {
-            Write-Error "Combined data file not found: $CombinedDataPath"
-            Write-Host "Please run Build-MSSurfaceDeviceDetails.ps1 first" -ForegroundColor Yellow
-            return
-        }
-        
-        Write-Host "Loading combined Surface data from file..." -ForegroundColor Yellow
-        $combinedData = Get-Content $CombinedDataPath | ConvertFrom-Json
-    }
+    
+    Write-Host "Loading combined Surface data..." -ForegroundColor Yellow
+    $combinedData = Get-Content $CombinedDataPath | ConvertFrom-Json
     
     # Filter to only devices with download URLs
     $devicesWithUrls = $combinedData | Where-Object { $_.MsiDownloadUrl }
@@ -296,7 +213,7 @@ function Get-SurfaceDriverPackMSIUrls {
     }
     
     # Export results
-    $outputPath = Join-Path $PSScriptRoot "SurfaceDriverPackMSIList.json"
+    $outputPath = Join-Path $PSScriptRoot "SurfaceDriverPackDownloadList.json"
     $results | ConvertTo-Json -Depth 10 | Out-File -FilePath $outputPath -Encoding UTF8
     Write-Host "`nExported MSI list to: $outputPath" -ForegroundColor Green
     
@@ -335,26 +252,51 @@ function Get-SurfaceDriverPackMSIUrls {
 }
 
 # Main execution
+
+#Build Required Files:
+
+# Trigger Process to build Required Files by calling the other PowerShell Scripts
+
+# Trigger Build-MSSurfaceSKUList.ps1
+Write-Host "`nRunning Build-MSSurfaceSKUList.ps1..." -ForegroundColor Yellow
+$skuScriptPath = Join-Path $PSScriptRoot "Build-MSSurfaceSKUList.ps1"
+if (Test-Path $skuScriptPath) {
+    & $skuScriptPath
+} else {
+    Write-Error "Build-MSSurfaceSKUList.ps1 not found in $PSScriptRoot"
+    return
+}
+start-sleep -Seconds 1
+# Trigger Build-MSSurfaceURLList.ps1 to combine the data
+Write-Host "`nRunning Build-MSSurfaceURLList.ps1 to combine data..." -ForegroundColor Yellow
+$surfaceScriptPath = Join-Path $PSScriptRoot "Build-MSSurfaceURLList.ps1"
+if (Test-Path $surfaceScriptPath) {
+    & $surfaceScriptPath
+} else {
+    Write-Error "Build-MSSurfaceURLList.ps1 not found in $PSScriptRoot"
+    return
+}
+start-sleep -Seconds 1
+# Trigger Build-MSSurfaceDeviceDetails.ps1
+Write-Host "`nRunning Build-MSSurfaceDeviceDetails.ps1..." -ForegroundColor Yellow
+$driverScriptPath = Join-Path $PSScriptRoot "Build-MSSurfaceDeviceDetails.ps1"
+if (Test-Path $driverScriptPath) {
+    & $driverScriptPath
+} else {
+    Write-Error "Build-MSSurfaceDeviceDetails.ps1 not found in $PSScriptRoot"
+    return
+}
+start-sleep -Seconds 1
+
+
 try {
-    # Check if running standalone or as part of complete build
-    if ($args.Count -eq 0) {
-        # Run the complete build process
-        $msiList = Build-CompleteSurfaceDriverPackList
-    }
-    else {
-        # Run just the MSI extraction (assumes prerequisite data exists)
-        $msiList = Get-SurfaceDriverPackMSIUrls
-    }
+    $msiList = Get-SurfaceDriverPackMSIUrls
     
     if ($msiList) {
         Write-Host "`nDriver pack MSI list created successfully!" -ForegroundColor Green
         Write-Host "Check SurfaceDriverPackMSIList.json for the complete list." -ForegroundColor Cyan
-        
-        # Return the data for potential further processing
-        return $msiList
     }
 }
 catch {
-    Write-Error "Failed to build Surface driver pack list: $_"
-    Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Error "Failed to extract MSI URLs: $_"
 }

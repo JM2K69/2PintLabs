@@ -1,4 +1,6 @@
-# Script to combine Surface SKU data with Driver Pack URLs
+#region Functions
+
+#Script to combine Surface SKU data with Driver Pack URLs
 function Build-MSSurfaceSKUList {
     <#
     .SYNOPSIS
@@ -685,35 +687,20 @@ function Match-SurfaceData {
     [Parameter(Mandatory = $false)]
     [System.Management.Automation.SwitchParameter] $OutputJSON,
     [Parameter(Mandatory = $false)]
-    [System.Management.Automation.SwitchParameter] $extradebug,
-    [Parameter(Mandatory = $false)]
-    [PSObject]$SkuData,
-    [Parameter(Mandatory = $false)]
-    [PSObject]$URLData
+    [System.Management.Automation.SwitchParameter] $extradebug
     )
     
     Write-Host "Loading SKU data..." -ForegroundColor Yellow
-    if ($SkuData) {
-        $skuData = $SkuData
-    }
-    else {
-        $skuData = Build-MSSurfaceSKUList
-    }
     $skuData = Build-MSSurfaceSKUList
     
     Write-Host "Loading Driver Pack data..." -ForegroundColor Yellow
-    if ($URLData) {
-        $driverData = $URLData
-    }
-    else {
-        $URLData = Build-MSSurfaceURLList
-    }
-
-    Write-Host "Found $($skuData.Count) SKUs and $($URLData.Count) driver packs" -ForegroundColor Green
+    $driverData = Build-MSSurfaceURLList
+    
+    Write-Host "Found $($skuData.Count) SKUs and $($driverData.Count) driver packs" -ForegroundColor Green
     
     # Create a lookup table for driver packs
     $driverLookup = @{}
-    foreach ($driver in $URLData) {
+    foreach ($driver in $driverData) {
         # Skip if device name is null or empty
         if ([string]::IsNullOrWhiteSpace($driver.Device)) {
             Write-Warning "Skipping driver entry with no device name"
@@ -935,4 +922,283 @@ function Match-SurfaceData {
         }
     }
     return $combinedData
+}
+
+#endregion
+
+function Get-SurfaceDriverPackMSIUrls {
+    [CmdletBinding()]
+    param(
+    [Parameter(Mandatory = $false)]
+    [System.Management.Automation.SwitchParameter] $OutputJSON,
+    [Parameter(Mandatory = $false)]
+    [string]$outputPath
+    )
+    
+    Write-Host "`nSurface Driver Pack MSI URL Extractor" -ForegroundColor Cyan
+    Write-Host "=====================================" -ForegroundColor Cyan
+    
+    
+    Write-Host "Loading combined Surface data..." -ForegroundColor Yellow
+    $combinedData = Match-SurfaceData
+    
+    # Filter to only devices with download URLs
+    $devicesWithUrls = $combinedData | Where-Object { $_.MsiDownloadUrl }
+    Write-Host "Found $($devicesWithUrls.Count) devices with download URLs" -ForegroundColor Green
+    
+    $results = @()
+    $processedUrls = @{}  # Cache to avoid processing the same URL multiple times
+    
+    foreach ($device in $devicesWithUrls) {
+        # Skip if we've already processed this URL
+        if ($processedUrls.ContainsKey($device.MsiDownloadUrl)) {
+            Write-Host "  Using cached data for: $($device.Device)" -ForegroundColor DarkGray
+            
+            # Create result object with cached data
+            $cachedData = $processedUrls[$device.MsiDownloadUrl]
+            $resultObj = [PSCustomObject]@{
+                Device = $device.Device
+                ShortDevice = $device.ShortDevice
+                SystemSKU = $device.SystemSKU
+                DownloadPageUrl = $device.MsiDownloadUrl
+                DownloadId = $device.DownloadId
+                Windows11Url = $cachedData.Windows11Url
+                Windows11FileName = $cachedData.Windows11FileName
+                Windows11FileSize = $cachedData.Windows11FileSize
+                Windows10Url = $cachedData.Windows10Url
+                Windows10FileName = $cachedData.Windows10FileName
+                Windows10FileSize = $cachedData.Windows10FileSize
+                LastUpdated = $cachedData.LastUpdated
+                Status = $cachedData.Status
+            }
+            $results += $resultObj
+            continue
+        }
+        
+        Write-Host "`nProcessing: $($device.Device)" -ForegroundColor Yellow
+        Write-Host "  URL: $($device.MsiDownloadUrl)" -ForegroundColor DarkGray
+        
+        try {
+            # Fetch the download page
+            $response = Invoke-WebRequest -Uri $device.MsiDownloadUrl -UseBasicParsing
+            $content = $response.Content
+            
+            # Initialize variables
+            $windows11Url = $null
+            $windows11FileName = $null
+            $windows11FileSize = $null
+            $windows10Url = $null
+            $windows10FileName = $null
+            $windows10FileSize = $null
+            $lastUpdated = $null
+            
+            # Microsoft download pages contain links to MSI files in different formats
+            # Let's look for all .msi links first
+            $msiUrls = @()
+            
+            # Pattern 1: Direct MSI links in href attributes
+            $hrefPattern = 'href="([^"]+\.msi)"'
+            $hrefMatches = [regex]::Matches($content, $hrefPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            foreach ($match in $hrefMatches) {
+                $msiUrls += $match.Groups[1].Value
+            }
+            
+            # Pattern 2: MSI links in JavaScript or data attributes
+            $jsPattern = '["''](https?://[^"'']+\.msi)["'']'
+            $jsMatches = [regex]::Matches($content, $jsPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            foreach ($match in $jsMatches) {
+                $msiUrls += $match.Groups[1].Value
+            }
+            
+            # Pattern 3: Look for download.microsoft.com URLs
+            $downloadPattern = '(https?://download\.microsoft\.com/[^"''<>\s]+\.msi)'
+            $downloadMatches = [regex]::Matches($content, $downloadPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            foreach ($match in $downloadMatches) {
+                $msiUrls += $match.Groups[1].Value
+            }
+            
+            # Remove duplicates
+            $msiUrls = $msiUrls | Select-Object -Unique
+            
+            Write-Host "  Found $($msiUrls.Count) MSI URLs" -ForegroundColor DarkGray
+            
+            # Categorize the MSI URLs
+            foreach ($url in $msiUrls) {
+                $fileName = Split-Path $url -Leaf
+                
+                # Check for Windows 11
+                if ($fileName -match 'Win11|Windows.*11|_11_|Win11_|22000|22621|22631|226\d\d') {
+                    if (-not $windows11Url) {
+                        $windows11Url = $url
+                        $windows11FileName = $fileName
+                        Write-Host "    Windows 11: $fileName" -ForegroundColor Green
+                    }
+                }
+                # Check for Windows 10
+                elseif ($fileName -match 'Win10|Windows.*10|_10_|Win10_|19041|19042|19043|19044|19045|190\d\d|17763|18362|18363') {
+                    if (-not $windows10Url) {
+                        $windows10Url = $url
+                        $windows10FileName = $fileName
+                        Write-Host "    Windows 10: $fileName" -ForegroundColor Green
+                    }
+                }
+            }
+            
+            # Look for file sizes if available
+            # Microsoft sometimes shows file sizes in the page
+            if ($windows11FileName) {
+                $sizePattern = [regex]::Escape($windows11FileName) + '.*?(\d+(?:\.\d+)?\s*[MG]B)'
+                $sizeMatch = [regex]::Match($content, $sizePattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                if ($sizeMatch.Success) {
+                    $windows11FileSize = $sizeMatch.Groups[1].Value
+                }
+            }
+            
+            if ($windows10FileName) {
+                $sizePattern = [regex]::Escape($windows10FileName) + '.*?(\d+(?:\.\d+)?\s*[MG]B)'
+                $sizeMatch = [regex]::Match($content, $sizePattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                if ($sizeMatch.Success) {
+                    $windows10FileSize = $sizeMatch.Groups[1].Value
+                }
+            }
+            
+            # Look for last updated date
+            $datePatterns = @(
+                'Date Published:?\s*</[^>]+>\s*([^<]+)',
+                'Last Updated:?\s*([^<]+)',
+                'Release Date:?\s*([^<]+)',
+                '(\d{1,2}/\d{1,2}/\d{4})'
+            )
+            
+            foreach ($pattern in $datePatterns) {
+                $dateMatch = [regex]::Match($content, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                if ($dateMatch.Success) {
+                    $lastUpdated = $dateMatch.Groups[1].Value.Trim()
+                    break
+                }
+            }
+            
+            # Create result object
+            $resultObj = [PSCustomObject]@{
+                Device = $device.Device
+                ShortDevice = $device.ShortDevice
+                SystemSKU = $device.SystemSKU
+                DownloadPageUrl = $device.MsiDownloadUrl
+                DownloadId = $device.DownloadId
+                Windows11Url = $windows11Url
+                Windows11FileName = $windows11FileName
+                Windows11FileSize = $windows11FileSize
+                Windows10Url = $windows10Url
+                Windows10FileName = $windows10FileName
+                Windows10FileSize = $windows10FileSize
+                LastUpdated = $lastUpdated
+                Status = if ($windows11Url -or $windows10Url) { "Found" } else { "Not Found" }
+            }
+            
+            # Cache the result
+            $processedUrls[$device.MsiDownloadUrl] = $resultObj
+            $results += $resultObj
+            
+            # Status update
+            $foundCount = 0
+            if ($windows11Url) { $foundCount++ }
+            if ($windows10Url) { $foundCount++ }
+            
+            if ($foundCount -gt 0) {
+                Write-Host "  Status: Found $foundCount driver pack(s)" -ForegroundColor Green
+            } else {
+                Write-Host "  Status: No MSI files found" -ForegroundColor Yellow
+            }
+            
+            # Be nice to the server
+            Start-Sleep -Milliseconds 500
+        }
+        catch {
+            Write-Error "  Failed to process $($device.Device): $_"
+            
+            # Add error result
+            $resultObj = [PSCustomObject]@{
+                Device = $device.Device
+                ShortDevice = $device.ShortDevice
+                SystemSKU = $device.SystemSKU
+                DownloadPageUrl = $device.MsiDownloadUrl
+                DownloadId = $device.DownloadId
+                Windows11Url = $null
+                Windows11FileName = $null
+                Windows11FileSize = $null
+                Windows10Url = $null
+                Windows10FileName = $null
+                Windows10FileSize = $null
+                LastUpdated = $null
+                Status = "Error: $_"
+            }
+            $results += $resultObj
+        }
+    }
+    
+    # Export results
+    if (-not $OutputJSON) {
+        Write-Host "Use -OutputJSON to export the results to a JSON file" -ForegroundColor Yellow
+        return $results
+    }
+    else {
+        Write-Host "Exporting results to JSON..." -ForegroundColor Yellow
+        if (-not $outputPath) {
+            $outputPath = Join-Path $PSScriptRoot "Surface.json"
+        }
+    $results | ConvertTo-Json -Depth 10 | Out-File -FilePath $outputPath -Encoding UTF8
+    Write-Host "`nExported MSI list to: $outputPath" -ForegroundColor Green
+    }
+
+    
+    # Show summary
+    Write-Host "`nSummary:" -ForegroundColor Yellow
+    $foundCount = ($results | Where-Object { $_.Status -eq "Found" }).Count
+    $notFoundCount = ($results | Where-Object { $_.Status -eq "Not Found" }).Count
+    $errorCount = ($results | Where-Object { $_.Status -like "Error*" }).Count
+    
+    Write-Host "  Found driver packs: $foundCount" -ForegroundColor Green
+    Write-Host "  Not found: $notFoundCount" -ForegroundColor Yellow
+    Write-Host "  Errors: $errorCount" -ForegroundColor Red
+    
+    # Show devices with both Windows 10 and 11
+    $bothVersions = $results | Where-Object { $_.Windows11Url -and $_.Windows10Url }
+    Write-Host "`nDevices with both Windows 10 and 11 drivers: $($bothVersions.Count)" -ForegroundColor Cyan
+    if ($bothVersions.Count -gt 0 -and $bothVersions.Count -le 10) {
+        $bothVersions | ForEach-Object {
+            Write-Host "  - $($_.Device)" -ForegroundColor Gray
+        }
+    }
+    
+    # Show devices with only one version
+    $onlyWin11 = $results | Where-Object { $_.Windows11Url -and -not $_.Windows10Url }
+    $onlyWin10 = $results | Where-Object { $_.Windows10Url -and -not $_.Windows11Url }
+    
+    if ($onlyWin11.Count -gt 0) {
+        Write-Host "`nDevices with only Windows 11 drivers: $($onlyWin11.Count)" -ForegroundColor Yellow
+    }
+    
+    if ($onlyWin10.Count -gt 0) {
+        Write-Host "`nDevices with only Windows 10 drivers: $($onlyWin10.Count)" -ForegroundColor Yellow
+    }
+    
+    return $results
+}
+
+# Main execution
+
+#Build Required Files:
+
+
+
+try {
+    $msiList = Get-SurfaceDriverPackMSIUrls -OutputJSON
+    
+    if ($msiList) {
+        Write-Host "`nDriver pack MSI list created successfully!" -ForegroundColor Green
+        Write-Host "Check SurfaceDriverPackMSIList.json for the complete list." -ForegroundColor Cyan
+    }
+}
+catch {
+    Write-Error "Failed to extract MSI URLs: $_"
 }

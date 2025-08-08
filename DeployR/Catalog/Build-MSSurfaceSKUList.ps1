@@ -1,3 +1,28 @@
+function Build-MSSurfaceSKUList {
+    <#
+    .SYNOPSIS
+    Builds a list of Microsoft Surface SKUs from the GitHub repository
+    
+    .DESCRIPTION
+    This function fetches the Surface SKU data from the Microsoft Docs GitHub repository,
+    parses it, and returns a structured list of Surface devices with their system models and SKUs.
+    
+    .PARAMETER OutputPath
+    Optional path to save the JSON output
+    
+    .EXAMPLE
+    $skuData = Build-MSSurfaceSKUList
+    Build-MSSurfaceSKUList -OutputPath ".\SurfaceSkus.json"
+    #>
+    
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [System.Management.Automation.SwitchParameter] $OutputJSON
+    )
+    
+
+
 function Get-SurfaceSkuFromGitHub {
     <#
     .SYNOPSIS
@@ -406,7 +431,10 @@ $skuData = Get-SurfaceSkuFromGitHub
 if ($skuData) {
     # Save the SKU data to JSON
     $jsonPath = Join-Path $PSScriptRoot "SurfaceSKUs.json"
-    $skuData | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8
+    if ($OutputJSON) {
+        $skuData | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8
+        Write-Host "`nExported SKU data to: $jsonPath" -ForegroundColor Green
+    }
     Write-Host "`nSKU data exported to JSON: $jsonPath" -ForegroundColor Green
     
     # Display summary
@@ -425,4 +453,7 @@ if ($skuData) {
 }
 else {
     Write-Error "Failed to retrieve Surface SKU data"
+}
+
+    return $skuData
 }
