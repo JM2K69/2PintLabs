@@ -14,7 +14,7 @@ function Get-CMOSDGather {
     powershell.exe "$env:temp\CMOSD-Gather.ps1" -debug $true
 }
 write-host "Function: Invoke-DeployRTS" -ForegroundColor Green
-write-host" Common Servers I Use:" -ForegroundColor magenta
+write-host " Common Servers I Use:" -ForegroundColor magenta
 write-host "  - 214-deployr.2p.garytown.com" -ForegroundColor Green
 write-host "  - recover01.2pintsoftware.com" -ForegroundColor Green
 write-host "  - dr.2pintlabs.com" -ForegroundColor Green
