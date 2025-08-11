@@ -84,11 +84,11 @@ if ($null -ne $RegisteredOrganization) {
 }
 [GC]::Collect()
 
-
+<#  This is hanging the process for some reason, I can't figure it out... disabling this function for now.
 if ($OneDriveUpdate -eq "true") {
-    <#
-    This script downloads and installs the OneDrive setup executable for Machine Level vs User Level.
-    #>
+
+    #This script downloads and installs the OneDrive setup executable for Machine Level vs User Level.
+
     $OneDriveSetup = "https://go.microsoft.com/fwlink/?linkid=844652"
     $OneDriveARMSetup = "https://go.microsoft.com/fwlink/?linkid=2282608"
 
@@ -110,13 +110,13 @@ if ($OneDriveUpdate -eq "true") {
     REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
 
     Write-Host "Making sure the Run key exists"
-    if (-not (Test-Path -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Run")) {
-        New-Item -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Run" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
-    }
-    <#
+    #if (-not (Test-Path -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Run")) {
+    #    New-Item -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Run" -ItemType directory -Force -ErrorAction SilentlyContinue | Out-Null
+    #}
+    
     & reg.exe add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\Run" /f /reg:64 2>&1 | Out-Null
     & reg.exe query "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\Run" /reg:64 2>&1 | Out-Null
-    #>
+    
     Write-Host "Changing OneDriveSetup value to point to the machine wide EXE"
     # Quotes are so problematic, we'll use the more risky approach and hope garbage collection cleans it up later
     Set-ItemProperty -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Run" -Name OneDriveSetup -Value """C:\Program Files\Microsoft OneDrive\Onedrive.exe"" /background" | Out-Null
@@ -126,7 +126,7 @@ if ($OneDriveUpdate -eq "true") {
     Write-Host "Unmounting Default User Registry Hive (REG UNLOAD HKLM\Default)"
     REG UNLOAD HKLM\Default
 }
-
+#>
 Write-Host "Configuring OEM branding info"
 if ($null -ne $Manufacturer) {
     Write-Host "Setting Manufacturer: $Manufacturer"
@@ -148,6 +148,7 @@ if ($null -ne $OEMSupportURL -and $OEMSupportURL -ne "") {
     Write-Host "Setting SupportURL: $OEMSupportURL"
     Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\OEMInformation" -Name "SupportURL" -Value $OEMSupportURL -Force | Out-Null
 }
-
+[GC]::Collect()
 Write-Host "Tweaks for Windows 11 UI COMPLETE"
 Write-Host "==================================================================="
+exit 0
