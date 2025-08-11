@@ -31,10 +31,6 @@ catch {
 }
 
 
-
-
-
-
 # Validate the Device Manufacturer
 if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -and $MakeAlias -ne "Panasonic Corporation" -and $MakeAlias -ne "Microsoft") {
     Write-Host "MakeAlias must be Microsoft, Dell, Lenovo, Panasonic or HP. Exiting script."

@@ -47,140 +47,177 @@ function Get-SurfaceSkuFromGitHub {
     )
     
     try {
-        Write-Host "Fetching Surface SKU data from GitHub..." -ForegroundColor Cyan
+        Write-Host "Fetching Surface SKU data from Microsoft Learn..." -ForegroundColor Cyan
         
-        $url = "https://raw.githubusercontent.com/microsoftdocs/devices-docs/public/surface/surface-system-sku-reference.md"
+        $url = "https://learn.microsoft.com/en-us/surface/surface-system-sku-reference"
         
-        # Fetch the markdown content
-        $response = Invoke-WebRequest -Uri $url -UseBasicParsing
-        $content = $response.Content
+        # Use proper headers to avoid blocking
+        $headers = @{
+            'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'Accept' = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            'Accept-Language' = 'en-US,en;q=0.5'
+            'Accept-Encoding' = 'gzip, deflate'
+            'Cache-Control' = 'no-cache'
+        }
         
-        # Split content into lines
-        $lines = $content -split "`n"
+        # Fetch the content
+        try {
+            $response = Invoke-WebRequest -Uri $url -Headers $headers -UseBasicParsing
+            $content = $response.Content
+        }
+        catch {
+            Write-Warning "Failed to fetch with headers, trying basic request: $_"
+            $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+            $content = $response.Content
+        }
+        
+        Write-Host "Successfully fetched page content ($(($content.Length / 1024).ToString('F1')) KB)" -ForegroundColor Green
         
         $devices = @()
-        $inTable = $false
-        $headerFound = $false
         
-        Write-Host "Parsing markdown content..." -ForegroundColor Yellow
+        # Since we're now fetching HTML content instead of markdown, we need to parse HTML tables
+        Write-Host "Parsing HTML content for Surface SKU tables..." -ForegroundColor Yellow
         
-        foreach ($line in $lines) {
-            $line = $line.Trim()
+        # Look for HTML tables containing Surface device information
+        $tableMatches = [regex]::Matches($content, '<table[^>]*>.*?</table>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        
+        if ($tableMatches.Count -eq 0) {
+            Write-Warning "No HTML tables found, trying to parse as markdown..."
             
-            # Skip empty lines
-            if (-not $line) {
-                continue
-            }
+            # Fallback to markdown parsing if no HTML tables found
+            $lines = $content -split "`n"
+            $inTable = $false
+            $headerFound = $false
             
-            # Check if we're entering a table
-            if ($line -match '^\|.*\|$') {
-                # Check if this is the header row we want
-                if ($line -match 'Device.*System\s+Model.*System\s+SKU' -or 
-                    $line -match 'Device.*System Model.*System SKU') {
-                    $inTable = $true
-                    $headerFound = $true
-                    Write-Host "  Found table header" -ForegroundColor DarkGray
+            foreach ($line in $lines) {
+                $line = $line.Trim()
+                
+                # Skip empty lines
+                if (-not $line) {
                     continue
                 }
                 
-                # Skip the separator line (|---|---|---|)
-                if ($headerFound -and $line -match '^\|[\s\-:]+\|') {
-                    continue
-                }
-                
-                # Parse data rows
-                if ($inTable) {
-                    # Exit table if we hit an empty line or non-table content
-                    if (-not ($line -match '^\|.*\|$')) {
-                        $inTable = $false
-                        $headerFound = $false
+                # Check if we're entering a table
+                if ($line -match '^\|.*\|$') {
+                    # Check if this is the header row we want
+                    if ($line -match 'Device.*System\s+Model.*System\s+SKU' -or 
+                        $line -match 'Device.*System Model.*System SKU') {
+                        $inTable = $true
+                        $headerFound = $true
+                        Write-Host "  Found table header" -ForegroundColor DarkGray
                         continue
                     }
                     
-                    # Split the line by pipes and clean up
-                    $cells = $line -split '\|' | Where-Object { $_ -ne '' } | ForEach-Object { $_.Trim() }
+                    # Skip the separator line (|---|---|---|)
+                    if ($headerFound -and $line -match '^\|[\s\-:]+\|') {
+                        continue
+                    }
                     
-                    # We expect at least 3 cells (Device, System Model, System SKU)
-                    if ($cells.Count -ge 3) {
-                        $device = $cells[0].Trim()
-                        $systemModel = $cells[1].Trim()
-                        $systemSku = $cells[2].Trim()
+                    # Parse data rows
+                    if ($inTable) {
+                        # Exit table if we hit an empty line or non-table content
+                        if (-not ($line -match '^\|.*\|$')) {
+                            $inTable = $false
+                            $headerFound = $false
+                            continue
+                        }
                         
-                        # Only add if we have a Surface device
-                        if ($device -match 'Surface' -and $device -notmatch '^\s*$') {
-                            # Clean up the values
-                            $device = $device -replace '\*', '' -replace '\s+', ' '
-                            $systemModel = $systemModel -replace '\*', '' -replace '\s+', ' '
-                            $systemSku = $systemSku -replace '\*', '' -replace '\s+', ' '
+                        # Split the line by pipes and clean up
+                        $cells = $line -split '\|' | Where-Object { $_ -ne '' } | ForEach-Object { $_.Trim() }
+                        
+                        # We expect at least 3 cells (Device, System Model, System SKU)
+                        if ($cells.Count -ge 3) {
+                            $device = $cells[0].Trim()
+                            $systemModel = $cells[1].Trim()
+                            $systemSku = $cells[2].Trim()
                             
-                            # Handle special characters and formatting
-                            $device = [System.Web.HttpUtility]::HtmlDecode($device)
-                            $systemModel = [System.Web.HttpUtility]::HtmlDecode($systemModel)
-                            $systemSku = [System.Web.HttpUtility]::HtmlDecode($systemSku)
-                            
-                            # Skip Consumer devices
-                            if ($device -match 'Consumer') {
-                                Write-Verbose "Skipping Consumer device: $device"
-                                continue
+                            # Only add if we have a Surface device
+                            if ($device -match 'Surface' -and $device -notmatch '^\s*$') {
+                                $devices += @{
+                                    Device = $device
+                                    SystemModel = $systemModel
+                                    SystemSKU = $systemSku
+                                }
+                                
+                                Write-Host "  Found: $device" -ForegroundColor Green
                             }
-                            
-                            # Skip Surface 3 devices
-                            if ($device -match '^Surface 3\b') {
-                                Write-Verbose "Skipping Surface 3 device: $device"
-                                continue
-                            }
-                            
-                            # Create device object
-                            $shortDeviceName = Get-ShortDeviceName -DeviceName $device
-                            
-                            # Skip if Get-ShortDeviceName returns null (for excluded devices)
-                            if ($null -eq $shortDeviceName) {
-                                Write-Verbose "Skipping excluded device: $device"
-                                continue
-                            }
-                            
-                            $deviceObj = [PSCustomObject]@{
-                                Device = $device
-                                SystemModel = if ($systemModel -and $systemModel -ne '-' -and $systemModel -ne 'N/A') { $systemModel } else { "N/A" }
-                                SystemSKU = if ($systemSku -and $systemSku -ne '-' -and $systemSku -ne 'N/A') { $systemSku } else { "N/A" }
-                                ShortDevice = $shortDeviceName
-                            }
-                            
-                            $devices += $deviceObj
-                            Write-Host "  Found: $device" -ForegroundColor Green
                         }
                     }
                 }
             }
-            # Also check for tables that might not have proper markdown formatting
-            elseif ($line -match 'Surface\s+\w+.*\d{4}') {
-                # Try to parse lines that look like they contain Surface device info
-                if ($line -match '(Surface[^|]+)\s+([^|]+)\s+(\d{4})') {
-                    $device = $Matches[1].Trim()
-                    $systemModel = $Matches[2].Trim()
-                    $systemSku = $Matches[3].Trim()
+        }
+        else {
+            Write-Host "Found $($tableMatches.Count) HTML table(s), parsing..." -ForegroundColor Green
+            
+            foreach ($tableMatch in $tableMatches) {
+                $tableHtml = $tableMatch.Value
+                
+                # Check if this table contains Surface device information
+                if ($tableHtml -match 'Surface' -and ($tableHtml -match 'System.*Model' -or $tableHtml -match 'System.*SKU')) {
+                    Write-Host "Processing Surface device table..." -ForegroundColor Cyan
                     
-                    # Skip Consumer devices
-                    if ($device -match 'Consumer') {
-                        Write-Verbose "Skipping Consumer device: $device"
-                        continue
+                    # Parse HTML table rows
+                    $rowMatches = [regex]::Matches($tableHtml, '<tr[^>]*>(.*?)</tr>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                    
+                    $isHeaderProcessed = $false
+                    
+                    foreach ($rowMatch in $rowMatches) {
+                        $rowHtml = $rowMatch.Groups[1].Value
+                        
+                        # Extract cell contents
+                        $cellMatches = [regex]::Matches($rowHtml, '<t[hd][^>]*>(.*?)</t[hd]>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                        
+                        if ($cellMatches.Count -ge 3) {
+                            $device = [System.Web.HttpUtility]::HtmlDecode($cellMatches[0].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                            $systemModel = [System.Web.HttpUtility]::HtmlDecode($cellMatches[1].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                            $systemSku = [System.Web.HttpUtility]::HtmlDecode($cellMatches[2].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                            
+                            # Skip header row
+                            if ($device -match 'Device' -and $systemModel -match 'Model' -and $systemSku -match 'SKU') {
+                                $isHeaderProcessed = $true
+                                continue
+                            }
+                            
+                            # Only process data rows after header
+                            if ($isHeaderProcessed -and $device -match 'Surface' -and $device -notmatch '^\s*$') {
+                                # Clean up the values
+                                $device = $device.Trim()
+                                $systemModel = $systemModel.Trim()
+                                $systemSku = $systemSku.Trim()
+                                
+                                # Skip Consumer devices
+                                if ($device -match 'Consumer') {
+                                    Write-Verbose "Skipping Consumer device: $device"
+                                    continue
+                                }
+                                
+                                # Skip Surface 3 devices
+                                if ($device -match '^Surface 3\b') {
+                                    Write-Verbose "Skipping Surface 3 device: $device"
+                                    continue
+                                }
+                                
+                                # Create device object
+                                $shortDeviceName = Get-ShortDeviceName -DeviceName $device
+                                
+                                # Skip if Get-ShortDeviceName returns null (for excluded devices)
+                                if ($null -eq $shortDeviceName) {
+                                    Write-Verbose "Skipping excluded device: $device"
+                                    continue
+                                }
+                                
+                                $deviceObj = [PSCustomObject]@{
+                                    Device = $device
+                                    SystemModel = if ($systemModel -and $systemModel -ne '-' -and $systemModel -ne 'N/A') { $systemModel } else { "N/A" }
+                                    SystemSKU = if ($systemSku -and $systemSku -ne '-' -and $systemSku -ne 'N/A') { $systemSku } else { "N/A" }
+                                    ShortDevice = $shortDeviceName
+                                }
+                                
+                                $devices += $deviceObj
+                                Write-Host "  Found: $device" -ForegroundColor Green
+                            }
+                        }
                     }
-                    
-                    # Skip Surface 3 devices
-                    if ($device -match '^Surface 3\b') {
-                        Write-Verbose "Skipping Surface 3 device: $device"
-                        continue
-                    }
-                    
-                    $deviceObj = [PSCustomObject]@{
-                        Device = $device
-                        SystemModel = $systemModel
-                        SystemSKU = $systemSku
-                        ShortDevice = Get-ShortDeviceName -DeviceName $device
-                    }
-                    
-                    $devices += $deviceObj
-                    Write-Host "  Found (alt format): $device" -ForegroundColor Green
                 }
             }
         }
@@ -207,7 +244,7 @@ function Get-SurfaceSkuFromGitHub {
         return $uniqueDevices
     }
     catch {
-        Write-Error "Failed to get Surface SKU data from GitHub: $_"
+        Write-Error "Failed to get Surface SKU data from Microsoft Learn: $_"
         return $null
     }
 }
