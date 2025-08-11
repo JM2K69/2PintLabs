@@ -2231,7 +2231,9 @@ else {
     
     
     Write-Host "Starting Downloading Drivers to $DownloadContentPath"
+
     Foreach ($Driver in $Drivers){
+
         #Generalize Variable Names
         if ($MakeAlias -eq "Dell") {
             $Name = $Driver.Name
@@ -2250,6 +2252,9 @@ else {
         }
         
         Write-Host "Driver: $NAME" -ForegroundColor Magenta
+
+        
+
         if ($null -ne $URL){
             
             
@@ -2278,7 +2283,11 @@ else {
     Write-Host "Starting Extracting Drivers to $ExtractedDriverLocation"
     $DriversDownloads = Get-ChildItem -Path $DownloadContentPath -Filter *.exe -Recurse
     if ($DriversDownloads) {
+        $TotalDrivers = $DriversDownloads.Count
+        $DriverCurrentCount = 0
         foreach ($DriverDownload in $DriversDownloads) {
+            $DriverCurrentCount++
+            $PercentComplete = [math]::Round(($DriverCurrentCount / $TotalDrivers) * 100)
             Write-Host "Found Driver Download: $($DriverDownload.Name)"
             $FolderName = $DriverDownload.Name -replace '.exe',''
             $ExpandFile = $DriverDownload.FullName
@@ -2287,6 +2296,7 @@ else {
                 New-Item -ItemType Directory -Path $ExtractedDriverPath -Force | Out-Null
             }
             Write-Host "Expanding Driver to $ExtractedDriverPath"
+            Write-Progress -Activity "Extracting Drivers" -Status "Extracting $ExpandFile" -PercentComplete $PercentComplete
             if ($MakeAlias -eq "Dell") {
                 try {
                     Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$ExtractedDriverPath`"" -Wait -NoNewWindow -PassThru
