@@ -36,8 +36,12 @@ catch {
 
 
 # Validate the Device Manufacturer
-if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -and $MakeAlias -ne "Panasonic Corporation") {
-    Write-Host "MakeAlias must be Dell, Lenovo, Panasonic or HP. Exiting script."
+if ($MakeAlias -ne "Dell" -and $MakeAlias -ne "Lenovo" -and $MakeAlias -ne "HP" -and $MakeAlias -ne "Panasonic Corporation" -and $MakeAlias -ne "Microsoft") {
+    Write-Host "MakeAlias must be Microsoft, Dell, Lenovo, Panasonic or HP. Exiting script."
+    Exit 0
+}
+if ($ModelAlias -eq "Virtual Machine") {
+    Write-Host "ModelAlias is Virtual Machine, exiting script."
     Exit 0
 }
 
