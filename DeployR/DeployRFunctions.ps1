@@ -8,6 +8,7 @@ function Get-DeployRGather {
     iex (irm "https://gather.garytown.com")
 }
 
+write-host "Function: Get-CMOSDGather" -ForegroundColor Green
 function Get-CMOSDGather {
     $Script = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/Josch62/Gather-Script-For-ConfigMgr-TS/refs/heads/main/Gather.ps1" -UseBasicParsing
     $Script | Out-File -FilePath "$env:temp\CMOSD-Gather.ps1" -Force -Encoding UTF8
