@@ -108,7 +108,9 @@ function Get-SurfaceDPDownloads {
         [CmdletBinding()]
         param(
         [Parameter(Mandatory = $false)]
-        [System.Management.Automation.SwitchParameter] $OutputJSON
+        [System.Management.Automation.SwitchParameter] $OutputJSON,
+        [Parameter(Mandatory = $false)]
+        [System.Management.Automation.SwitchParameter] $Details
         )
         
         
@@ -133,176 +135,284 @@ function Get-SurfaceDPDownloads {
             [CmdletBinding()]
             param(
             [Parameter(Mandatory = $false)]
-            [string]$OutputPath
+            [string]$OutputPath,
+            [Parameter(Mandatory = $false)]
+            [System.Management.Automation.SwitchParameter] $Details
             )
             
             try {
-                Write-Host "Fetching Surface SKU data from GitHub..." -ForegroundColor Cyan
+                if ($Details){Write-Host "Fetching Surface SKU data from Microsoft Learn..." -ForegroundColor Cyan }
                 
-                $url = "https://raw.githubusercontent.com/microsoftdocs/devices-docs/public/surface/surface-system-sku-reference.md"
+                $url = "https://learn.microsoft.com/en-us/surface/surface-system-sku-reference"
                 
-                # Fetch the markdown content
-                $response = Invoke-WebRequest -Uri $url -UseBasicParsing
-                $content = $response.Content
+                # Use proper headers to avoid blocking
+                $headers = @{
+                    'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    'Accept' = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+                    'Accept-Language' = 'en-US,en;q=0.5'
+                    'Accept-Encoding' = 'gzip, deflate'
+                    'Cache-Control' = 'no-cache'
+                }
                 
-                # Split content into lines
-                $lines = $content -split "`n"
+                # Fetch the content
+                try {
+                    $response = Invoke-WebRequest -Uri $url -Headers $headers -UseBasicParsing
+                    $content = $response.Content
+                }
+                catch {
+                    Write-Warning "Failed to fetch with headers, trying basic request: $_"
+                    $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+                    $content = $response.Content
+                }
+                
+                if ($Details){Write-Host "Successfully fetched page content ($(($content.Length / 1024).ToString('F1')) KB)" -ForegroundColor Green}
                 
                 $devices = @()
-                $inTable = $false
-                $headerFound = $false
                 
-                Write-Host "Parsing markdown content..." -ForegroundColor Yellow
+                # Since we're now fetching HTML content instead of markdown, we need to parse HTML tables
+                if ($Details){Write-Host "Parsing HTML content for Surface SKU tables..." -ForegroundColor Yellow}
                 
-                foreach ($line in $lines) {
-                    $line = $line.Trim()
+                # Look for HTML tables containing Surface device information
+                $tableMatches = [regex]::Matches($content, '<table[^>]*>.*?</table>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                
+                if ($tableMatches.Count -eq 0) {
+                    Write-Warning "No HTML tables found, trying to parse as markdown..."
                     
-                    # Skip empty lines
-                    if (-not $line) {
-                        continue
-                    }
+                    # Fallback to markdown parsing if no HTML tables found
+                    $lines = $content -split "`n"
+                    $inTable = $false
+                    $headerFound = $false
                     
-                    # Check if we're entering a table
-                    if ($line -match '^\|.*\|$') {
-                        # Check if this is the header row we want
-                        if ($line -match 'Device.*System\s+Model.*System\s+SKU' -or 
-                        $line -match 'Device.*System Model.*System SKU') {
-                            $inTable = $true
-                            $headerFound = $true
-                            #Write-Host "  Found table header" -ForegroundColor DarkGray
+                    foreach ($line in $lines) {
+                        $line = $line.Trim()
+                        
+                        # Skip empty lines
+                        if (-not $line) {
                             continue
                         }
                         
-                        # Skip the separator line (|---|---|---|)
-                        if ($headerFound -and $line -match '^\|[\s\-:]+\|') {
-                            continue
-                        }
-                        
-                        # Parse data rows
-                        if ($inTable) {
-                            # Exit table if we hit an empty line or non-table content
-                            if (-not ($line -match '^\|.*\|$')) {
-                                $inTable = $false
-                                $headerFound = $false
+                        # Check if we're entering a table
+                        if ($line -match '^\|.*\|$') {
+                            # Check if this is the header row we want
+                            if ($line -match 'Device.*System\s+Model.*System\s+SKU' -or 
+                            $line -match 'Device.*System Model.*System SKU') {
+                                $inTable = $true
+                                $headerFound = $true
+                                if ($Details){Write-Host "  Found table header" -ForegroundColor DarkGray}
                                 continue
                             }
                             
-                            # Split the line by pipes and clean up
-                            $cells = $line -split '\|' | Where-Object { $_ -ne '' } | ForEach-Object { $_.Trim() }
+                            # Skip the separator line (|---|---|---|)
+                            if ($headerFound -and $line -match '^\|[\s\-:]+\|') {
+                                continue
+                            }
                             
-                            # We expect at least 3 cells (Device, System Model, System SKU)
-                            if ($cells.Count -ge 3) {
-                                $device = $cells[0].Trim()
-                                $systemModel = $cells[1].Trim()
-                                $systemSku = $cells[2].Trim()
+                            # Parse data rows
+                            if ($inTable) {
+                                # Exit table if we hit an empty line or non-table content
+                                if (-not ($line -match '^\|.*\|$')) {
+                                    $inTable = $false
+                                    $headerFound = $false
+                                    continue
+                                }
                                 
-                                # Only add if we have a Surface device
-                                if ($device -match 'Surface' -and $device -notmatch '^\s*$') {
-                                    # Clean up the values
-                                    $device = $device -replace '\*', '' -replace '\s+', ' '
-                                    $systemModel = $systemModel -replace '\*', '' -replace '\s+', ' '
-                                    $systemSku = $systemSku -replace '\*', '' -replace '\s+', ' '
+                                # Split the line by pipes and clean up
+                                $cells = $line -split '\|' | Where-Object { $_ -ne '' } | ForEach-Object { $_.Trim() }
+                                
+                                # We expect at least 3 cells (Device, System Model, System SKU)
+                                if ($cells.Count -ge 3) {
+                                    $device = $cells[0].Trim()
+                                    $systemModel = $cells[1].Trim()
+                                    $systemSku = $cells[2].Trim()
                                     
-                                    # Handle special characters and formatting
-                                    $device = [System.Web.HttpUtility]::HtmlDecode($device)
-                                    $systemModel = [System.Web.HttpUtility]::HtmlDecode($systemModel)
-                                    $systemSku = [System.Web.HttpUtility]::HtmlDecode($systemSku)
-                                    
-                                    # Skip Consumer devices
-                                    if ($device -match 'Consumer') {
-                                        #Write-Verbose "Skipping Consumer device: $device"
-                                        continue
+                                    # Only add if we have a Surface device
+                                    if ($device -match 'Surface' -and $device -notmatch '^\s*$') {
+                                        $devices += @{
+                                            Device = $device
+                                            SystemModel = $systemModel
+                                            SystemSKU = $systemSku
+                                        }
+                                        
+                                        if ($Details){Write-Host "  Found: $device" -ForegroundColor Green}
                                     }
-                                    
-                                    # Skip Surface 3 devices
-                                    if ($device -match '^Surface 3\b') {
-                                        #Write-Verbose "Skipping Surface 3 device: $device"
-                                        continue
-                                    }
-                                    
-                                    # Create device object
-                                    $shortDeviceName = Get-ShortDeviceName -DeviceName $device
-                                    
-                                    # Skip if Get-ShortDeviceName returns null (for excluded devices)
-                                    if ($null -eq $shortDeviceName) {
-                                        #Write-Verbose "Skipping excluded device: $device"
-                                        continue
-                                    }
-                                    
-                                    $deviceObj = [PSCustomObject]@{
-                                        Device = $device
-                                        SystemModel = if ($systemModel -and $systemModel -ne '-' -and $systemModel -ne 'N/A') { $systemModel } else { "N/A" }
-                                        SystemSKU = if ($systemSku -and $systemSku -ne '-' -and $systemSku -ne 'N/A') { $systemSku } else { "N/A" }
-                                        ShortDevice = $shortDeviceName
-                                    }
-                                    
-                                    $devices += $deviceObj
-                                    #Write-Host "  Found: $device" -ForegroundColor Green
                                 }
                             }
                         }
                     }
-                    # Also check for tables that might not have proper markdown formatting
-                    elseif ($line -match 'Surface\s+\w+.*\d{4}') {
-                        # Try to parse lines that look like they contain Surface device info
-                        if ($line -match '(Surface[^|]+)\s+([^|]+)\s+(\d{4})') {
-                            $device = $Matches[1].Trim()
-                            $systemModel = $Matches[2].Trim()
-                            $systemSku = $Matches[3].Trim()
+                }
+                else {
+                    if ($Details){Write-Host "Found $($tableMatches.Count) HTML table(s), parsing..." -ForegroundColor Green}
+                    
+                    foreach ($tableMatch in $tableMatches) {
+                        $tableHtml = $tableMatch.Value
+                        
+                        # Check if this table contains Surface device information
+                        if ($tableHtml -match 'Surface' -and ($tableHtml -match 'System.*Model' -or $tableHtml -match 'System.*SKU')) {
+                            if ($Details){Write-Host "Processing Surface device table..." -ForegroundColor Cyan}
                             
-                            # Skip Consumer devices
-                            if ($device -match 'Consumer') {
-                                #Write-Verbose "Skipping Consumer device: $device"
-                                continue
+                            # Parse HTML table rows
+                            $rowMatches = [regex]::Matches($tableHtml, '<tr[^>]*>(.*?)</tr>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                            
+                            $isHeaderProcessed = $false
+                            
+                            foreach ($rowMatch in $rowMatches) {
+                                $rowHtml = $rowMatch.Groups[1].Value
+                                
+                                # Extract cell contents
+                                $cellMatches = [regex]::Matches($rowHtml, '<t[hd][^>]*>(.*?)</t[hd]>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                                
+                                if ($cellMatches.Count -ge 3) {
+                                    $device = [System.Web.HttpUtility]::HtmlDecode($cellMatches[0].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                                    $systemModel = [System.Web.HttpUtility]::HtmlDecode($cellMatches[1].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                                    $systemSku = [System.Web.HttpUtility]::HtmlDecode($cellMatches[2].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                                    
+                                    # Skip header row
+                                    if ($device -match 'Device' -and $systemModel -match 'Model' -and $systemSku -match 'SKU') {
+                                        $isHeaderProcessed = $true
+                                        continue
+                                    }
+                                    
+                                    # Only process data rows after header
+                                    if ($isHeaderProcessed -and $device -match 'Surface' -and $device -notmatch '^\s*$') {
+                                        # Clean up the values
+                                        $device = $device.Trim()
+                                        $systemModel = $systemModel.Trim()
+                                        $systemSku = $systemSku.Trim()
+                                        
+                                        # Skip Consumer devices
+                                        if ($device -match 'Consumer') {
+                                            Write-Verbose "Skipping Consumer device: $device"
+                                            continue
+                                        }
+                                        
+                                        # Skip Surface 3 devices
+                                        if ($device -match '^Surface 3\b') {
+                                            Write-Verbose "Skipping Surface 3 device: $device"
+                                            continue
+                                        }
+                                        
+                                        # Create device object
+                                        $shortDeviceName = Get-ShortDeviceName -DeviceName $device
+                                        
+                                        # Skip if Get-ShortDeviceName returns null (for excluded devices)
+                                        if ($null -eq $shortDeviceName) {
+                                            Write-Verbose "Skipping excluded device: $device"
+                                            continue
+                                        }
+                                        
+                                        $deviceObj = [PSCustomObject]@{
+                                            Device = $device
+                                            SystemModel = if ($systemModel -and $systemModel -ne '-' -and $systemModel -ne 'N/A') { $systemModel } else { "N/A" }
+                                            SystemSKU = if ($systemSku -and $systemSku -ne '-' -and $systemSku -ne 'N/A') { $systemSku } else { "N/A" }
+                                            ShortDevice = $shortDeviceName
+                                        }
+                                        
+                                        $devices += $deviceObj
+                                        if ($Details){Write-Host "  Found: $device" -ForegroundColor Green}
+                                    }
+                                }
                             }
-                            
-                            # Skip Surface 3 devices
-                            if ($device -match '^Surface 3\b') {
-                                #Write-Verbose "Skipping Surface 3 device: $device"
-                                continue
-                            }
-                            
-                            $deviceObj = [PSCustomObject]@{
-                                Device = $device
-                                SystemModel = $systemModel
-                                SystemSKU = $systemSku
-                                ShortDevice = Get-ShortDeviceName -DeviceName $device
-                            }
-                            
-                            $devices += $deviceObj
-                            #Write-Host "  Found (alt format): $device" -ForegroundColor Green
                         }
                     }
                 }
                 
                 # Remove duplicates based on all three properties
                 $uniqueDevices = $devices | Sort-Object Device, SystemModel, SystemSKU -Unique
-                <#
-                Write-Host "`nTotal unique devices found: $($uniqueDevices.Count)" -ForegroundColor Yellow
+                
+                if ($Details){Write-Host "`nTotal unique devices found: $($uniqueDevices.Count)" -ForegroundColor Yellow}
                 
                 # Display summary by device type
                 $deviceTypes = $uniqueDevices | Group-Object { ($_.Device -split ' ')[0..1] -join ' ' } | Sort-Object Name
-                Write-Host "`nDevice Summary:" -ForegroundColor Cyan
-                foreach ($type in $deviceTypes) {
-                Write-Host "  $($type.Name): $($type.Count) models" -ForegroundColor Gray
+                if ($Details){
+                    Write-Host "`nDevice Summary:" -ForegroundColor Cyan
+                    foreach ($type in $deviceTypes) {
+                        Write-Host "  $($type.Name): $($type.Count) models" -ForegroundColor Gray
+                    }
                 }
-                
                 # Convert to JSON if output path specified
                 if ($OutputPath) {
-                $jsonOutput = $uniqueDevices | ConvertTo-Json -Depth 10
-                $jsonOutput | Out-File -FilePath $OutputPath -Encoding UTF8
-                Write-Host "`nData saved to: $OutputPath" -ForegroundColor Green
+                    $jsonOutput = $uniqueDevices | ConvertTo-Json -Depth 10
+                    $jsonOutput | Out-File -FilePath $OutputPath -Encoding UTF8
+                    Write-Host "`nData saved to: $OutputPath" -ForegroundColor Green
                 }
-                #>
+                
                 return $uniqueDevices
             }
             catch {
-                Write-Error "Failed to get Surface SKU data from GitHub: $_"
+                Write-Error "Failed to get Surface SKU data from Microsoft Learn: $_"
                 return $null
             }
         }
         
+        # Function to display the data in a nice table format
+        function Show-SurfaceSkuTable {
+            <#
+            .SYNOPSIS
+            Displays Surface SKU data in a formatted table
+            
+            .PARAMETER SkuData
+            The SKU data array from Get-SurfaceSkuFromGitHub
+            
+            .PARAMETER DeviceFilter
+            Optional filter for specific device types (e.g., "Surface Pro", "Surface Laptop")
+            
+            .EXAMPLE
+            Show-SurfaceSkuTable -SkuData $skuData
+            Show-SurfaceSkuTable -SkuData $skuData -DeviceFilter "Surface Pro"
+            #>
+            
+            [CmdletBinding()]
+            param(
+            [Parameter(Mandatory = $true)]
+            [array]$SkuData,
+            
+            [Parameter(Mandatory = $false)]
+            [string]$DeviceFilter
+            )
+            
+            $displayData = $SkuData
+            
+            if ($DeviceFilter) {
+                $displayData = $SkuData | Where-Object { $_.Device -like "*$DeviceFilter*" }
+                Write-Host "Filtering for: $DeviceFilter" -ForegroundColor Yellow
+            }
+            
+            $displayData | Format-Table -AutoSize
+        }
         
+        # Function to export to CSV
+        function Export-SurfaceSkuToCsv {
+            <#
+            .SYNOPSIS
+            Exports Surface SKU data to CSV file
+            
+            .PARAMETER SkuData
+            The SKU data array from Get-SurfaceSkuFromGitHub
+            
+            .PARAMETER Path
+            Path to save the CSV file
+            
+            .EXAMPLE
+            Export-SurfaceSkuToCsv -SkuData $skuData -Path ".\SurfaceSkus.csv"
+            #>
+            
+            [CmdletBinding()]
+            param(
+            [Parameter(Mandatory = $true)]
+            [array]$SkuData,
+            
+            [Parameter(Mandatory = $true)]
+            [string]$Path
+            )
+            
+            try {
+                $SkuData | Export-Csv -Path $Path -NoTypeInformation
+                Write-Host "Data exported to CSV: $Path" -ForegroundColor Green
+            }
+            catch {
+                Write-Error "Failed to export to CSV: $_"
+            }
+        }
         
         # Add this function before the Main execution section
         function Get-ShortDeviceName {
@@ -441,37 +551,38 @@ function Get-SurfaceDPDownloads {
             
             return $shortName
         }
-        
-        # Main execution
-        Write-Host "Surface SKU Reference Parser" -ForegroundColor Cyan
-        Write-Host "===========================" -ForegroundColor Cyan
-        Write-Host ""
-        
+        if ($Details){
+            # Main execution
+            Write-Host "Surface SKU Reference Parser" -ForegroundColor Cyan
+            Write-Host "===========================" -ForegroundColor Cyan
+            Write-Host ""
+        }
         # Get the SKU data
         $skuData = Get-SurfaceSkuFromGitHub
         
         if ($skuData) {
             # Save the SKU data to JSON
-            $jsonPath = Join-Path $PSScriptRoot "SurfaceSKUs.json"
+            
             if ($OutputJSON) {
+                $jsonPath = Join-Path $PSScriptRoot "SurfaceSKUs.json"
                 $skuData | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8
                 Write-Host "`nExported SKU data to: $jsonPath" -ForegroundColor Green
             }
-            <#
-            # Display summary
-            Write-Host "`nTotal devices found: $($skuData.Count)" -ForegroundColor Yellow
-            
-            # Show sample data
-            Write-Host "`nSample data:" -ForegroundColor Cyan
-            $skuData | Select-Object -First 5 | Format-Table Device, SystemModel, SystemSKU, ShortDevice -AutoSize
-            
-            # Usage examples
-            Write-Host "`nUse these commands to work with the data:" -ForegroundColor Yellow
-            Write-Host '  $skuData | Format-Table -AutoSize' -ForegroundColor White
-            Write-Host '  $skuData | Where-Object { $_.Device -like "*Surface Go*" }' -ForegroundColor White
-            Write-Host '  $skuData | Export-Csv -Path ".\SurfaceSkus.csv" -NoTypeInformation' -ForegroundColor White
-            Write-Host '  Show-SurfaceSkuTable -SkuData $skuData -DeviceFilter "Surface Pro"' -ForegroundColor White
-            #>
+            if ($Details){
+                # Display summary
+                Write-Host "`nTotal devices found: $($skuData.Count)" -ForegroundColor Yellow
+                
+                # Show sample data
+                Write-Host "`nSample data:" -ForegroundColor Cyan
+                $skuData | Select-Object -First 5 | Format-Table Device, SystemModel, SystemSKU, ShortDevice -AutoSize
+                
+                # Usage examples
+                Write-Host "`nUse these commands to work with the data:" -ForegroundColor Yellow
+                Write-Host '  $skuData | Format-Table -AutoSize' -ForegroundColor White
+                Write-Host '  $skuData | Where-Object { $_.Device -like "*Surface Go*" }' -ForegroundColor White
+                Write-Host '  $skuData | Export-Csv -Path ".\SurfaceSkus.csv" -NoTypeInformation' -ForegroundColor White
+                Write-Host '  Show-SurfaceSkuTable -SkuData $skuData -DeviceFilter "Surface Pro"' -ForegroundColor White
+            }
         }
         else {
             Write-Error "Failed to retrieve Surface SKU data"
@@ -480,226 +591,328 @@ function Get-SurfaceDPDownloads {
         return $skuData
     }
     
-    
     function Build-MSSurfaceURLList {
         <#
         .SYNOPSIS
-        Builds a list of Microsoft Surface download URLs from the GitHub repository
+        Builds a list of Microsoft Surface download URLs from Microsoft Learn
         
         .DESCRIPTION
-        This function fetches the Surface download URL data from the Microsoft Docs GitHub repository,
+        This function fetches the Surface download URL data from Microsoft Learn documentation,
         parses it, and returns a structured list of Surface devices with their download URLs.
         
-        .PARAMETER OutputPath
-        Optional path to save the JSON output
+        .PARAMETER OutputJSON
+        Switch to export the data to a JSON file
         
         .EXAMPLE
         $urlData = Build-MSSurfaceURLList
-        Build-MSSurfaceURLList -OutputPath ".\SurfaceURLs.json"
+        Build-MSSurfaceURLList -OutputJSON
         #>
         
         [CmdletBinding()]
         param(
         [Parameter(Mandatory = $false)]
-        [System.Management.Automation.SwitchParameter] $OutputJSON
+        [System.Management.Automation.SwitchParameter] $OutputJSON,
+        [Parameter(Mandatory = $false)]
+        [System.Management.Automation.SwitchParameter] $Details
         )
         
-        
         function Get-SurfaceDriverTable {
-            Write-Host "Fetching Surface driver documentation..." -ForegroundColor Yellow
+            Write-Host "Fetching Surface driver documentation from Microsoft Learn..." -ForegroundColor Yellow
             
-            $url = "https://raw.githubusercontent.com/microsoftdocs/devices-docs/public/surface/manage-surface-driver-and-firmware-updates.md"
+            $url = "https://learn.microsoft.com/en-us/surface/manage-surface-driver-and-firmware-updates"
             
             try {
-                $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+                # Use proper headers to avoid blocking
+                $headers = @{
+                    'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    'Accept' = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+                    'Accept-Language' = 'en-US,en;q=0.5'
+                    'Accept-Encoding' = 'gzip, deflate'
+                    'Cache-Control' = 'no-cache'
+                }
+                
+                $response = Invoke-WebRequest -Uri $url -Headers $headers -UseBasicParsing
                 $content = $response.Content
             }
             catch {
-                Write-Error "Failed to fetch content: $_"
-                return $null
+                Write-Error "Failed to fetch content from Microsoft Learn: $_"
+                Write-Host "Trying alternative approach..." -ForegroundColor Yellow
+                
+                # Try without custom headers
+                try {
+                    $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+                    $content = $response.Content
+                }
+                catch {
+                    Write-Error "Alternative approach failed: $_"
+                    return $null
+                }
             }
             
-            # Split into lines
-            $lines = $content -split "`r?`n"
-            
-            Write-Host "Document has $($lines.Count) lines" -ForegroundColor Yellow
+            if ($Details){Write-Host "Successfully fetched page content ($(($content.Length / 1024).ToString('F1')) KB)" -ForegroundColor Green}
             
             $devices = @()
             
-            # Look for the table
-            #Write-Host "`nSearching for device table..." -ForegroundColor Yellow
+            # Parse HTML content to find the table
+            if ($Details){Write-Host "`nSearching for Surface device table..." -ForegroundColor Yellow}
             
-            for ($i = 0; $i -lt $lines.Count; $i++) {
-                $line = $lines[$i]
+            # Look for table patterns in the HTML
+            # Microsoft Learn pages often have tables with specific classes or structures
+            $tableMatches = [regex]::Matches($content, '<table[^>]*>.*?</table>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            
+            if ($tableMatches.Count -eq 0) {
+                Write-Warning "No tables found in the page content"
+                if ($Details){Write-Host "Looking for markdown-style tables..." -ForegroundColor Yellow}
                 
-                # Look for table header
-                if ($line -match 'Surface device.*\|.*Downloadable' -or 
-                $line -match '\|\s*Surface device\s*\|') {
-                    #Write-Host "Found table header at line $i" -ForegroundColor Green
-                    #Write-Host "Header: $line" -ForegroundColor DarkGray
+                # Split into lines and look for markdown tables
+                $lines = $content -split "`r?`n"
+                
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $line = $lines[$i]
                     
-                    # Skip separator line
-                    $i++
-                    if ($lines[$i] -match '^\|[\s-]+\|') {
-                        $i++
-                    }
-                    
-                    # Process table rows
-                    while ($i -lt $lines.Count) {
-                        $row = $lines[$i]
+                    # Look for table headers that might contain "Surface device" and download info
+                    if ($line -match 'Surface device.*\|' -or 
+                    $line -match '\|\s*Surface device\s*\|' -or
+                    $line -match '\|\s*Device\s*\|.*download' -or
+                    $line -match 'Device.*MSI') {
                         
-                        # Check if we're still in the table
-                        if ($row -notmatch '^\|') {
-                            #Write-Host "End of table at line $i" -ForegroundColor Yellow
-                            break
+                        if ($Details){Write-Host "Found potential table header at line $i" -ForegroundColor Green}
+                        if ($Details){Write-Host "Header: $($line.Substring(0, [Math]::Min(100, $line.Length)))..." -ForegroundColor DarkGray}
+                        
+                        # Skip separator line if present
+                        $i++
+                        if ($i -lt $lines.Count -and $lines[$i] -match '^\|[\s-]+\|') {
+                            $i++
                         }
                         
-                        # Parse cells - don't trim the pipe characters first
-                        $cells = $row -split '\|' | Where-Object { $_ -ne '' }
-                        
-                        if ($cells.Count -ge 2) {
-                            $firstCell = $cells[0].Trim()
-                            $secondCell = $cells[1].Trim()
+                        # Process table rows
+                        while ($i -lt $lines.Count) {
+                            $row = $lines[$i]
                             
-                            # Clean up the category name
-                            $firstCell = $firstCell -replace '\*\*', ''  # Remove bold markdown
+                            # Check if we're still in the table
+                            if ($row -notmatch '^\|' -or $row.Trim() -eq '') {
+                                if ($Details){Write-Host "End of table at line $i" -ForegroundColor Yellow}
+                                break
+                            }
                             
-                            # Check if this is a category row
-                            if ($firstCell -match '^Surface\s+(Pro|Laptop|Book|Go|Studio|Hub|3)(?:\s+Go|Studio)?$') {
-                                $currentCategory = $firstCell
-                                #Write-Host "`nProcessing category: $currentCategory" -ForegroundColor Cyan
-                                #Write-Host "Cell 2 content: $($secondCell.Substring(0, [Math]::Min(100, $secondCell.Length)))..." -ForegroundColor DarkGray
+                            # Parse cells
+                            $cells = $row -split '\|' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+                            
+                            if ($cells.Count -ge 2) {
+                                $firstCell = $cells[0]
+                                $secondCell = $cells[1]
                                 
-                                # Parse all devices from the second cell
-                                # The devices are in format: - [Device Name](URL)
-                                # Split by the pattern "- [" which starts each device
-                                $deviceMatches = [regex]::Matches($secondCell, '-\s*\[([^\]]+)\]\(([^\)]+)\)')
+                                # Clean up markdown formatting
+                                $firstCell = $firstCell -replace '\*\*', '' -replace '\*', ''
                                 
-                                if ($deviceMatches.Count -gt 0) {
-                                    #Write-Host "Found $($deviceMatches.Count) devices with links" -ForegroundColor Green
+                                # Check if this is a Surface device category
+                                if ($firstCell -match 'Surface\s+(Pro|Laptop|Book|Go|Studio|Hub|3)') {
+                                    $currentCategory = $firstCell
+                                    if ($Details){Write-Host "`nProcessing category: $currentCategory" -ForegroundColor Cyan}
                                     
-                                    foreach ($match in $deviceMatches) {
-                                        $deviceName = $match.Groups[1].Value.Trim()
-                                        $msiUrl = $match.Groups[2].Value.Trim()
-                                        
-                                        # Handle relative URLs
-                                        if ($msiUrl -notmatch '^https?://') {
-                                            if ($msiUrl -match '^/') {
-                                                $msiUrl = "https://www.microsoft.com$msiUrl"
-                                            }
-                                        }
-                                        
-                                        # Extract download ID
-                                        $downloadId = $null
-                                        if ($msiUrl -match 'id=(\d+)') {
-                                            $downloadId = $Matches[1]
-                                        }
-                                        
-                                        # Create device object
-                                        $deviceObj = [PSCustomObject]@{
-                                            Category = $currentCategory
-                                            Device = $deviceName
-                                            MsiDownloadUrl = $msiUrl
-                                            DownloadId = $downloadId
-                                        }
-                                        
-                                        $devices += $deviceObj
-                                        #Write-Host "  Added: $deviceName" -ForegroundColor DarkGray
-                                    }
+                                    # Parse devices and URLs from the second cell
+                                    $devices += Parse-DeviceCell -CategoryName $currentCategory -CellContent $secondCell
                                 }
+                            }
+                            
+                            $i++
+                        }
+                        
+                        break
+                    }
+                }
+            }
+            else {
+                if ($Details){Write-Host "Found $($tableMatches.Count) HTML table(s), parsing..." -ForegroundColor Green}
+                
+                foreach ($tableMatch in $tableMatches) {
+                    $tableHtml = $tableMatch.Value
+                    
+                    # Check if this table contains Surface device information
+                    if ($tableHtml -match 'Surface' -and ($tableHtml -match 'download' -or $tableHtml -match 'MSI')) {
+                        if ($Details){Write-Host "Processing Surface device table..." -ForegroundColor Cyan}
+                        
+                        # Parse HTML table rows
+                        $rowMatches = [regex]::Matches($tableHtml, '<tr[^>]*>(.*?)</tr>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                        
+                        foreach ($rowMatch in $rowMatches) {
+                            $rowHtml = $rowMatch.Groups[1].Value
+                            
+                            # Extract cell contents
+                            $cellMatches = [regex]::Matches($rowHtml, '<t[hd][^>]*>(.*?)</t[hd]>', [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+                            
+                            if ($cellMatches.Count -ge 2) {
+                                $firstCell = [System.Web.HttpUtility]::HtmlDecode($cellMatches[0].Groups[1].Value) -replace '<[^>]+>', '' -replace '\s+', ' '
+                                $secondCell = $cellMatches[1].Groups[1].Value
                                 
-                                # Also look for devices without links (just plain text)
-                                # These would be in format: - Device Name
-                                $plainDevices = [regex]::Matches($secondCell, '-\s+([^-\[]+?)(?=\s*-|\s*$)')
-                                foreach ($match in $plainDevices) {
-                                    $deviceName = $match.Groups[1].Value.Trim()
+                                # Check if this is a Surface device category
+                                if ($firstCell -match 'Surface\s+(Pro|Laptop|Book|Go|Studio|Hub|3)') {
+                                    $currentCategory = $firstCell.Trim()
+                                    if ($Details){Write-Host "`nProcessing category: $currentCategory" -ForegroundColor Cyan}
                                     
-                                    # Skip if this was already captured as a linked device
-                                    if ($devices | Where-Object { $_.Device -eq $deviceName -and $_.Category -eq $currentCategory }) {
-                                        continue
-                                    }
-                                    
-                                    # Skip if too short
-                                    if ($deviceName.Length -lt 5) {
-                                        continue
-                                    }
-                                    
-                                    # Create device object without URL
-                                    $deviceObj = [PSCustomObject]@{
-                                        Category = $currentCategory
-                                        Device = $deviceName
-                                        MsiDownloadUrl = $null
-                                        DownloadId = $null
-                                    }
-                                    
-                                    $devices += $deviceObj
-                                    #Write-Host "  Added (no URL): $deviceName" -ForegroundColor DarkGray
+                                    # Parse devices and URLs from the second cell
+                                    $devices += Parse-DeviceCell -CategoryName $currentCategory -CellContent $secondCell
                                 }
                             }
                         }
-                        
-                        $i++
                     }
-                    
-                    break  # Exit the outer for loop
                 }
             }
             
             return $devices
         }
         
+        function Parse-DeviceCell {
+            param(
+            [string]$CategoryName,
+            [string]$CellContent,
+            [Parameter(Mandatory = $false)]
+            [System.Management.Automation.SwitchParameter] $Details
+            )
+            
+            $deviceList = @()
+            
+            # Remove HTML tags and decode entities
+            $cleanContent = [System.Web.HttpUtility]::HtmlDecode($CellContent) -replace '<[^>]+>', ''
+            
+            if ($Details){Write-Host "  Parsing devices from: $($cleanContent.Substring(0, [Math]::Min(100, $cleanContent.Length)))..." -ForegroundColor DarkGray}
+            
+            # Look for device links in format [Device Name](URL) or <a href="URL">Device Name</a>
+            $linkMatches = [regex]::Matches($CellContent, '<a[^>]+href="([^"]+)"[^>]*>([^<]+)</a>', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            
+            if ($linkMatches.Count -eq 0) {
+                # Try markdown format
+                $linkMatches = [regex]::Matches($CellContent, '\[([^\]]+)\]\(([^\)]+)\)')
+            }
+            
+            if ($linkMatches.Count -gt 0) {
+                if ($Details){Write-Host "    Found $($linkMatches.Count) linked devices" -ForegroundColor Green}
+                
+                foreach ($match in $linkMatches) {
+                    $deviceName = $match.Groups[2].Value.Trim()
+                    $url = $match.Groups[1].Value.Trim()
+                    
+                    # Clean up device name
+                    $deviceName = [System.Web.HttpUtility]::HtmlDecode($deviceName) -replace '\s+', ' '
+                    
+                    # Handle relative URLs
+                    if ($url -notmatch '^https?://') {
+                        if ($url -match '^/') {
+                            $url = "https://www.microsoft.com$url"
+                        }
+                    }
+                    
+                    # Extract download ID
+                    $downloadId = $null
+                    if ($url -match 'id=(\d+)') {
+                        $downloadId = $Matches[1]
+                    }
+                    
+                    $deviceObj = [PSCustomObject]@{
+                        Category = $CategoryName
+                        Device = $deviceName
+                        MsiDownloadUrl = $url
+                        DownloadId = $downloadId
+                    }
+                    
+                    $deviceList += $deviceObj
+                    if ($Details){Write-Host "    Added: $deviceName" -ForegroundColor Gray}
+                }
+            }
+            
+            # Look for plain text devices (without links)
+            $plainTextDevices = [regex]::Matches($cleanContent, '(?:^|\n|\r)\s*[-•]\s*([^-•\n\r]+)', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+            
+            foreach ($match in $plainTextDevices) {
+                $deviceName = $match.Groups[1].Value.Trim()
+                
+                # Skip if already added as linked device or too short
+                if (($deviceList | Where-Object { $_.Device -eq $deviceName }) -or $deviceName.Length -lt 5) {
+                    continue
+                }
+                
+                # Skip if it looks like a URL or other metadata
+                if ($deviceName -match '^https?://' -or $deviceName -match '^\d+$') {
+                    continue
+                }
+                
+                $deviceObj = [PSCustomObject]@{
+                    Category = $CategoryName
+                    Device = $deviceName
+                    MsiDownloadUrl = $null
+                    DownloadId = $null
+                }
+                
+                $deviceList += $deviceObj
+                if ($Details){Write-Host "    Added (no URL): $deviceName" -ForegroundColor DarkGray}
+            }
+            
+            return $deviceList
+        }
+        
         # Main execution
-        #Write-Host "`nSurface Driver URL Parser" -ForegroundColor Cyan
-        #Write-Host "========================" -ForegroundColor Cyan
+        if ($Details) {
+            Write-Host "`nSurface Driver URL Parser" -ForegroundColor Cyan
+            Write-Host "========================" -ForegroundColor Cyan
+        }
+        
         
         try {
             # Get the data
             $surfaceDevices = Get-SurfaceDriverTable
-            <#
+            
             if ($surfaceDevices -and $surfaceDevices.Count -gt 0) {
-            Write-Host "`nFound $($surfaceDevices.Count) total Surface devices" -ForegroundColor Green
-            
-            # Count devices with and without URLs
-            $devicesWithUrls = $surfaceDevices | Where-Object { $_.MsiDownloadUrl }
-            $devicesWithoutUrls = $surfaceDevices | Where-Object { -not $_.MsiDownloadUrl }
-            
-            Write-Host "  - $($devicesWithUrls.Count) devices with download URLs" -ForegroundColor Green
-            Write-Host "  - $($devicesWithoutUrls.Count) devices without download URLs" -ForegroundColor Yellow
-            
-            # Export all devices to JSON
-            if (-not $OutputJSON) {
-            Write-Host "Use -OutputJSON to export the data to a JSON file" -ForegroundColor Yellow
-            }
-            else{
-            $jsonPath = Join-Path $PSScriptRoot "SurfaceURLs.json"
-            $surfaceDevices | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8
-            Write-Host "`nExported to: $jsonPath" -ForegroundColor Green
-            }
-            # Show summary by category
-            Write-Host "`nSummary by category:" -ForegroundColor Yellow
-            $surfaceDevices | Group-Object Category | Sort-Object Name | ForEach-Object {
-            Write-Host "  $($_.Name): $($_.Count) devices" -ForegroundColor Cyan
-            }
-            
-            # Show all devices
-            Write-Host "`nAll devices found:" -ForegroundColor Yellow
-            $surfaceDevices | Group-Object Category | ForEach-Object {
-            Write-Host "`n$($_.Name):" -ForegroundColor Cyan
-            $_.Group | ForEach-Object {
-            $urlStatus = if($_.MsiDownloadUrl) { "✓" } else { "✗" }
-            Write-Host "  [$urlStatus] $($_.Device)" -ForegroundColor Gray
-            }
-            }
+                if ($Details) {Write-Host "`nFound $($surfaceDevices.Count) total Surface devices" -ForegroundColor Green}
+                
+                # Count devices with and without URLs
+                $devicesWithUrls = $surfaceDevices | Where-Object { $_.MsiDownloadUrl }
+                $devicesWithoutUrls = $surfaceDevices | Where-Object { -not $_.MsiDownloadUrl }
+                
+                if ($Details) {
+                    Write-Host "  - $($devicesWithUrls.Count) devices with download URLs" -ForegroundColor Green
+                    Write-Host "  - $($devicesWithoutUrls.Count) devices without download URLs" -ForegroundColor Yellow
+                }
+                
+                # Export all devices to JSON if requested
+                if ($OutputJSON) {
+                    $jsonPath = Join-Path $PSScriptRoot "SurfaceURLs.json"
+                    $surfaceDevices | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8
+                    Write-Host "`nExported to: $jsonPath" -ForegroundColor Green
+                }
+                else {
+                    Write-Host "Use -OutputJSON to export the data to a JSON file" -ForegroundColor Yellow
+                }
+                if ($Details) {
+                    # Show summary by category
+                    Write-Host "`nSummary by category:" -ForegroundColor Yellow
+                    $surfaceDevices | Group-Object Category | Sort-Object Name | ForEach-Object {
+                        Write-Host "  $($_.Name): $($_.Count) devices" -ForegroundColor Cyan
+                    }
+                    
+                    # Show sample devices
+                    Write-Host "`nSample devices found:" -ForegroundColor Yellow
+                    $surfaceDevices | Group-Object Category | ForEach-Object {
+                        Write-Host "`n$($_.Name):" -ForegroundColor Cyan
+                        $_.Group | Select-Object -First 3 | ForEach-Object {
+                            $urlStatus = if($_.MsiDownloadUrl) { "✓" } else { "✗" }
+                            Write-Host "  [$urlStatus] $($_.Device)" -ForegroundColor Gray
+                        }
+                        if ($_.Group.Count -gt 3) {
+                            Write-Host "  ... and $($_.Group.Count - 3) more" -ForegroundColor DarkGray
+                        }
+                    }
+                }
             }
             else {
-            Write-Warning "No Surface devices found in the documentation"
+                Write-Warning "No Surface devices found in the documentation"
             }
-            #>
         }
         catch {
             Write-Error "Failed to parse Surface driver table: $_"
+            Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
         }
         
+        # Always return the data for use by other scripts
         return $surfaceDevices
     }
     function Match-SurfaceData {
@@ -708,23 +921,20 @@ function Get-SurfaceDPDownloads {
         [Parameter(Mandatory = $false)]
         [System.Management.Automation.SwitchParameter] $OutputJSON,
         [Parameter(Mandatory = $false)]
-        [System.Management.Automation.SwitchParameter] $extradebug,
+        [System.Management.Automation.SwitchParameter] $Details,
         [Parameter(Mandatory = $false)]
         [PSObject]$SkuData,
         [Parameter(Mandatory = $false)]
         [PSObject]$URLData
         )
         
-        
+        Write-Host "Loading SKU data..." -ForegroundColor Yellow
         if ($SkuData) {
-            Write-Host "Loading SKU data from parameter..." -ForegroundColor Yellow
             $skuData = $SkuData
         }
         else {
-            Write-Host "Fetching SKU data from GitHub..." -ForegroundColor Yellow
             $skuData = Build-MSSurfaceSKUList
         }
-        
         
         Write-Host "Loading Driver Pack data..." -ForegroundColor Yellow
         if ($URLData) {
@@ -770,7 +980,7 @@ function Get-SurfaceDPDownloads {
             }
         }
         
-        #Write-Host "Created lookup table with $($driverLookup.Count) entries" -ForegroundColor Green
+        Write-Host "Created lookup table with $($driverLookup.Count) entries" -ForegroundColor Green
         
         # Function to find best matching driver pack
         function Find-MatchingDriverPack {
@@ -920,7 +1130,7 @@ function Get-SurfaceDPDownloads {
         } else {
             #Write-Host "Use -OutputJSON to export the combined data to a JSON file" -ForegroundColor Yellow
         }
-        if ($extradebug) {
+        if ($Details) {
             # Show summary by device type
             Write-Host "`nSummary by Device Type:" -ForegroundColor Yellow
             $deviceGroups = $combinedData | ForEach-Object {
@@ -964,21 +1174,31 @@ function Get-SurfaceDPDownloads {
     
     
     function Get-SurfaceDriverPackMSIUrls {
+        [CmdletBinding()]
         param(
+        [Parameter(Mandatory = $false)]
+        [System.Management.Automation.SwitchParameter] $OutputJSON,
+        [Parameter(Mandatory = $false)]
+        [string]$outputPath,
         [PSObject]$CombinedData
         )
         
         Write-Host "`nSurface Driver Pack MSI URL Extractor" -ForegroundColor Cyan
         Write-Host "=====================================" -ForegroundColor Cyan
         
-        # Load the combined data
-        if (-not ($CombinedData)) {
-            Write-Error "Combined data not found"
-            return
+        
+        Write-Host "Loading combined Surface data..." -ForegroundColor Yellow
+        
+        if ($CombinedData) {
+            $combinedData = $CombinedData
+        } else {
+            Write-Host "No combined data provided, fetching from Match-SurfaceData..." -ForegroundColor Yellow
+            $combinedData = Match-SurfaceData
         }
         
+        
         # Filter to only devices with download URLs
-        $devicesWithUrls = $CombinedData | Where-Object { $_.MsiDownloadUrl }
+        $devicesWithUrls = $combinedData | Where-Object { $_.MsiDownloadUrl }
         Write-Host "Found $($devicesWithUrls.Count) devices with download URLs" -ForegroundColor Green
         
         $results = @()
@@ -1171,6 +1391,20 @@ function Get-SurfaceDPDownloads {
             }
         }
         
+        # Export results
+        if (-not $OutputJSON) {
+            Write-Host "Use -OutputJSON to export the results to a JSON file" -ForegroundColor Yellow
+            return $results
+        }
+        else {
+            Write-Host "Exporting results to JSON..." -ForegroundColor Yellow
+            if (-not $outputPath) {
+                $outputPath = Join-Path $PSScriptRoot "Surface.json"
+            }
+            $results | ConvertTo-Json -Depth 10 | Out-File -FilePath $outputPath -Encoding UTF8
+            Write-Host "`nExported MSI list to: $outputPath" -ForegroundColor Green
+        }
+        
         
         # Show summary
         Write-Host "`nSummary:" -ForegroundColor Yellow
@@ -1182,13 +1416,33 @@ function Get-SurfaceDPDownloads {
         Write-Host "  Not found: $notFoundCount" -ForegroundColor Yellow
         Write-Host "  Errors: $errorCount" -ForegroundColor Red
         
+        # Show devices with both Windows 10 and 11
+        $bothVersions = $results | Where-Object { $_.Windows11Url -and $_.Windows10Url }
+        Write-Host "`nDevices with both Windows 10 and 11 drivers: $($bothVersions.Count)" -ForegroundColor Cyan
+        if ($bothVersions.Count -gt 0 -and $bothVersions.Count -le 10) {
+            $bothVersions | ForEach-Object {
+                Write-Host "  - $($_.Device)" -ForegroundColor Gray
+            }
+        }
+        
+        # Show devices with only one version
+        $onlyWin11 = $results | Where-Object { $_.Windows11Url -and -not $_.Windows10Url }
+        $onlyWin10 = $results | Where-Object { $_.Windows10Url -and -not $_.Windows11Url }
+        
+        if ($onlyWin11.Count -gt 0) {
+            Write-Host "`nDevices with only Windows 11 drivers: $($onlyWin11.Count)" -ForegroundColor Yellow
+        }
+        
+        if ($onlyWin10.Count -gt 0) {
+            Write-Host "`nDevices with only Windows 10 drivers: $($onlyWin10.Count)" -ForegroundColor Yellow
+        }
         
         return $results
     }
     
     $SystemSKU = (Get-CimInstance -Namespace root\wmi -ClassName MS_SystemInformation).SystemSKU
     #Test
-    #$SystemSKU = 'Surface_Book_1793'
+    $SystemSKU = 'Surface_Book_1793'
     $SKUs = Build-MSSurfaceSKUList | where-object { $_.SystemSKU -eq $SystemSKU }    
     
     $DeviceDetails = Match-SurfaceData -SkuData $SKUs
@@ -2231,9 +2485,9 @@ else {
     
     
     Write-Host "Starting Downloading Drivers to $DownloadContentPath"
-
+    
     Foreach ($Driver in $Drivers){
-
+        
         #Generalize Variable Names
         if ($MakeAlias -eq "Dell") {
             $Name = $Driver.Name
@@ -2252,9 +2506,9 @@ else {
         }
         
         Write-Host "Driver: $NAME" -ForegroundColor Magenta
-
         
-
+        
+        
         if ($null -ne $URL){
             
             
