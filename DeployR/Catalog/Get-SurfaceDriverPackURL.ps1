@@ -1354,7 +1354,7 @@ function Get-SurfaceDriverPackMSIUrls {
     
     $SystemSKU = (Get-CimInstance -Namespace root\wmi -ClassName MS_SystemInformation).SystemSKU
     #Test
-    $SystemSKU = 'Surface_Book_1793'
+    #$SystemSKU = 'Surface_Book_1793'
     $SKUs = Build-MSSurfaceSKUList | where-object { $_.SystemSKU -eq $SystemSKU }    
     
     $DeviceDetails = Match-SurfaceData -SkuData $SKUs
