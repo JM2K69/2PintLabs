@@ -17,18 +17,21 @@ catch {}
 if (Get-Module -name "DeployR.Utility"){
     $inTS = $true
     # Get the provided variables
-    [string]$installationDeferral = ${TSEnv:installationDeferral}
-    [int]$deferralInstallInterval = ${TSEnv:deferralInstallInterval}
-    [int]$deferralInstallCount = ${TSEnv:deferralInstallCount}
-    [string]$systemRestartDeferral = ${TSEnv:systemRestartDeferral}
-    [int]$deferralRestartInterval = ${TSEnv:deferralRestartInterval}
-    [int]$deferralRestartCount = ${TSEnv:deferralRestartCount}
+    [string]$installationDeferral = ${TSEnv:installationDeferral} #Enable or Disable
+    [int]$deferralInstallInterval = ${TSEnv:deferralInstallInterval} #1-9
+    [int]$deferralInstallCount = ${TSEnv:deferralInstallCount}  #1-9
+    [string]$systemRestartDeferral = ${TSEnv:systemRestartDeferral} #Enable or Disable
+    [int]$deferralRestartInterval = ${TSEnv:deferralRestartInterval} #1-99
+    [int]$deferralRestartCount = ${TSEnv:deferralRestartCount} #1-9
     [int]$delayDays = ${TSEnv:delayDays} #0-45
     [string]$scheduleAction = ${TSEnv:scheduleAction}
-    [string]$scheduleAuto = ${TSEnv:scheduleAuto}
+    [string]$schedule = ${TSEnv:schedule}
+    [string]$scheduleDaily = ${TSEnv:scheduleDaily}
+    [string]$scheduleWeekly = ${TSEnv:scheduleWeekly}
+    [string]$scheduleMonthly = ${TSEnv:scheduleMonthly}
     
     #Device Categories
-    [string]$updateDeviceCategoryAll = ${TSEnv:updateDeviceCategoryAll}
+    [string]$updateDeviceCategoryFilter = ${TSEnv:updateDeviceCategoryFilter} #Enable or Disable
     [string]$updateDeviceCategoryAudio = ${TSEnv:updateDeviceCategoryAudio}
     [string]$updateDeviceCategoryVideo = ${TSEnv:updateDeviceCategoryVideo}
     [string]$updateDeviceCategoryNetwork = ${TSEnv:updateDeviceCategoryNetwork}
@@ -38,12 +41,14 @@ if (Get-Module -name "DeployR.Utility"){
     [string]$updateDeviceCategoryOthers = ${TSEnv:updateDeviceCategoryOthers}
     
     #Update Severities
+    [string]$updateSeverityFilter = ${TSEnv:updateSeverityFilter} #Enable or Disable
     [String]$updateSeveritySecurity = ${TSEnv:updateSeveritySecurity}
     [String]$updateSeverityCritical = ${TSEnv:updateSeverityCritical}
     [String]$updateSeverityRecommended = ${TSEnv:updateSeverityRecommended}
     [String]$updateSeverityOptional = ${TSEnv:updateSeverityOptional}
     
     #Update Types
+    [string]$updateTypeFilter = ${TSEnv:updateTypeFilter} #Enable or Disable
     [String]$updateTypeBIOS = ${TSEnv:updateTypeBIOS}
     [String]$updateTypeFirmware = ${TSEnv:updateTypeFirmware}
     [String]$updateTypeDriver = ${TSEnv:updateTypeDriver}
@@ -61,23 +66,28 @@ else {
     [int]$deferralRestartCount = 6
     [int]$delayDays = 14
     [string]$scheduleAction = 'DownloadInstallAndNotify'
-    [string]$scheduleAuto = 'True'
+    [string]$schedule = 'scheduleDaily'
+    [string]$scheduleDaily = '12:30'
+    [string]$scheduleWeekly = 'Wed'
+    [string]$scheduleMonthly = 'third'
     
     #Device Categories
-    [string]$updateDeviceCategoryAll = "True"
-    [string]$updateDeviceCategoryAudio = "False"
-    [string]$updateDeviceCategoryVideo = "False"
-    [string]$updateDeviceCategoryNetwork = "False"
+    [string]$updateDeviceCategoryFilter = "Disable"
+    [string]$updateDeviceCategoryAudio = "True"
+    [string]$updateDeviceCategoryVideo = "True"
+    [string]$updateDeviceCategoryNetwork = "True"
     [string]$updateDeviceCategoryStorage = "False"
     [string]$updateDeviceCategoryInput = "False"
-    [string]$updateDeviceCategoryChipset = "False"
+    [string]$updateDeviceCategoryChipset = "True"
     [string]$updateDeviceCategoryOthers = "False"
     #Update Severities
+    [string]$updateSeverityFilter = "Disable"
     [String]$updateSeveritySecurity = "True"
     [String]$updateSeverityCritical = "True"
     [String]$updateSeverityRecommended = "False"
     [String]$updateSeverityOptional = "False"
     #Update Types
+    [string]$updateTypeFilter = "Disable"
     [String]$updateTypeBIOS = "True"
     [String]$updateTypeFirmware = "True"
     [String]$updateTypeDriver = "True"
@@ -89,11 +99,14 @@ else {
 
 
 
-
+$Manufacturer = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Manufacturer
 [String]$MakeAlias = ${TSEnv:MakeAlias}
-if ($MakeAlias -ne "Dell") {
-    Write-Host "MakeAlias must be Dell. Exiting script."
-    Exit 0
+if ($MakeAlias -eq "Dell" -or $Manufacturer -match "Dell"){
+    #Confirmed the device is a Dell
+}
+else {
+    Write-Host "This script is designed to run on Dell systems only. Exiting."
+    exit 0
 }
 
 
@@ -107,7 +120,41 @@ Write-Host "System Restart Deferral: $systemRestartDeferral"
 Write-Host "Deferral Restart Interval: $deferralRestartInterval"
 Write-Host "Deferral Restart Count: $deferralRestartCount"
 Write-Host "Schedule Action: $scheduleAction"
-Write-Host "Schedule Auto: $scheduleAuto"
+Write-Host "Schedule: $schedule"
+Write-Host "DelayDays: $delayDays"
+
+
+#Report Device Category Filters
+Write-Host "-----------------------------------------------------"
+Write-Host "Device Category Filters: $updateDeviceCategoryFilter"
+if ($updateDeviceCategoryFilter -eq "Enable"){
+    Write-Host "  Audio: $updateDeviceCategoryAudio"
+    Write-Host "  Video: $updateDeviceCategoryVideo"
+    Write-Host "  Network: $updateDeviceCategoryNetwork"
+    Write-Host "  Storage: $updateDeviceCategoryStorage"
+    Write-Host "  Input: $updateDeviceCategoryInput"
+    Write-Host "  Chipset: $updateDeviceCategoryChipset"
+    Write-Host "  Others: $updateDeviceCategoryOthers"
+}
+#Report Severity Filters
+Write-Host "-----------------------------------------------------"
+Write-Host "Severity Filters: $updateSeverityFilter"
+if ($updateSeverityFilter -eq "Enable"){
+    Write-Host "  Security: $updateSeveritySecurity"
+    Write-Host "  Critical: $updateSeverityCritical"
+    Write-Host "  Recommended: $updateSeverityRecommended"
+    Write-Host "  Optional: $updateSeverityOptional"
+}
+#Report Update Type Filters
+Write-Host "-----------------------------------------------------"
+Write-Host "Update Type Filters: $updateTypeFilter"
+if ($updateTypeFilter -eq "Enable"){
+    Write-Host "  BIOS: $updateTypeBIOS"
+    Write-Host "  Firmware: $updateTypeFirmware"
+    Write-Host "  Driver: $updateTypeDriver"
+    Write-Host "  Application: $updateTypeApplication"
+    Write-Host "  Others: $updateTypeOthers"
+}
 
 
 
@@ -805,7 +852,8 @@ else {
     Write-Host "Log Path: $LogPath"
     $DateTimeStamp = Get-Date -Format "yyyyMMdd-HHmmss"
     
-    #Always set Suspend Bitlocker
+    #Always set Suspend Bitlocker Enable
+    $autoSuspendBitLocker = 'Enable'
     $autoSuspendBitLockerVar = "-autoSuspendBitLocker=$autoSuspendBitLocker -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-autoSuspendBitLocker.log`""
     $ArgList = "/configure $autoSuspendBitLockerVar"
     Write-Host $ArgList
@@ -816,7 +864,20 @@ else {
         Write-Host "Description: $($ExitInfo.Description)"
         Write-Host "Resolution: $($ExitInfo.Resolution)"
     }
-    
+    #Always set User Consent Disable
+    <# - Not working in 5.5
+    $userConsent = 'disable'
+    $userConsentVar = "-userConsent=$userConsent -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-userConsent.log`""
+    $ArgList = "/configure $userConsentVar"
+    Write-Host $ArgList
+    $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+    if ($DCUConfig.ExitCode -ne 0){
+        $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+        Write-Host "Exit: $($DCUConfig.ExitCode)"
+        Write-Host "Description: $($ExitInfo.Description)"
+        Write-Host "Resolution: $($ExitInfo.Resolution)"
+    }
+    #>    
     if ($scheduleAction){
         $scheduleActionVar = "-scheduleAction=$scheduleAction"
         $ArgList = "/configure $scheduleActionVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-scheduleAction.log`""
@@ -829,18 +890,34 @@ else {
             Write-Host "Resolution: $($ExitInfo.Resolution)"
         }
     }
-    if ($scheduleAuto -eq 'True'){
-        $scheduleAutoVar = "-scheduleAuto"
-        $ArgList = "/configure $scheduleAutoVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-scheduleAuto.log`""
-        Write-Host $ArgList
-        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
-        if ($DCUConfig.ExitCode -ne 0){
-            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
-            Write-Host "Exit: $($DCUConfig.ExitCode)"
-            Write-Host "Description: $($ExitInfo.Description)"
-            Write-Host "Resolution: $($ExitInfo.Resolution)"
-        }
+
+    #Schedule Settings
+    if ($schedule -eq 'scheduleAuto'){
+        $scheduleVar = "-$schedule"
     }
+    elseif ($schedule -eq 'scheduleManual'){
+        $scheduleVar = "-$schedule"
+    }
+    elseif ($schedule -eq 'scheduleDaily'){
+        $scheduleVar = "-$schedule=$scheduleDaily"
+    }
+    elseif ($schedule -eq 'scheduleWeekly'){
+        $scheduleVar = "-$schedule=$scheduleWeekly,$scheduleDaily"
+    }    
+    elseif ($schedule -eq 'scheduleMonthly'){
+        $scheduleVar = "-$schedule=$scheduleMonthly,$scheduleWeekly,$scheduleDaily"
+    }   
+    
+    $ArgList = "/configure $scheduleVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-schedule.log`""
+    Write-Host $ArgList
+    $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+    if ($DCUConfig.ExitCode -ne 0){
+        $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+        Write-Host "Exit: $($DCUConfig.ExitCode)"
+        Write-Host "Description: $($ExitInfo.Description)"
+        Write-Host "Resolution: $($ExitInfo.Resolution)"
+    }
+    
     #Installation Deferral
     if ($installationDeferral){
         if ($scheduleAction -ne 'DownloadInstallAndNotify'){
@@ -933,8 +1010,21 @@ else {
             }
         }
     }
+
+    if ($delayDays){
+        $delayDaysVar = "-delayDays=$delayDays"
+        $ArgList = "/configure $delayDaysVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-delayDays.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
     #update Device Category
-    if (updateDeviceCategoryAll -eq "True"){
+    if ($updateDeviceCategoryFilter -eq "Disable"){
         #do nothing, as default is ALl
     }
     else {
@@ -976,7 +1066,10 @@ else {
     
     #Update Severity
     #Confirm something is set
-    if ($updateSeveritySecurity -ne "" -and $updateSeverityCritical -ne "" -and $updateSeverityRecommended -ne "" -and $updateSeverityOptional -ne "") {
+    if ($updateSeverityFilter -eq "Disable"){
+        #do nothing, as default is All
+    }
+    else {
         if ($updateSeveritySecurity -eq "True"){
             $DCUSecurity = "security,"
         }
@@ -994,6 +1087,7 @@ else {
         $updateSeverityString = $updateSeverityString.TrimEnd(',')
         [string]$updateSeverityVar = "-updateSeverity=$updateSeverityString"
         $ArgList = "/configure $updateSeverityVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateSeverity.log`""
+        Write-Host $ArgList
         $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
         if ($DCUConfig.ExitCode -ne 0){
             $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
@@ -1002,13 +1096,12 @@ else {
             Write-Host "Resolution: $($ExitInfo.Resolution)"
         }
     }
-    else {
-        Write-Host "No Update Severity Selected, Defaulting to All by doing nothing"
-    }
     
     #Update Type, confirm something is set
-    if ($updateTypeBIOS -ne "" -or $updateTypeFirmware -ne "" -or $updateTypeDrivers -ne "" -or $updateTypeApplications -ne "" -or $updateTypeOthers -ne ""){
-        
+    if ($updateTypeFilter -eq "Disable"){
+        #do nothing, as default is All
+    }
+    else {
         if ($updateTypeBIOS -eq "True"){
             $DCUBIOS = "bios,"
         }
@@ -1037,9 +1130,6 @@ else {
             Write-Host "Description: $($ExitInfo.Description)"
             Write-Host "Resolution: $($ExitInfo.Resolution)"
         }
-    }
-    else {
-        Write-Host "No Update Type Selected, Defaulting to All by doing nothing"
     }
     
     
