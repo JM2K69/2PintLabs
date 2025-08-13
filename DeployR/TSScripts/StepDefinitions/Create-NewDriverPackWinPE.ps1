@@ -2321,6 +2321,10 @@ if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x
     Exit 1
 }
 
+if ($DriverPackOption -eq "Migrate Only"){
+    Write-Host "Driver Pack Option is set to MigrateOnly, exiting script."
+    exit 0
+}
 
 #Import DeployR.Utility module
 if (-not (Get-Module -Name DeployR.Utility)) {
