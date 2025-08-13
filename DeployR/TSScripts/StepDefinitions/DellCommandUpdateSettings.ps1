@@ -1,8 +1,3 @@
-<#Gary Blok - @gwblok - GARYTOWN.COM
-
-DISCLAIMER: THIS IS NOT AN OFFICIAL DELL SCRIPT. I DO NOT WORK FOR DELL. 
-USE AT YOUR OWN RISK. I TAKE NO RESPONSIBILITY FOR ANYTHING THIS SCRIPT DOES. TEST IN A LAB FIRST.
-ALL INFORMATION IS PUBLICLY AVAILABLE ON THE INTERNET. I JUST CONSOLIDATED IT INTO ONE SCRIPT.
 
 
 #https://dl.dell.com/content/manual17524146-dell-command-update-version-5-x-reference-guide.pdf?language=en-us
@@ -761,7 +756,7 @@ function Test-WindowsDesktopRuntime {
 #endregion functions
 
 
-
+#region Confirm DCU Installed
 if ((Get-DCUVersion) -match "False"){
     # Do the Stuff
     write-host "Checking for Dell Command Update Latest Version"
@@ -792,7 +787,7 @@ if ((Get-DCUVersion) -match "False"){
 else {
     Write-Host "Dell Command Update is already installed, version: $(Get-DCUVersion)"
 }
-
+#endregion Confirm DCU Installed
 
 if ((Get-DCUVersion) -match "False"){
     Write-Host "Dell Command Update is not getting installed, do some extra testing.."
@@ -968,7 +963,7 @@ else {
         #Trim Last ,
         $updateDeviceCategoryString = $updateDeviceCategoryString.TrimEnd(',')
         [string]$updateDeviceCategoryvar = "-updateDeviceCategory=$updateDeviceCategoryString"
-        $ArgList = "/configure $systemRestartDeferralVar $updateDeviceCategoryvar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateDeviceCategory.log`""
+        $ArgList = "/configure $updateDeviceCategoryvar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateDeviceCategory.log`""
         Write-Host $ArgList
         $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
         if ($DCUConfig.ExitCode -ne 0){
@@ -977,6 +972,74 @@ else {
             Write-Host "Description: $($ExitInfo.Description)"
             Write-Host "Resolution: $($ExitInfo.Resolution)"
         }
+    }
+    
+    #Update Severity
+    #Confirm something is set
+    if ($updateSeveritySecurity -ne "" -and $updateSeverityCritical -ne "" -and $updateSeverityRecommended -ne "" -and $updateSeverityOptional -ne "") {
+        if ($updateSeveritySecurity -eq "True"){
+            $DCUSecurity = "security,"
+        }
+        if ($updateSeverityCritical -eq "True"){
+            $DCUCritical = "critical,"
+        }
+        if ($updateSeverityRecommended -eq "True"){
+            $DCURecommended = "recommended,"
+        }
+        if ($updateSeverityOptional -eq "True"){
+            $DCUOptional = "optional,"
+        }
+        $updateSeverityString="$DCUSecurity$DCUCritical$DCURecommended$DCUOptional"
+        #Trim Last ,
+        $updateSeverityString = $updateSeverityString.TrimEnd(',')
+        [string]$updateSeverityVar = "-updateSeverity=$updateSeverityString"
+        $ArgList = "/configure $updateSeverityVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateSeverity.log`""
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+    else {
+        Write-Host "No Update Severity Selected, Defaulting to All by doing nothing"
+    }
+    
+    #Update Type, confirm something is set
+    if ($updateTypeBIOS -ne "" -or $updateTypeFirmware -ne "" -or $updateTypeDrivers -ne "" -or $updateTypeApplications -ne "" -or $updateTypeOthers -ne ""){
+        
+        if ($updateTypeBIOS -eq "True"){
+            $DCUBIOS = "bios,"
+        }
+        if ($updateTypeFirmware -eq "True"){
+            $DCUFirmware = "firmware,"
+        }
+        if ($updateTypeDrivers -eq "True"){
+            $DCUDrivers = "driver,"
+        }
+        if ($updateTypeApplications -eq "True"){
+            $DCUApplications = "application,"
+        }
+        if ($updateTypeOthers -eq "True"){
+            $DCUOther = "others,"
+        }
+        $updateTypeString="$DCUBIOS$DCUFirmware$DCUDrivers$DCUApplications$DCUOther"
+        #Trim Last ,
+        $updateTypeString = $updateTypeString.TrimEnd(',')
+        [string]$updateTypeVar = "-updateType=$updateTypeString"
+        $ArgList = "/configure $updateTypeVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateType.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+    else {
+        Write-Host "No Update Type Selected, Defaulting to All by doing nothing"
     }
     
     
