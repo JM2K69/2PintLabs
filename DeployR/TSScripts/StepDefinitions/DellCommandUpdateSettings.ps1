@@ -113,15 +113,16 @@ else {
 #Write Info to Log
 Write-Host "=============================================================================="
 Write-Host "Current DCU Settings selected from Task Sequence" 
+Write-Host "Schedule Action: $scheduleAction"
+Write-Host "Schedule: $schedule"
+Write-Host "DelayDays: $delayDays"
 Write-Host "Installation Deferral: $installationDeferral"
 Write-Host "Deferral Install Interval: $deferralInstallInterval"
 Write-Host "Deferral Install Count: $deferralInstallCount"
 Write-Host "System Restart Deferral: $systemRestartDeferral"
 Write-Host "Deferral Restart Interval: $deferralRestartInterval"
 Write-Host "Deferral Restart Count: $deferralRestartCount"
-Write-Host "Schedule Action: $scheduleAction"
-Write-Host "Schedule: $schedule"
-Write-Host "DelayDays: $delayDays"
+
 
 
 #Report Device Category Filters
