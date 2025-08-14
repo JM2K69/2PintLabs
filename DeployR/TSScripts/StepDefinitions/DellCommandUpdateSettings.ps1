@@ -1108,11 +1108,11 @@ else {
         if ($updateTypeFirmware -eq "True"){
             $DCUFirmware = "firmware,"
         }
-        if ($updateTypeDrivers -eq "True"){
-            $DCUDrivers = "driver,"
+        if ($updateTypeDriver -eq "True"){
+            $DCUDriver = "driver,"
         }
-        if ($updateTypeApplications -eq "True"){
-            $DCUApplications = "application,"
+        if ($updateTypeApplication -eq "True"){
+            $DCUApplication = "application,"
         }
         if ($updateTypeOthers -eq "True"){
             $DCUOther = "others,"
