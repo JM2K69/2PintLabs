@@ -1118,7 +1118,7 @@ else {
         if ($updateTypeOthers -eq "True"){
             $DCUOther = "others,"
         }
-        $updateTypeString="$DCUBIOS$DCUFirmware$DCUDrivers$DCUApplications$DCUOther"
+        $updateTypeString="$DCUBIOS$DCUFirmware$DCUDriver$DCUApplication$DCUOther"
         #Trim Last ,
         $updateTypeString = $updateTypeString.TrimEnd(',')
         [string]$updateTypeVar = "-updateType=$updateTypeString"
