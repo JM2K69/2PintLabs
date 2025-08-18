@@ -85,7 +85,8 @@ function Install-LenovoVantage {
     
     #Lenovo Vantage Service
     Write-Host -ForegroundColor Cyan " Installing Lenovo Vantage Service..."
-    Invoke-Expression -command "$tempExtractPath\VantageService\Install-VantageService.ps1"
+    #Invoke-Expression -command "$tempExtractPath\VantageService\Install-VantageService.ps1"
+    Invoke-Expression -command "$tempExtractPath\VantageInstaller.exe Install -Vantage"
     
     #Lenovo Vantage Batch File
     write-host -ForegroundColor Cyan " Installing Lenovo Vantage...batch file..."
