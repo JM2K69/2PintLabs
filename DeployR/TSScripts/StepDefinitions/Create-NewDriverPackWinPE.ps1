@@ -2397,6 +2397,10 @@ if ($DriverPackOption -eq "Standard" -or $MakeAlias -eq "Panasonic Corporation" 
     }        
     if ($null -ne $DriverPack) {
         Write-Host "Found Driver Pack"
+        ${TSEnv:DriverPackURL} = $URL
+        ${TSEnv:DriverPackName} = $Name
+        ${TSEnv:DriverPackID} = $ID
+        ${TSEnv:DriverPackCustom} = $false
         Write-Output $DriverPack
         Write-Host "Downloading and extracting  Driver Pack to $ExtractedDriverLocation"
         write-host "Invoke-DriverDownloadExpand -URL $URL -Name $Name -ID $ID -ToolsPath $ToolsPath -DestinationPath $ExtractedDriverLocation"
@@ -2405,6 +2409,7 @@ if ($DriverPackOption -eq "Standard" -or $MakeAlias -eq "Panasonic Corporation" 
         Write-Host "No Driver Pack found for the specified model."
         exit 0
     }
+    
 }
 #Downloading Driver Updates directly from the OEM, extracting and applying them to the Offline OS
 else {
@@ -2542,6 +2547,8 @@ else {
     $DriversDownloads = Get-ChildItem -Path $DownloadContentPath -Filter *.exe -Recurse
     if ($DriversDownloads) {
         $TotalDrivers = $DriversDownloads.Count
+        ${TSEnv:DriverPackCustom} = $true
+        ${TSEnv:DriverPackCustomCount} = $TotalDrivers
         $DriverCurrentCount = 0
         foreach ($DriverDownload in $DriversDownloads) {
             $DriverCurrentCount++
