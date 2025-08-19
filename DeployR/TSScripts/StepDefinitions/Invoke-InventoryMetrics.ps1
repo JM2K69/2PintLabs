@@ -52,8 +52,10 @@ if (Get-Module -Name "DeployR.Utility") {
     $InventoryDriverPackURL =   ${TSEnv:DriverPackURL}
     $InventoryDriverPackName =  ${TSEnv:DriverPackName}
     $InventoryDriverPackID =    ${TSEnv:DriverPackID}
+    $InventoryDriverMigrateCount = ${TSEnv:DriverMigrateCount}
     $InventoryDriverPackCustom = ${TSEnv:DriverPackCustom}
     $InventoryDriverPackCustomCount = ${TSEnv:DriverPackCustomCount}
+    $InventoryDriverPackMethod = ${TSEnv:DriverPackMethod}
 }
 
 #Write out all Vars
@@ -71,6 +73,7 @@ Write-Host "InventoryApps:              $InventoryApps" -ForegroundColor Cyan
 Write-Host "InventoryDriverPackURL:     $InventoryDriverPackURL" -ForegroundColor Cyan
 Write-Host "InventoryDriverPackName:    $InventoryDriverPackName" -ForegroundColor Cyan
 Write-Host "InventoryDriverPackID:      $InventoryDriverPackID" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackMethod:  $InventoryDriverPackMethod" -ForegroundColor Cyan
 Write-Host "InventoryDriverPackCustom:  $InventoryDriverPackCustom" -ForegroundColor Cyan
 Write-Host "InventoryDriverPackCustomCount: $InventoryDriverPackCustomCount" -ForegroundColor Cyan
 Write-Host "==============================================================="
@@ -174,8 +177,8 @@ function Get-InstalledApps
     }
     else {
         $regpath = @(
-            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
-            'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
         )
     }
     Get-ItemProperty $regpath | .{process{if($_.DisplayName -and $_.UninstallString) { $_ } }} | Select DisplayName, Publisher, InstallDate, DisplayVersion, UninstallString |Sort DisplayName
@@ -309,16 +312,13 @@ if ($InventoryDurationTime -eq "True") {
 }
 
 #Driver Inventory
-if ($InventoryDriverPackURL -ne "" -and $null -ne $InventoryDriverPackURL) {
-
-    write-host "Setting DriverPack URL Information..."
-    if (${TSEnv:DriverPackURL}){
-        $driverPackURL = ${TSEnv:DriverPackURL}
-        Write-Host "DriverPack URL: $driverPackURL"
-        Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackURL" -Value $driverPackURL | Out-Null
-    } else {
-        Write-Host "DriverPack URL not available, skipping..." -ForegroundColor Yellow
-    }
+if ($InventoryDriverMigrateCount -ne "" -and $null -ne $InventoryDriverMigrateCount) {
+    Write-Host "DriverPack Migrate Count: $InventoryDriverMigrateCount" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackMigrateCount" -Value $InventoryDriverMigrateCount | Out-Null
+}
+if ($InventoryDriverPackURL -ne "" -and $null -ne $InventoryDriverPackURL) {    
+    Write-Host "DriverPack URL: $InventoryDriverPackURL" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackURL" -Value $InventoryDriverPackURL | Out-Null
 }
 if ($InventoryDriverPackName -ne "" -and $null -ne $InventoryDriverPackName) {
     Write-Host "DriverPack Name: $InventoryDriverPackName" -ForegroundColor Green

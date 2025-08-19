@@ -41,7 +41,7 @@ if ($ModelAlias -eq "Virtual Machine") {
     Exit 0
 }
 
-
+${TSEnv:DriverPackMethod} = $DriverPackOption
 
 if ($env:SystemDrive -eq "X:") {
     $dest = "S:\Drivers"
@@ -2187,6 +2187,7 @@ function Migrate-WinPEDrivers {
         exit 0
     }
     Write-Host "Completing matching imported and running drivers. Found $($matchedDrivers.count) matched drivers total."
+    ${TSEnv:DriverMigrateCount} = $($matchedDrivers.count)
     # set up drivers folder
     $exportRoot = "$($env:SystemDrive)\ExportedDrivers"
     
