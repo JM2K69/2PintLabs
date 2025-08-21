@@ -111,6 +111,9 @@ function Install-LenovoVantage {
         Write-Host -ForegroundColor Red "Lenovo Vantage failed with exit code $($InstallProcess.ExitCode)."
     }
     
+    Write-Host "Launching $tempExtractPath\lenovo-commercial-vantage-install.ps1"
+    Invoke-Expression -command "$tempExtractPath\lenovo-commercial-vantage-install.ps1"
+
     if ($IncludeSUHelper){
         $InstallProcess = Start-Process -FilePath $tempExtractPath\SystemUpdate\SUHelperSetup.exe -ArgumentList "/VERYSILENT /NORESTART" -Wait -PassThru
         if ($InstallProcess.ExitCode -eq 0) {
