@@ -75,7 +75,14 @@ if ($TaskBarMoveStartLeft -eq $true) {
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
-
+# Start Menu Disable Bing Search Results
+$StartMenuDisableBing = $true
+if ($StartMenuDisableBing -eq $true) {
+    Write-Host "Attempting to run: StartMenuDisableBing"
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Name "DisableSearchBoxSuggestions" -Value "1" -PropertyType Dword -Force
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value "0" -PropertyType Dword -Force
+    try { $reg.Handle.Close() } catch {}
+}
 #Start Menu Size, add more pins or recommendations?
 if ($StartMenuAddMore -eq "default"){
     Write-Host "Attempting to run: StartMenuAddMore, but it's set to default, so nothing will happen"
