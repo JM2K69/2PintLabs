@@ -2317,6 +2317,10 @@ if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x
     $ToolsPath = "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
     $SevenZipPath = "$ToolsPath\7za.exe"
     $InnoExtractPath = "$ToolsPath\innoextract.exe"
+} elseif (Test-path -Path "S:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"){
+    $ToolsPath = "S:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
+    $SevenZipPath = "$ToolsPath\7za.exe"
+    $InnoExtractPath = "$ToolsPath\innoextract.exe"
 } else {
     Write-Host "Unable to find Tools Path, please ensure the Tools are available in the expected location."
     Exit 1
