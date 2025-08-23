@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-OSD Registry Stamp Script
+OSD Registry Record Metrics
 
 .DESCRIPTION
 This script connects to the DeployR task sequence and writes deployment information to the registry.
@@ -27,10 +27,10 @@ catch {
     Write-Warning "This script requires the DeployR Task Sequence environment"
 }
 
-# Define the registry path for OSD stamping
-$StampOSDRegPath = if (Get-Module -Name "DeployR.Utility") {
-    if (${TSEnv:StampOSDRegPath}) {
-        ${TSEnv:StampOSDRegPath}
+# Define the registry path for OSD Inventorying
+$InventoryOSDRegPath = if (Get-Module -Name "DeployR.Utility") {
+    if (${TSEnv:InventoryOSDRegPath}) {
+        ${TSEnv:InventoryOSDRegPath}
     } else {
         "HKLM:\SOFTWARE\2Pint Software\DeployR\OSD"
     }
@@ -40,28 +40,42 @@ $StampOSDRegPath = if (Get-Module -Name "DeployR.Utility") {
 
 #Get the Task Sequence Environment Variables
 if (Get-Module -Name "DeployR.Utility") {
-    $StampWinPEInfo =       ${TSEnv:StampWinPEBuildInfo}
-    $StampOSIMAGENAME =     ${TSEnv:StampOSIMAGENAME}
-    $StampDEPLOYRHOST =     ${TSEnv:StampDEPLOYRHOST}
-    $StampOSIMAGEVERSION =  ${TSEnv:StampOSIMAGEVERSION}
-    $StampTSID =            ${TSEnv:StampTSID}
-    $StampCOMPUTERNAME =    ${TSEnv:StampCOMPUTERNAME}
-    $StampDurationTime =    ${TSEnv:StampDurationTime}
-    $StampStartTime =       ${TSEnv:StampStartTime}
-    $StampApps =            ${TSEnv:StampApps}
+    $InventoryWinPEInfo =       ${TSEnv:InventoryWinPEBuildInfo}
+    $InventoryOSIMAGENAME =     ${TSEnv:InventoryOSIMAGENAME}
+    $InventoryDEPLOYRHOST =     ${TSEnv:InventoryDEPLOYRHOST}
+    $InventoryOSIMAGEVERSION =  ${TSEnv:InventoryOSIMAGEVERSION}
+    $InventoryTSID =            ${TSEnv:InventoryTSID}
+    $InventoryCOMPUTERNAME =    ${TSEnv:InventoryCOMPUTERNAME}
+    $InventoryDurationTime =    ${TSEnv:InventoryDurationTime}
+    $InventoryStartTime =       ${TSEnv:InventoryStartTime}
+    $InventoryApps =            ${TSEnv:InventoryApps}
+    $InventoryDriverPackURL =   ${TSEnv:DriverPackURL}
+    $InventoryDriverPackName =  ${TSEnv:DriverPackName}
+    $InventoryDriverPackID =    ${TSEnv:DriverPackID}
+    $InventoryDriverMigrateCount = ${TSEnv:DriverMigrateCount}
+    $InventoryDriverPackCustom = ${TSEnv:DriverPackCustom}
+    $InventoryDriverPackCustomCount = ${TSEnv:DriverPackCustomCount}
+    $InventoryDriverPackMethod = ${TSEnv:DriverPackMethod}
 }
 
 #Write out all Vars
 Write-Host "==============================================================="
-Write-Host "StampOSDRegPath:        $StampOSDRegPath" -ForegroundColor Cyan
-Write-Host "StampStartTime:         $StampStartTime" -ForegroundColor Cyan
-Write-Host "StampDurationTime:      $StampDurationTime" -ForegroundColor Cyan
-Write-Host "StampWinPEInfo:         $StampWinPEInfo" -ForegroundColor Cyan
-Write-Host "StampOSIMAGENAME:       $StampOSIMAGENAME" -ForegroundColor Cyan
-Write-Host "StampDEPLOYRHOST:       $StampDEPLOYRHOST" -ForegroundColor Cyan
-Write-Host "StampOSIMAGEVERSION:    $StampOSIMAGEVERSION" -ForegroundColor Cyan
-Write-Host "StampTSID:              $StampTSID" -ForegroundColor Cyan
-Write-Host "StampCOMPUTERNAME:      $StampCOMPUTERNAME" -ForegroundColor Cyan
+Write-Host "InventoryOSDRegPath:        $InventoryOSDRegPath" -ForegroundColor Cyan
+Write-Host "InventoryStartTime:         $InventoryStartTime" -ForegroundColor Cyan
+Write-Host "InventoryDurationTime:      $InventoryDurationTime" -ForegroundColor Cyan
+Write-Host "InventoryWinPEInfo:         $InventoryWinPEInfo" -ForegroundColor Cyan
+Write-Host "InventoryOSIMAGENAME:       $InventoryOSIMAGENAME" -ForegroundColor Cyan
+Write-Host "InventoryDEPLOYRHOST:       $InventoryDEPLOYRHOST" -ForegroundColor Cyan
+Write-Host "InventoryOSIMAGEVERSION:    $InventoryOSIMAGEVERSION" -ForegroundColor Cyan
+Write-Host "InventoryTSID:              $InventoryTSID" -ForegroundColor Cyan
+Write-Host "InventoryCOMPUTERNAME:      $InventoryCOMPUTERNAME" -ForegroundColor Cyan
+Write-Host "InventoryApps:              $InventoryApps" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackURL:     $InventoryDriverPackURL" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackName:    $InventoryDriverPackName" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackID:      $InventoryDriverPackID" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackMethod:  $InventoryDriverPackMethod" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackCustom:  $InventoryDriverPackCustom" -ForegroundColor Cyan
+Write-Host "InventoryDriverPackCustomCount: $InventoryDriverPackCustomCount" -ForegroundColor Cyan
 Write-Host "==============================================================="
 
 #region Helper Functions
@@ -163,8 +177,8 @@ function Get-InstalledApps
     }
     else {
         $regpath = @(
-            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
-            'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
         )
     }
     Get-ItemProperty $regpath | .{process{if($_.DisplayName -and $_.UninstallString) { $_ } }} | Select DisplayName, Publisher, InstallDate, DisplayVersion, UninstallString |Sort DisplayName
@@ -172,11 +186,11 @@ function Get-InstalledApps
 #endregion
 
 # Main execution
-Write-Host "`n=== OSD Registry Stamp Started ===" -ForegroundColor Magenta
+Write-Host "`n=== OSD Registry Inventory Started ===" -ForegroundColor Magenta
 Write-Host "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Yellow
 
 # Create the registry path if it doesn't exist
-if (-not (New-RegistryPath -Path $StampOSDRegPath)) {
+if (-not (New-RegistryPath -Path $InventoryOSDRegPath)) {
     Write-Error "Cannot proceed without registry path access"
     exit 1
 }
@@ -188,31 +202,31 @@ if (Get-Module -Name "DeployR.Utility") {
     Write-Host "`nTask Sequence Information:" -ForegroundColor Yellow
     
     # 1. TS ID
-    if ($StampTSID -eq "True"){
+    if ($InventoryTSID -eq "True"){
         $tsID = ${TSEnv:TSID}
         if (-not $tsID) { $tsID = "Unknown" }
-        Set-RegistryValue -Path $StampOSDRegPath -Name "TSID" -Value $tsID | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "TSID" -Value $tsID | Out-Null
     }
     
     # 2. DeployR Server
-    if ($StampDEPLOYRHOST -eq "True"){
+    if ($InventoryDEPLOYRHOST -eq "True"){
         $deployRHost = ${TSEnv:DEPLOYRHOST}
         if (-not $deployRHost) { $deployRHost = "Unknown" }
-        Set-RegistryValue -Path $StampOSDRegPath -Name "DeployRServer" -Value $deployRHost | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "DeployRServer" -Value $deployRHost | Out-Null
     }
     
     # 3. OS Image Version
-    if ($StampOSIMAGEVERSION -eq "True"){
+    if ($InventoryOSIMAGEVERSION -eq "True"){
         $osImageVersion = ${TSEnv:OSIMAGEVERSION}
         if (-not $osImageVersion) { $osImageVersion = Get-OSBuildInfo }
-        Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageVersion" -Value $osImageVersion | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "OSImageVersion" -Value $osImageVersion | Out-Null
     }
     
     # 4. OS Image Name/Edition
-    if ($StampOSIMAGENAME -eq "True"){
+    if ($InventoryOSIMAGENAME -eq "True"){
         $osImageName = ${TSEnv:OSIMAGENAME}
         if (-not $osImageName) { $osImageName = Get-OSEdition }
-        Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageName" -Value $osImageName | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "OSImageName" -Value $osImageName | Out-Null
     }
     
     
@@ -220,29 +234,29 @@ if (Get-Module -Name "DeployR.Utility") {
     Write-Host "`nNon-Task Sequence Environment - Using local system information:" -ForegroundColor Yellow
     
     # Fallback values when not in task sequence
-    Set-RegistryValue -Path $StampOSDRegPath -Name "TSID" -Value "No Task Sequence" | Out-Null
-    Set-RegistryValue -Path $StampOSDRegPath -Name "DeployRServer" -Value "Unknown" | Out-Null
-    Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageVersion" -Value (Get-OSBuildInfo) | Out-Null
-    Set-RegistryValue -Path $StampOSDRegPath -Name "OSImageName" -Value (Get-OSEdition) | Out-Null
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "TSID" -Value "No Task Sequence" | Out-Null
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DeployRServer" -Value "Unknown" | Out-Null
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "OSImageVersion" -Value (Get-OSBuildInfo) | Out-Null
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "OSImageName" -Value (Get-OSEdition) | Out-Null
 }
 
 Write-Host "`nSystem Information:" -ForegroundColor Yellow
 
 # 5. Computer Name
-if ($StampCOMPUTERNAME -eq "True"){
+if ($InventoryCOMPUTERNAME -eq "True"){
     $computerName = $env:COMPUTERNAME
     if (-not $computerName) { $computerName = "Unknown" }
-    Set-RegistryValue -Path $StampOSDRegPath -Name "ComputerName" -Value $computerName | Out-Null
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "ComputerName" -Value $computerName | Out-Null
 }
 
 
 # 6. WinPE Information
-if ($StampWinPEInfo -eq "True"){
+if ($InventoryWinPEInfo -eq "True"){
     write-host "Setting WinPE Information..."
     if (${TSEnv:WinPEBuildInfo}){
         $winPEInfo = ${TSEnv:WinPEBuildInfo}
         Write-Host "WinPE Information: $winPEInfo"
-        Set-RegistryValue -Path $StampOSDRegPath -Name "WinPEBuild" -Value $winPEInfo | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "WinPEBuild" -Value $winPEInfo | Out-Null
     } else {
         Write-Host "WinPE Information not available, skipping..." -ForegroundColor Yellow
     }
@@ -251,32 +265,32 @@ if ($StampWinPEInfo -eq "True"){
 
 
 # 7. Start Time (if available from TS, otherwise current time)
-if ($StampStartTime -eq "True") {
+if ($InventoryStartTime -eq "True") {
     $startTime = if (Get-Module -Name "DeployR.Utility") {
         ${TSEnv:OSDStartTime}
     } else {
         $null
     }
     if ($startTime) {
-        Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value $startTime 
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "DeploymentStartTime" -Value $startTime 
         Write-Host "Setting DeploymentStartTime to: $startTime" -ForegroundColor Green
     }
     else {
         Write-Host "No OSDStartTime found, Please add Step Definition 'Tweaks - Set Initial Variables' into the beginning of your Task Sequence" -ForegroundColor Yellow
-        Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentStartTime" -Value "Missing Element, See Log File"
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "DeploymentStartTime" -Value "Missing Element, See Log File"
     }
 }
 
 
 
 
-# 8. Finish Time (current time as this is when the stamp is being written)
+# 8. Finish Time (current time as this is when the Inventory is being written)
 $finishTime = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')
 Write-Host "Setting DeploymentFinishTime to: $finishTime" -ForegroundColor Green
-Set-RegistryValue -Path $StampOSDRegPath -Name "DeploymentFinishTime" -Value $finishTime
+Set-RegistryValue -Path $InventoryOSDRegPath -Name "DeploymentFinishTime" -Value $finishTime
 
 # Calculate Task Sequence Duration
-if ($StampDurationTime -eq "True") {
+if ($InventoryDurationTime -eq "True") {
     try {
         $duration = $null
         if ($startTime -and $finishTime) {
@@ -288,23 +302,49 @@ if ($StampDurationTime -eq "True") {
         } else {
             $duration = "Unknown"
         }
-        Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value $duration | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "TaskSequenceDuration" -Value $duration | Out-Null
         Write-Host "Task Sequence Duration: $duration" -ForegroundColor Green
     }
     catch {
         Write-Warning "Could not calculate Task Sequence Duration: $($_.Exception.Message)"
-        Set-RegistryValue -Path $StampOSDRegPath -Name "TaskSequenceDuration" -Value "Unknown" | Out-Null
+        Set-RegistryValue -Path $InventoryOSDRegPath -Name "TaskSequenceDuration" -Value "Unknown" | Out-Null
     }
 }
 
-if ($StampApps -eq "True") {
+#Driver Inventory
+if ($InventoryDriverMigrateCount -ne "" -and $null -ne $InventoryDriverMigrateCount) {
+    Write-Host "DriverPack Migrate Count: $InventoryDriverMigrateCount" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackMigrateCount" -Value $InventoryDriverMigrateCount | Out-Null
+}
+if ($InventoryDriverPackURL -ne "" -and $null -ne $InventoryDriverPackURL) {    
+    Write-Host "DriverPack URL: $InventoryDriverPackURL" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackURL" -Value $InventoryDriverPackURL | Out-Null
+}
+if ($InventoryDriverPackName -ne "" -and $null -ne $InventoryDriverPackName) {
+    Write-Host "DriverPack Name: $InventoryDriverPackName" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackName" -Value $InventoryDriverPackName | Out-Null
+}
+if ($InventoryDriverPackID -ne "" -and $null -ne $InventoryDriverPackID) {
+    Write-Host "DriverPack ID: $InventoryDriverPackID" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackID" -Value $InventoryDriverPackID | Out-Null
+}
+if ($InventoryDriverPackCustom -ne "" -and $null -ne $InventoryDriverPackCustom) {
+    Write-Host "DriverPack Custom: $InventoryDriverPackCustom" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackCustom" -Value $InventoryDriverPackCustom | Out-Null
+}
+if ($InventoryDriverPackCustomCount -ne "" -and $null -ne $InventoryDriverPackCustomCount) {
+    Write-Host "DriverPack Custom Count: $InventoryDriverPackCustomCount" -ForegroundColor Green
+    Set-RegistryValue -Path $InventoryOSDRegPath -Name "DriverPackCustomCount" -Value $InventoryDriverPackCustomCount | Out-Null
+}
+
+if ($InventoryApps -eq "True") {
     Write-Host "`nInstalled Applications:" -ForegroundColor Yellow
     $installedApps = Get-InstalledApps
-    $recordApps = $installedapps | Where-Object {$_.DisplayName -ne "Remote Desktop Connection"}
+    $recordApps = $installedApps | Where-Object {$_.DisplayName -ne "Remote Desktop Connection"}
     if ($recordApps) {
-        New-Item -Path "$StampOSDRegPath\Apps" -ItemType Directory -Force | Out-Null
+        New-Item -Path "$InventoryOSDRegPath\Apps" -ItemType Directory -Force | Out-Null
         $recordApps | ForEach-Object {
-            Set-RegistryValue -Path "$StampOSDRegPath\Apps" -Name "App_$($_.DisplayName)" -Value "$($_.DisplayVersion) by $($_.Publisher)" | Out-Null
+            Set-RegistryValue -Path "$InventoryOSDRegPath\Apps" -Name "App_$($_.DisplayName)" -Value "$($_.DisplayVersion) by $($_.Publisher)" | Out-Null
             Write-Host "  Installed: $($_.DisplayName) - Version: $($_.DisplayVersion) by $($_.Publisher)" -ForegroundColor Green
         }
     } else {
@@ -315,17 +355,17 @@ if ($StampApps -eq "True") {
 
 # Additional useful information
 Write-Host "`nAdditional Information:" -ForegroundColor Yellow
-Set-RegistryValue -Path $StampOSDRegPath -Name "ScriptVersion" -Value "1.0" | Out-Null
+Set-RegistryValue -Path $InventoryOSDRegPath -Name "ScriptVersion" -Value "1.0" | Out-Null
 
 # Summary
-Write-Host "`n=== OSD Registry Stamp Completed ===" -ForegroundColor Magenta
-Write-Host "All deployment information has been written to: $StampOSDRegPath" -ForegroundColor Green
+Write-Host "`n=== OSD Registry Inventory Completed ===" -ForegroundColor Magenta
+Write-Host "All deployment information has been written to: $InventoryOSDRegPath" -ForegroundColor Green
 Write-Host "Finish Time: $finishTime" -ForegroundColor Yellow
 
 # Display final registry contents for verification
 Write-Host "`nRegistry Contents Verification:" -ForegroundColor Cyan
 try {
-    $regValues = Get-ItemProperty -Path $StampOSDRegPath -ErrorAction SilentlyContinue
+    $regValues = Get-ItemProperty -Path $InventoryOSDRegPath -ErrorAction SilentlyContinue
     if ($regValues) {
         $regValues.PSObject.Properties | Where-Object { $_.Name -notlike "PS*" } | ForEach-Object {
             Write-Host "  $($_.Name): $($_.Value)" -ForegroundColor White
@@ -338,4 +378,4 @@ catch {
     Write-Warning "Could not verify registry contents: $($_.Exception.Message)"
 }
 
-Write-Host "`nOSD Registry Stamp process completed successfully!" -ForegroundColor Green
+Write-Host "`nOSD Registry Inventory process completed successfully!" -ForegroundColor Green

@@ -41,7 +41,7 @@ if ($ModelAlias -eq "Virtual Machine") {
     Exit 0
 }
 
-
+${TSEnv:DriverPackMethod} = $DriverPackOption
 
 if ($env:SystemDrive -eq "X:") {
     $dest = "S:\Drivers"
@@ -2187,6 +2187,7 @@ function Migrate-WinPEDrivers {
         exit 0
     }
     Write-Host "Completing matching imported and running drivers. Found $($matchedDrivers.count) matched drivers total."
+    ${TSEnv:DriverMigrateCount} = $($matchedDrivers.count)
     # set up drivers folder
     $exportRoot = "$($env:SystemDrive)\ExportedDrivers"
     
@@ -2316,6 +2317,10 @@ if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x
     $ToolsPath = "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
     $SevenZipPath = "$ToolsPath\7za.exe"
     $InnoExtractPath = "$ToolsPath\innoextract.exe"
+} elseif (Test-path -Path "S:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"){
+    $ToolsPath = "S:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
+    $SevenZipPath = "$ToolsPath\7za.exe"
+    $InnoExtractPath = "$ToolsPath\innoextract.exe"
 } else {
     Write-Host "Unable to find Tools Path, please ensure the Tools are available in the expected location."
     Exit 1
@@ -2397,6 +2402,10 @@ if ($DriverPackOption -eq "Standard" -or $MakeAlias -eq "Panasonic Corporation" 
     }        
     if ($null -ne $DriverPack) {
         Write-Host "Found Driver Pack"
+        ${TSEnv:DriverPackURL} = $URL
+        ${TSEnv:DriverPackName} = $Name
+        ${TSEnv:DriverPackID} = $ID
+        ${TSEnv:DriverPackCustom} = $false
         Write-Output $DriverPack
         Write-Host "Downloading and extracting  Driver Pack to $ExtractedDriverLocation"
         write-host "Invoke-DriverDownloadExpand -URL $URL -Name $Name -ID $ID -ToolsPath $ToolsPath -DestinationPath $ExtractedDriverLocation"
@@ -2405,6 +2414,7 @@ if ($DriverPackOption -eq "Standard" -or $MakeAlias -eq "Panasonic Corporation" 
         Write-Host "No Driver Pack found for the specified model."
         exit 0
     }
+    
 }
 #Downloading Driver Updates directly from the OEM, extracting and applying them to the Offline OS
 else {
@@ -2542,6 +2552,8 @@ else {
     $DriversDownloads = Get-ChildItem -Path $DownloadContentPath -Filter *.exe -Recurse
     if ($DriversDownloads) {
         $TotalDrivers = $DriversDownloads.Count
+        ${TSEnv:DriverPackCustom} = $true
+        ${TSEnv:DriverPackCustomCount} = $TotalDrivers
         $DriverCurrentCount = 0
         foreach ($DriverDownload in $DriversDownloads) {
             $DriverCurrentCount++
