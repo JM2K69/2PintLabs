@@ -40,12 +40,11 @@ function Install-LenovoVantage {
     #$url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2401.29.0.zip"
     
     #Jan 25 release - seems to be the best working version.
-    #$url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2501.15.0_v3.zip"
+    $url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2501.15.0_v3.zip"
     
-    July 2025 Release - having issues, fails to install during OSD
-    $url = 'https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_20.2506.39.0_v17.zip'
-    $urladdon = 'https://download.lenovo.com/cdrt/support/VantageInstaller%201.0.172.0.zip'
-
+    #July 2025 Release - having issues, fails to install during OSD
+    #$url = 'https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_20.2506.39.0_v17.zip'
+    
     #$tempFilePath = "C:\Windows\Temp\lenovo_vantage.zip"
     $tempExtractPath = "C:\Windows\Temp\LCV\Extract"
     $tempDownloadPath = "C:\Windows\Temp\LCV\Download"
@@ -63,14 +62,6 @@ function Install-LenovoVantage {
         Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
         $ExpandFile = Join-Path -Path $DownloadContentPath -ChildPath "$ID.exe"
         Invoke-WebRequest -Uri $URL -OutFile $ExpandFile -UseBasicParsing
-    }
-
-    #$urladdon
-    $destFileAddon = Request-DeployRCustomContent -ContentName "LCVAddon" -ContentFriendlyName $NAME -URL $urladdon -DestinationPath $tempDownloadPath -ErrorAction SilentlyContinue
-    $GetItemOutFileAddon = Get-Item $destFileAddon
-    $ExpandFileAddon = $GetItemOutFileAddon.FullName
-    if (Test-Path -path $ExpandFileAddon) {
-        Write-Host "Downloaded Content to: $ExpandFileAddon" -ForegroundColor Green
     }
     <# switched to process above.  Will leave this here for reference for now
 
@@ -90,24 +81,21 @@ function Install-LenovoVantage {
         Write-Host -ForegroundColor Green "Installation file downloaded successfully. Starting installation..."
         Write-Host -ForegroundColor Cyan " Extracting $ExpandFile to $tempExtractPath"
         if (test-path -path $tempExtractPath) {Remove-Item -Path $tempExtractPath -Recurse -Force}
-        Expand-Archive -Path $ExpandFile -Destination $tempExtractPath 
+        Expand-Archive -Path $ExpandFile -Destination $tempExtractPath
         
     } else {
         Write-Host "Failed to download the file."
         return
     }
-    # Extract Addon File to same location
-    Write-Host -ForegroundColor Cyan " Extracting $ExpandFileAddon to $tempExtractPath"
-    Expand-Archive -Path $ExpandFileAddon -Destination $tempExtractPath -Force -Verbose
-
+    
     #Lenovo Vantage Service
-    #Write-Host -ForegroundColor Cyan " Installing Lenovo Vantage Service..."
-    #Write-Host "Launching $tempExtractPath\VantageService\Install-VantageService.ps1"
-    #Invoke-Expression -command "$tempExtractPath\VantageService\Install-VantageService.ps1"
+    Write-Host -ForegroundColor Cyan " Installing Lenovo Vantage Service..."
+    Write-Host "Launching $tempExtractPath\VantageService\Install-VantageService.ps1"
+    Invoke-Expression -command "$tempExtractPath\VantageService\Install-VantageService.ps1"
     
     #July Version - Having issues with during OSD, reverting back
-    write-host "Launching $tempExtractPath\VantageInstaller.exe Install -Vantage"
-    Invoke-Expression -command "$tempExtractPath\VantageInstaller.exe Install -Vantage"
+    #write-host "Launching $tempExtractPath\VantageInstaller.exe Install -Vantage"
+    #Invoke-Expression -command "$tempExtractPath\VantageInstaller.exe Install -Vantage"
     
     #Lenovo Vantage Batch File
     write-host -ForegroundColor Cyan " Installing Lenovo Vantage...batch file..."
