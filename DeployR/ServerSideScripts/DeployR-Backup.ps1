@@ -2,7 +2,7 @@ $BackupLocation = "D:\Backups"
 $TempLocation = "$BackupLocation\Temp"
 $DateStamp = (Get-Date).ToString("yyyyMMdd-HHmmss")
 Import-Module 'C:\Program Files\2Pint Software\DeployR\Client\PSModules\DeployR.Utility'
-Set-DeployRHost "http://localhost:7282"
+#Set-DeployRHost "http://localhost:7282"
 
 
 
@@ -53,14 +53,16 @@ if (-not (Test-Path -Path "$BackupLocation\$DateStamp\TaskSequences")) {New-Item
 Write-Host "Starting DeployR backup at $DateStamp" -ForegroundColor Green
 #Backup DeployR content items
 Write-Host "Backing up DeployR content items..." -ForegroundColor Yellow
-Get-DeployRContentItem | Where-Object {$_.id -notlike '00000000-0000-0000-0000-*'} | Where-Object {$_.contentItemPurpose -match "Other"} | ForEach-Object {
+$ContentItems = Get-DeployRContentItem | Where-Object {$_.id -notlike '00000000-0000-0000-0000-*'} | Where-Object {$_.contentItemPurpose -match "Other"}
+$ContentItems | ForEach-Object {
     write-host "Backing up content item: $($_.name) | $($_.id)" -ForegroundColor Cyan
     Export-DeployRContentItem -Id $_.id -DestinationFolder "$BackupLocation\$DateStamp\ContentItems\$($_.name)-$($_.id)"
 }
 
 #Backup DeployR step definitions
 Write-Host "Backing up DeployR step definitions..." -ForegroundColor Yellow
-(Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'}) | ForEach-Object {
+$Steps = (Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -notlike '0000*'})
+$Steps | ForEach-Object {
     write-host "Backing up step definition: $($_.name) | $($_.id)" -ForegroundColor Cyan
     Export-DeployRStepDefinition -Id $_.id -DestinationFolder "$BackupLocation\$DateStamp\StepDefinitions\$($_.name)-$($_.id)"
 }
