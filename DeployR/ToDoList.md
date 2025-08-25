@@ -7,12 +7,13 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 - Defender Updates
 - WinRE Driver Injection (Full OS Stage) - Work with Terrill
 - OEM Tools Offline Mode (offline repo for updates)
+- Updated Format Step with additional customizations and Drive control.
 
 - PowerShell Functions
   - PowerShell Function to import Driver Packs in Automated Process
     - Think "Modern Driver Management" - Scans the Catalogs pops dialog and then downloads and imports
       - Need to get List of Model Alias
-  - 
+- 
 
 ## In Progress
 
@@ -55,3 +56,5 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
   - After much testing, Custom Action Scripts do not get triggered in OSD
 
 ## NOTES FOR Step Defs
+Filter: Add Type Application
+Include Type Application for auto updates.
