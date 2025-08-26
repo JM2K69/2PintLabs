@@ -34,8 +34,10 @@ if ($ComputerFQDN -eq "214-DEPLOYR.2p.garytown.com") {
 if ($EnableBackup2GitHub) {
     $GitHubCustomSteps = "D:\GitHub\2PintLabs\DeployR\CustomSteps"
     $GitHubCustomStepsReferencedContent = "D:\GitHub\2PintLabs\DeployR\CustomSteps\ReferencedContent"
+    $GitHubCustomTaskSequenceModules = "D:\GitHub\2PintLabs\DeployR\CustomTaskSequenceModules"
     if (-not (Test-Path -Path $GitHubCustomSteps)) {New-Item -Path $GitHubCustomSteps -ItemType Directory | Out-Null}
     if (-not (Test-Path -Path $GitHubCustomStepsReferencedContent)) {New-Item -Path $GitHubCustomStepsReferencedContent -ItemType Directory | Out-Null}
+    if (-not (Test-Path -Path $GitHubCustomTaskSequenceModules)) {New-Item -Path $GitHubCustomTaskSequenceModules -ItemType Directory | Out-Null}
 }
 
 #OneDriveBackup
@@ -90,6 +92,29 @@ if ($LatestBackup) {
 }
 
 if ($EnableBackup2GitHub -and $GitHubCustomSteps -and $GitHubCustomStepsReferencedContent) {
+    
+    #Backup DeployR Task Sequence Modules
+    Write-Host "Exporting DeployR task sequence modules to GitHub..." -ForegroundColor Yellow
+    if (Test-Path -Path $GitHubCustomTaskSequenceModules) {
+        Write-Host "Removing existing folder: $GitHubCustomTaskSequenceModules" -ForegroundColor Yellow
+        Remove-Item -Path "$GitHubCustomTaskSequenceModules\*" -Recurse -Force
+        Start-Sleep -Milliseconds 200
+    }
+
+    #Get all task sequences except the built-in ones
+    write-host "Getting all task sequence modules..." -ForegroundColor Yellow
+    (Get-DeployRMetadata -Type TaskSequence | Where-Object {$_.id -notlike '0000*' -and $_.name -match "Module"}) | ForEach-Object {
+        write-host "Backing up task sequence: $($_.name) | $($_.id)" -ForegroundColor Cyan
+        $ExportFolderName = "$($_.name)-$($_.id)"
+        if (Test-Path -Path "$GitHubCustomTaskSequenceModules\$ExportFolderName") {
+            Write-Host "Removing existing folder: $GitHubCustomTaskSequenceModules\$ExportFolderName" -ForegroundColor Yellow
+            Remove-Item -Path "$GitHubCustomTaskSequenceModules\$ExportFolderName" -Recurse -Force
+        }
+        New-Item -Path "$GitHubCustomTaskSequenceModules\$ExportFolderName" -ItemType Directory -Force | Out-Null
+        write-host "Exporting step definition to: $GitHubCustomTaskSequenceModules\$ExportFolderName" -ForegroundColor Cyan
+        Export-DeployRTaskSequence -Id $_.id -DestinationFolder "$GitHubCustomTaskSequenceModules\$ExportFolderName"
+    }
+
     #Backup DeployR step definitions for GitHub Custom Steps
     Write-Host "Exporting DeployR step definitions to GitHub..." -ForegroundColor Yellow
     write-host "Cleanup $GitHubCustomSteps and $GitHubCustomStepsReferencedContent first" -ForegroundColor Yellow
