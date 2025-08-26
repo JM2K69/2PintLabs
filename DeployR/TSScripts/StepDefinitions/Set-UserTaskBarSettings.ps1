@@ -19,6 +19,7 @@ $TaskBarStartMorePins = ${TSEnv:TaskBarStartMorePins}
 $TaskBarStartMoreRecommendations = ${TSEnv:TaskBarStartMoreRecommendations}
 $SetDarkMode = ${TSEnv:SetDarkMode}
 $StartMenuAddMore = ${TSEnv:StartMenuAddMore}
+$StartMenuDisableBing = ${TSEnv:StartMenuDisableBing}
 
 
 write-host "==================================================================="
@@ -30,10 +31,12 @@ write-host "TaskBarRemoveWidgets: $TaskBarRemoveWidgets"
 write-host "TaskBarRemoveChat: $TaskBarRemoveChat"
 write-host "TaskBarMoveStartLeft: $TaskBarMoveStartLeft"
 write-host "TaskBarRemoveSearch: $TaskBarRemoveSearch"
+Write-Host "StartMenuDisableBing: $StartMenuDisableBing"
 write-host "TaskBarStartMorePins: $TaskBarStartMorePins"
 write-host "TaskBarStartMoreRecommendations: $TaskBarStartMoreRecommendations"
 Write-Host "SetDarkMode: $SetDarkMode"
 Write-Host "StartMenuAddMore: $StartMenuAddMore"
+
 
 <#
 Customize Taskbar in Windows 11
@@ -75,7 +78,14 @@ if ($TaskBarMoveStartLeft -eq $true) {
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}
 }
-
+# Start Menu Disable Bing Search Results
+if ($StartMenuDisableBing -eq $true) {
+    Write-Host "Attempting to run: StartMenuDisableBing"
+    New-Item -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Force | Out-Null
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Name "DisableSearchBoxSuggestions" -Value "1" -PropertyType Dword -Force
+    $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value "0" -PropertyType Dword -Force
+    try { $reg.Handle.Close() } catch {}
+}
 #Start Menu Size, add more pins or recommendations?
 if ($StartMenuAddMore -eq "default"){
     Write-Host "Attempting to run: StartMenuAddMore, but it's set to default, so nothing will happen"

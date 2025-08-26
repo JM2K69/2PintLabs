@@ -42,19 +42,13 @@ function Install-LenovoVantage {
     #Jan 25 release - seems to be the best working version.
     #$url = "https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_10.2501.15.0_v3.zip"
     
-    #July 2025 Release - having issues, fails to install during OSD
+    July 2025 Release - having issues, fails to install during OSD
     $url = 'https://download.lenovo.com/pccbbs/thinkvantage_en/metroapps/Vantage/LenovoCommercialVantage_20.2506.39.0_v17.zip'
     $urladdon = 'https://download.lenovo.com/cdrt/support/VantageInstaller%201.0.172.0.zip'
 
     #$tempFilePath = "C:\Windows\Temp\lenovo_vantage.zip"
     $tempExtractPath = "C:\Windows\Temp\LCV\Extract"
     $tempDownloadPath = "C:\Windows\Temp\LCV\Download"
-    if (!(Test-Path -Path $tempDownloadPath)) {
-        New-Item -ItemType Directory -Path $tempDownloadPath | Out-Null
-    }
-    if (!(Test-Path -Path $tempExtractPath)) {
-        New-Item -ItemType Directory -Path $tempExtractPath | Out-Null
-    }
     $NAME = "Lenovo Vantage"
     try {
         #Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "$($Driver.PackageExe)" -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
@@ -67,25 +61,14 @@ function Install-LenovoVantage {
     } catch {
         Write-Host "Failed to download Content: $Name" -ForegroundColor red
         Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
-        $ExpandFile = Join-Path -Path $tempDownloadPath -ChildPath "LCV.zip"
+        $ExpandFile = Join-Path -Path $DownloadContentPath -ChildPath "$ID.exe"
         Invoke-WebRequest -Uri $URL -OutFile $ExpandFile -UseBasicParsing
     }
-    if (Test-Path -path $ExpandFile) {
-        Write-Host "Downloaded Content to: $ExpandFile" -ForegroundColor Green
-    }
-    #$urladdon
-    try {
-        $destFileAddon = Request-DeployRCustomContent -ContentName "LCVAddon" -ContentFriendlyName $NAME -URL $urladdon -DestinationPath $tempDownloadPath -ErrorAction SilentlyContinue
-        $GetItemOutFileAddon = Get-Item $destFileAddon
-        $ExpandFileAddon = $GetItemOutFileAddon.FullName 
-    }
-    catch {
-        Write-Host "Failed to download Content: LCVAddon" -ForegroundColor red
-        Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
-        $ExpandFileAddon = Join-Path -Path $tempDownloadPath -ChildPath "LCVAddon.zip"
-        Invoke-WebRequest -Uri $urladdon -OutFile $ExpandFileAddon -UseBasicParsing
-    }
 
+    #$urladdon
+    $destFileAddon = Request-DeployRCustomContent -ContentName "LCVAddon" -ContentFriendlyName $NAME -URL $urladdon -DestinationPath $tempDownloadPath -ErrorAction SilentlyContinue
+    $GetItemOutFileAddon = Get-Item $destFileAddon
+    $ExpandFileAddon = $GetItemOutFileAddon.FullName
     if (Test-Path -path $ExpandFileAddon) {
         Write-Host "Downloaded Content to: $ExpandFileAddon" -ForegroundColor Green
     }

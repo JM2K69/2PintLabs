@@ -54,7 +54,9 @@ Write-Host ""
 Write-Host "Checking for Lenovo updates..." -ForegroundColor Cyan
 #Find and Report Updates
 try {
+    Write-Progress -Activity "Checking for Updates" -Status "Searching for Lenovo updates..." -PercentComplete 5
     $updates = Get-LSUpdate -ErrorAction SilentlyContinue | Where-Object { $_.Installer.Unattended }
+    Write-Progress -Activity "Checking for Updates" -Status "Searching for Lenovo updates..." -PercentComplete 100
 } catch {
     Write-Host -ForegroundColor Red "Error retrieving updates: $_"
     exit 0
@@ -75,20 +77,29 @@ if ($LSUScanOnly -eq $true) {
     Write-Host -ForegroundColor Green "Scan only mode enabled. Exiting without applying updates."
     exit 0
 }
-
+$UpdateCount = $updates.Count
+$RunningCount = 0
 if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
     Write-Host -ForegroundColor Cyan "Installing Driver and BIOS Updates..."
     foreach ($update in $updates) {
+        $RunningCount++
+        $PercentComplete = [math]::Round(($RunningCount / $UpdateCount) * 100)
+        Write-Host "Processing $($update.Title) - Percent Complete: $PercentComplete"
+        Write-Progress -Activity "Updating" -Status "Processing $($update.Title)" -PercentComplete $PercentComplete
         $install = Install-LSUpdate -Verbose -SaveBIOSUpdateInfoToRegistry -Package $update
         if ($install.PendingAction -match "REBOOT"){
             ${TSEnv:SMSTSRebootRequested} = $true
         }
     }
-    $updates | Install-LSUpdate -Verbose
+    #$updates | Install-LSUpdate -Verbose
 } elseif ($LSUDrivers -eq $true) {
     Write-Host -ForegroundColor Cyan "Installing Driver Updates..."
     $Updates = $updates | Where-Object { $_.Type -eq 'Driver' }
     foreach ($update in $Updates) {
+        $RunningCount++
+        $PercentComplete = [math]::Round(($RunningCount / $UpdateCount) * 100)
+        Write-Host "Processing $($update.Title) - Percent Complete: $PercentComplete"
+        Write-Progress -Activity "Updating" -Status "Processing $($update.Title)" -PercentComplete $PercentComplete
         $install = Install-LSUpdate -Verbose -SaveBIOSUpdateInfoToRegistry -Package $update
         if ($install.PendingAction -match "REBOOT"){
             ${TSEnv:SMSTSRebootRequested} = $true
@@ -98,6 +109,10 @@ if ($LSUDrivers -eq $true -and $LSUBIOS -eq $true) {
     Write-Host -ForegroundColor Cyan "Installing BIOS Updates..."
     $Updates = $updates | Where-Object { $_.Type -eq 'BIOS' }
     foreach ($update in $Updates) {
+        $RunningCount++
+        $PercentComplete = [math]::Round(($RunningCount / $UpdateCount) * 100)
+        Write-Host "Processing $($update.Title) - Percent Complete: $PercentComplete"
+        Write-Progress -Activity "Updating" -Status "Processing $($update.Title)" -PercentComplete $PercentComplete
         $install = Install-LSUpdate -Verbose -SaveBIOSUpdateInfoToRegistry -Package $update
         if ($install.PendingAction -match "REBOOT"){
             ${TSEnv:SMSTSRebootRequested} = $true

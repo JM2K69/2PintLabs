@@ -172,7 +172,9 @@ function Get-WinPEBuildInfo {
     }
 
 }
-
-Write-Host "Setting WinPE Build Info"
-${TSEnv:WinPEBuildInfo} = Get-WinPEBuildInfo
-Write-Host "WinPE Build Info set to: ${TSEnv:WinPEBuildInfo}"
+if ($env:SystemDrive -eq "X:") {
+    Write-Host "Running in WinPE, setting WinPE Build Info"
+    ${TSEnv:WinPEBuildInfo} = Get-WinPEBuildInfo
+} else {
+    Write-Host "Running in Full Windows Environment, skipping WinPE Build Info"
+}

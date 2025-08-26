@@ -5,7 +5,15 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 ## Not Started
 
 - Defender Updates
+- WinRE Driver Injection (Full OS Stage) - Work with Terrill
 - OEM Tools Offline Mode (offline repo for updates)
+- Updated Format Step with additional customizations and Drive control.
+
+- PowerShell Functions
+  - PowerShell Function to import Driver Packs in Automated Process
+    - Think "Modern Driver Management" - Scans the Catalogs pops dialog and then downloads and imports
+      - Need to get List of Model Alias
+- 
 
 ## In Progress
 
@@ -15,7 +23,7 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 
 - Create script for easy import and overwrite of updated steps and content for sharing
   - MVP Created: <https://github.com/gwblok/2PintLabs/blob/main/DeployR/ServerSideScripts/DeployR-ImportFromGithub.ps1>
-  - Overwrite doesn't seem to work, this is a Dev side issue I'm waiting on.
+  - Overwrite doesn't seem to work, this is a Dev side issue I'm waiting on. - THIS IS DONE.. MN fixed issue with import overwrite in .480
   - Works good on new setups, but after I've modified them the new changes don't import into other systems.
 
 ## Completed
@@ -48,3 +56,5 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
   - After much testing, Custom Action Scripts do not get triggered in OSD
 
 ## NOTES FOR Step Defs
+Filter: Add Type Application
+Include Type Application for auto updates.

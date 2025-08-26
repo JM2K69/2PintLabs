@@ -1,11 +1,6 @@
-<#Gary Blok - @gwblok - 2PintSoftware.com
-
-DISCLAIMER: THIS IS NOT AN OFFICIAL DELL SCRIPT. I DO NOT WORK FOR DELL. 
-USE AT YOUR OWN RISK. I TAKE NO RESPONSIBILITY FOR ANYTHING THIS SCRIPT DOES. TEST IN A LAB FIRST.
-ALL INFORMATION IS PUBLICLY AVAILABLE ON THE INTERNET. I JUST CONSOLIDATED IT INTO ONE SCRIPT.
 
 
-#https://dl.dell.com/content/manual13608255-dell-command-update-version-5-x-reference-guide.pdf?language=en-us
+#https://dl.dell.com/content/manual17524146-dell-command-update-version-5-x-reference-guide.pdf?language=en-us
 
 
 #>
@@ -22,57 +17,155 @@ catch {}
 if (Get-Module -name "DeployR.Utility"){
     $inTS = $true
     # Get the provided variables
-    $updateTypeBIOSFirmware = ${TSEnv:updateTypeBIOSFirmware}
-    $updateTypeDrivers = ${TSEnv:updateTypeDrivers}
-    $updateTypeApplications = ${TSEnv:updateTypeApplications}
-    $updateSeverityRating = ${TSEnv:updateSeverityRating}
-    $ScanOnly = ${TSEnv:ScanOnly}
+    [string]$installationDeferral = ${TSEnv:installationDeferral} #Enable or Disable
+    [int]$deferralInstallInterval = ${TSEnv:deferralInstallInterval} #1-9
+    [int]$deferralInstallCount = ${TSEnv:deferralInstallCount}  #1-9
+    [string]$systemRestartDeferral = ${TSEnv:systemRestartDeferral} #Enable or Disable
+    [int]$deferralRestartInterval = ${TSEnv:deferralRestartInterval} #1-99
+    [int]$deferralRestartCount = ${TSEnv:deferralRestartCount} #1-9
+    [int]$delayDays = ${TSEnv:delayDays} #0-45
+    [string]$scheduleAction = ${TSEnv:scheduleAction}
+    [string]$schedule = ${TSEnv:schedule}
+    [string]$scheduleDaily = ${TSEnv:scheduleDaily}
+    [string]$scheduleWeekly = ${TSEnv:scheduleWeekly}
+    [string]$scheduleMonthly = ${TSEnv:scheduleMonthly}
+    
+    #Device Categories
+    [string]$updateDeviceCategoryFilter = ${TSEnv:updateDeviceCategoryFilter} #Enable or Disable
+    [string]$updateDeviceCategoryAudio = ${TSEnv:updateDeviceCategoryAudio}
+    [string]$updateDeviceCategoryVideo = ${TSEnv:updateDeviceCategoryVideo}
+    [string]$updateDeviceCategoryNetwork = ${TSEnv:updateDeviceCategoryNetwork}
+    [string]$updateDeviceCategoryStorage = ${TSEnv:updateDeviceCategoryStorage}
+    [string]$updateDeviceCategoryInput = ${TSEnv:updateDeviceCategoryInput}
+    [string]$updateDeviceCategoryChipset = ${TSEnv:updateDeviceCategoryChipset}
+    [string]$updateDeviceCategoryOthers = ${TSEnv:updateDeviceCategoryOthers}
+    
+    #Update Severities
+    [string]$updateSeverityFilter = ${TSEnv:updateSeverityFilter} #Enable or Disable
+    [String]$updateSeveritySecurity = ${TSEnv:updateSeveritySecurity}
+    [String]$updateSeverityCritical = ${TSEnv:updateSeverityCritical}
+    [String]$updateSeverityRecommended = ${TSEnv:updateSeverityRecommended}
+    [String]$updateSeverityOptional = ${TSEnv:updateSeverityOptional}
+    
+    #Update Types
+    [string]$updateTypeFilter = ${TSEnv:updateTypeFilter} #Enable or Disable
+    [String]$updateTypeBIOS = ${TSEnv:updateTypeBIOS}
+    [String]$updateTypeFirmware = ${TSEnv:updateTypeFirmware}
+    [String]$updateTypeDriver = ${TSEnv:updateTypeDriver}
+    [String]$updateTypeApplication = ${TSEnv:updateTypeApplication}
+    [String]$updateTypeOthers = ${TSEnv:updateTypeOthers}
+    [String]$updateTypeUtility = ${TSEnv:updateTypeUtility}
+
 }
 else {
     #Testing outside of DeployR
-    $updateTypeBIOSFirmware = "False"
-    $updateTypeDrivers = "True"
-    $updateTypeApplications = "False"
-    $updateSeverityRating = "All"
-    $ScanOnly = "False"
+    [string]$installationDeferral = "Enable"
+    [int]$deferralInstallInterval = 3
+    [int]$deferralInstallCount = $5
+    [string]$systemRestartDeferral = "Enable"
+    [int]$deferralRestartInterval = 4
+    [int]$deferralRestartCount = 6
+    [int]$delayDays = 14
+    [string]$scheduleAction = 'DownloadInstallAndNotify'
+    [string]$schedule = 'scheduleDaily'
+    [string]$scheduleDaily = '12:30'
+    [string]$scheduleWeekly = 'Wed'
+    [string]$scheduleMonthly = 'third'
+    
+    #Device Categories
+    [string]$updateDeviceCategoryFilter = "Disable"
+    [string]$updateDeviceCategoryAudio = "True"
+    [string]$updateDeviceCategoryVideo = "True"
+    [string]$updateDeviceCategoryNetwork = "True"
+    [string]$updateDeviceCategoryStorage = "False"
+    [string]$updateDeviceCategoryInput = "False"
+    [string]$updateDeviceCategoryChipset = "True"
+    [string]$updateDeviceCategoryOthers = "False"
+    #Update Severities
+    [string]$updateSeverityFilter = "Disable"
+    [String]$updateSeveritySecurity = "True"
+    [String]$updateSeverityCritical = "True"
+    [String]$updateSeverityRecommended = "False"
+    [String]$updateSeverityOptional = "False"
+    #Update Types
+    [string]$updateTypeFilter = "Disable"
+    [String]$updateTypeBIOS = "True"
+    [String]$updateTypeFirmware = "True"
+    [String]$updateTypeDriver = "True"
+    [String]$updateTypeApplication = "False"
+    [String]$updateTypeOthers = "False"
+    [String]$updateTypeUtility = "False"
+
 }
 
-$LogPath = "$env:SystemDrive\_2P\Logs"
 
 
+$Manufacturer = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Manufacturer
 [String]$MakeAlias = ${TSEnv:MakeAlias}
-if ($MakeAlias -ne "Dell") {
-    Write-Host "MakeAlias must be Dell. Exiting script."
-    Exit 0
+if ($MakeAlias -eq "Dell" -or $Manufacturer -match "Dell"){
+    #Confirmed the device is a Dell
+}
+else {
+    Write-Host "This script is designed to run on Dell systems only. Exiting."
+    exit 0
 }
 
-#Convert the string values to boolean
-if ($updateTypeBIOSFirmware -eq "true") {[bool]$updateTypeBIOSFirmware = $true} 
-else {[bool]$updateTypeBIOSFirmware = $false}
-if ($updateTypeDrivers -eq "true") {[bool]$updateTypeDrivers = $true} 
-else {[bool]$updateTypeDrivers = $false}
-if ($updateTypeApplications -eq "true") {[bool]$updateTypeApplications = $true} 
-else {[bool]$updateTypeApplications = $false}
-if ($ScanOnly -eq "true") {[bool]$ScanOnly = $true} 
-else {[bool]$ScanOnly = $false}
 
 #Write Info to Log
 Write-Host "=============================================================================="
 Write-Host "Current DCU Settings selected from Task Sequence" 
-Write-Host "updateTypeBIOSFirmware: $updateTypeBIOSFirmware"
-Write-Host "updateTypeDrivers: $updateTypeDrivers"
-Write-Host "updateTypeApplications: $updateTypeApplications"
-Write-Host "updateSeverityRating: $updateSeverityRating"
-Write-Host "ScanOnly: $ScanOnly"
+Write-Host "Schedule Action: $scheduleAction"
+Write-Host "Schedule: $schedule"
+Write-Host "DelayDays: $delayDays"
+Write-Host "Installation Deferral: $installationDeferral"
+Write-Host "Deferral Install Interval: $deferralInstallInterval"
+Write-Host "Deferral Install Count: $deferralInstallCount"
+Write-Host "System Restart Deferral: $systemRestartDeferral"
+Write-Host "Deferral Restart Interval: $deferralRestartInterval"
+Write-Host "Deferral Restart Count: $deferralRestartCount"
 
-if ($updateTypeBIOSFirmware-eq $false -and $updateTypeDrivers -eq $false -and $updateTypeApplications -eq $false){
-    Write-Host "!!Since no boxes are checked, running all updates!!"
-    Write-Host "This is totally logical, ok! It's based on the DCU documentation."
+
+
+#Report Device Category Filters
+Write-Host "-----------------------------------------------------"
+Write-Host "Device Category Filters: $updateDeviceCategoryFilter"
+if ($updateDeviceCategoryFilter -eq "Enable"){
+    Write-Host "  Audio: $updateDeviceCategoryAudio"
+    Write-Host "  Video: $updateDeviceCategoryVideo"
+    Write-Host "  Network: $updateDeviceCategoryNetwork"
+    Write-Host "  Storage: $updateDeviceCategoryStorage"
+    Write-Host "  Input: $updateDeviceCategoryInput"
+    Write-Host "  Chipset: $updateDeviceCategoryChipset"
+    Write-Host "  Others: $updateDeviceCategoryOthers"
 }
+#Report Severity Filters
+Write-Host "-----------------------------------------------------"
+Write-Host "Severity Filters: $updateSeverityFilter"
+if ($updateSeverityFilter -eq "Enable"){
+    Write-Host "  Security: $updateSeveritySecurity"
+    Write-Host "  Critical: $updateSeverityCritical"
+    Write-Host "  Recommended: $updateSeverityRecommended"
+    Write-Host "  Optional: $updateSeverityOptional"
+}
+#Report Update Type Filters
+Write-Host "-----------------------------------------------------"
+Write-Host "Update Type Filters: $updateTypeFilter"
+if ($updateTypeFilter -eq "Enable"){
+    Write-Host "  BIOS: $updateTypeBIOS"
+    Write-Host "  Firmware: $updateTypeFirmware"
+    Write-Host "  Driver: $updateTypeDriver"
+    Write-Host "  Application: $updateTypeApplication"
+    Write-Host "  Others: $updateTypeOthers"
+    Write-Host "  Utility: $updateTypeUtility"
+}
+
+
+
 Write-Host "=============================================================================="
 
 
 #region functions
+
 function Get-DellSupportedModels {
     [CmdletBinding()]
     
@@ -81,16 +174,16 @@ function Get-DellSupportedModels {
     
     # Pull down Dell XML CAB used in Dell Command Update ,extract and Load
     if (!(Test-Path $DellCabExtractPath)){$null = New-Item -Path $DellCabExtractPath -ItemType Directory -Force}
-    Write-Verbose "Downloading Dell Cab"
+    Write-Host "Downloading Dell Cab"
     Invoke-WebRequest -Uri "https://downloads.dell.com/catalog/CatalogIndexPC.cab" -OutFile $CabPathIndex -UseBasicParsing -Proxy $ProxyServer
     If(Test-Path "$DellCabExtractPath\DellSDPCatalogPC.xml"){Remove-Item -Path "$DellCabExtractPath\DellSDPCatalogPC.xml" -Force}
     Start-Sleep -Seconds 1
     if (test-path $DellCabExtractPath){Remove-Item -Path $DellCabExtractPath -Force -Recurse}
     $null = New-Item -Path $DellCabExtractPath -ItemType Directory
-    Write-Verbose "Expanding the Cab File..." 
+    Write-Host "Expanding the Cab File..." 
     $null = expand $CabPathIndex $DellCabExtractPath\CatalogIndexPC.xml
     
-    Write-Verbose "Loading Dell Catalog XML.... can take awhile"
+    Write-Host "Loading Dell Catalog XML.... can take awhile"
     [xml]$XMLIndex = Get-Content "$DellCabExtractPath\CatalogIndexPC.xml"
     
     
@@ -304,11 +397,11 @@ Function Get-DCUAppUpdates {
                     write-output "Update Complete with Exitcode: $($Process.ExitCode)"
                     Write-Progress -Activity "Installing Dell Command Update" -Status "Installing $TargetFileName" -PercentComplete 100
                     If($Process -ne $null -and $Process.ExitCode -eq '2'){
-                        Write-Verbose "Reboot Required"
+                        Write-Host "Reboot Required"
                     }
                 }
                 else{
-                    Write-Verbose " FAILED TO DOWNLOAD DCU"
+                    Write-Host " FAILED TO DOWNLOAD DCU"
                 }
             }
             else{
@@ -713,47 +806,7 @@ function Test-WindowsDesktopRuntime {
 #endregion functions
 
 
-# Main Script Logic
-
-# If there is an Intel Management Controller Installer, do that manually, as it will crash the system if run via DCU
-#$IntelMCInstaller = Get-DCUUpdateList -SystemSKUNumber '0B04' -Latest | Where-Object {$_.name -match "Intel Management Engine Components"}
-$IntelMCInstaller = Get-DCUUpdateList -Latest | Where-Object {$_.name -match "Intel Management Engine Components"}
-
-if ($IntelMCInstaller) {
-    Write-Host "Found Intel Management Engine Components installer, running it manually."
-    $DownloadContentPath = "$env:SystemDrive\Drivers\Dls"
-    if (!(Test-Path -Path $DownloadContentPath)) {
-        New-Item -ItemType Directory -Path $DownloadContentPath -Force | Out-Null
-    }
-    
-    #Download the installer
-    $Name = $IntelMCInstaller.Name
-    $ID = $IntelMCInstaller.PackageID
-    $URL = $IntelMCInstaller.Path
-    try {
-        #Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "$($Driver.PackageExe)" -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
-        $destFile = Request-DeployRCustomContent -ContentName $ID -ContentFriendlyName $NAME -URL $URL -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
-        $GetItemOutFile = Get-Item $destFile
-        $ExpandFile = $GetItemOutFile.FullName
-        if (Test-Path -path $ExpandFile) {
-            Write-Host "Downloaded driver to: $ExpandFile" -ForegroundColor Green
-        }
-    } catch {
-        Write-Host "Failed to download driver: $Name" -ForegroundColor red
-        Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
-        $ExpandFile = Join-Path -Path $DownloadContentPath -ChildPath "$ID.exe"
-        Invoke-WebRequest -Uri $URL -OutFile $ExpandFile -UseBasicParsing
-    }
-    Write-Host "Installing Intel Management Engine Components: $Name"
-    #Install the Intel Management Engine Components Silently
-    $InstallProcess = Start-Process -FilePath $ExpandFile -ArgumentList "/s /l=$env:systemdrive\_2p\logs\$ID.log" -Wait -PassThru
-    if ($InstallProcess.ExitCode -eq 0) {
-        Write-Host "Installed Intel Management Engine Components successfully." -ForegroundColor Green
-    } else {
-        Write-Host "Failed to install Intel Management Engine Components. Exit Code: $($InstallProcess.ExitCode)" -ForegroundColor Red
-    }
-}
-
+#region Confirm DCU Installed
 if ((Get-DCUVersion) -match "False"){
     # Do the Stuff
     write-host "Checking for Dell Command Update Latest Version"
@@ -784,7 +837,7 @@ if ((Get-DCUVersion) -match "False"){
 else {
     Write-Host "Dell Command Update is already installed, version: $(Get-DCUVersion)"
 }
-
+#endregion Confirm DCU Installed
 
 if ((Get-DCUVersion) -match "False"){
     Write-Host "Dell Command Update is not getting installed, do some extra testing.."
@@ -793,22 +846,300 @@ if ((Get-DCUVersion) -match "False"){
 else {
     
     Write-Host "=============================================================================="
-    Write-Host "Invoke Dell Command Update"
-    write-host "Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityRating -LogPath $LogPath"
-    $RunDCU = Invoke-DCU -updateTypeBIOSFirmware:$updateTypeBIOSFirmware -updateTypeDrivers:$updateTypeDrivers -updateTypeApplications:$updateTypeApplications -ScanOnly:$ScanOnly -updateSeverity $updateSeverityRating -LogPath $LogPath
-    Write-Host "Run Dell Command Update Step Complete"
-    if ($RunDCU -eq 1){
-        Write-Host "Dell Command Update completed with exit code 1, indicating a reboot is required." -ForegroundColor Yellow
-        # If running in a task sequence, set the SMSTSRebootRequested variable
-        if ($inTS) {
-            Write-Host "Setting SMSTSRebootRequested to true for task sequence." -ForegroundColor Yellow
-            ${TSEnv:SMSTSRebootRequested} = $true
+    Write-Host "Set Dell Command Update Settings"
+    
+    #Find DCU and Set Log Path
+    $DCUPath = (Get-DCUInstallDetails).DCUPath
+    Write-Host "DCU Path: $DCUPath"
+    $LogPath = "$env:SystemDrive\Users\Dell\EMPS\Logs"
+    Write-Host "Log Path: $LogPath"
+    $DateTimeStamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    
+    #Always set Suspend Bitlocker Enable
+    $autoSuspendBitLocker = 'Enable'
+    $autoSuspendBitLockerVar = "-autoSuspendBitLocker=$autoSuspendBitLocker -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-autoSuspendBitLocker.log`""
+    $ArgList = "/configure $autoSuspendBitLockerVar"
+    Write-Host $ArgList
+    $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+    if ($DCUConfig.ExitCode -ne 0){
+        $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+        Write-Host "Exit: $($DCUConfig.ExitCode)"
+        Write-Host "Description: $($ExitInfo.Description)"
+        Write-Host "Resolution: $($ExitInfo.Resolution)"
+    }
+    #Always set User Consent Disable
+    <# - Not working in 5.5
+    $userConsent = 'disable'
+    $userConsentVar = "-userConsent=$userConsent -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-userConsent.log`""
+    $ArgList = "/configure $userConsentVar"
+    Write-Host $ArgList
+    $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+    if ($DCUConfig.ExitCode -ne 0){
+        $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+        Write-Host "Exit: $($DCUConfig.ExitCode)"
+        Write-Host "Description: $($ExitInfo.Description)"
+        Write-Host "Resolution: $($ExitInfo.Resolution)"
+    }
+    #>    
+    if ($scheduleAction){
+        $scheduleActionVar = "-scheduleAction=$scheduleAction"
+        $ArgList = "/configure $scheduleActionVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-scheduleAction.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+
+    #Schedule Settings
+    if ($schedule -eq 'scheduleAuto'){
+        $scheduleVar = "-$schedule"
+    }
+    elseif ($schedule -eq 'scheduleManual'){
+        $scheduleVar = "-$schedule"
+    }
+    elseif ($schedule -eq 'scheduleDaily'){
+        $scheduleVar = "-$schedule=$scheduleDaily"
+    }
+    elseif ($schedule -eq 'scheduleWeekly'){
+        $scheduleVar = "-$schedule=$scheduleWeekly,$scheduleDaily"
+    }    
+    elseif ($schedule -eq 'scheduleMonthly'){
+        $scheduleVar = "-$schedule=$scheduleMonthly,$scheduleWeekly,$scheduleDaily"
+    }   
+    
+    $ArgList = "/configure $scheduleVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-schedule.log`""
+    Write-Host $ArgList
+    $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+    if ($DCUConfig.ExitCode -ne 0){
+        $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+        Write-Host "Exit: $($DCUConfig.ExitCode)"
+        Write-Host "Description: $($ExitInfo.Description)"
+        Write-Host "Resolution: $($ExitInfo.Resolution)"
+    }
+    
+    #Installation Deferral
+    if ($installationDeferral){
+        if ($scheduleAction -ne 'DownloadInstallAndNotify'){
+            Write-Host "Schedule Action must be set to DownloadInstallAndNotify to use Installation Deferral"
+            
         }
         else {
-            Write-Host "Please reboot the system to apply changes." -ForegroundColor Yellow
+            if ($installationDeferral -eq 'Enable'){
+                $installationDeferralVar = "-installationDeferral=$installationDeferral"
+                if ($deferralInstallInterval){
+                    [string]$deferralInstallIntervalVar = "-deferralInstallInterval=$deferralInstallInterval"
+                }
+                else {
+                    [string]$deferralInstallIntervalVar = "-deferralInstallInterval=5"
+                }
+                if ($deferralInstallCount){
+                    [string]$deferralInstallCountVar = "-deferralInstallCount=$deferralInstallCount"
+                }
+                else {
+                    [string]$deferralInstallCountVar = "-deferralInstallCount=5"
+                }
+                $ArgList = "/configure $installationDeferralVar $deferralInstallIntervalVar $deferralInstallCountVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-installationDeferral.log`""
+                Write-Host $ArgList
+                $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+                if ($DCUConfig.ExitCode -ne 0){
+                    $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+                    Write-Host "Exit: $($DCUConfig.ExitCode)"
+                    Write-Host "Description: $($ExitInfo.Description)"
+                    Write-Host "Resolution: $($ExitInfo.Resolution)"
+                }
+                
+            }
+            else {
+                [string]$installationDeferralVar = "-installationDeferral=$installationDeferral"
+                $ArgList = "/configure $installationDeferralVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-installationDeferral.log`""
+                Write-Host $ArgList
+                $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+                if ($DCUConfig.ExitCode -ne 0){
+                    $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+                    Write-Host "Exit: $($DCUConfig.ExitCode)"
+                    Write-Host "Description: $($ExitInfo.Description)"
+                    Write-Host "Resolution: $($ExitInfo.Resolution)"
+                }
+            }
         }
-        
     }
+    #System Reboot Deferral
+    if ($systemRestartDeferral){
+        if ($scheduleAction -ne 'DownloadInstallAndNotify'){
+            Write-Host "Schedule Action must be set to DownloadInstallAndNotify to use Installation Deferral"
+            
+        }
+        else {
+            if ($systemRestartDeferral -eq 'Enable'){
+                $systemRestartDeferralVar = "-systemRestartDeferral=$systemRestartDeferral"
+                if ($deferralRestartInterval){
+                    [string]$deferralRestartIntervalVar = "-deferralRestartInterval=$deferralRestartInterval"
+                }
+                else {
+                    [string]$deferralRestartIntervalVar = "-deferralRestartInterval=5"
+                }
+                if ($deferralRestartCount){
+                    [string]$deferralRestartCountVar = "-deferralRestartCount=$deferralRestartCount"
+                }
+                else {
+                    [string]$deferralRestartCountVar = "-deferralRestartCount=5"
+                }
+                $ArgList = "/configure $systemRestartDeferralVar $deferralRestartIntervalVar $deferralRestartCountVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-RestartDeferral.log`""
+                Write-Host $ArgList
+                $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+                if ($DCUConfig.ExitCode -ne 0){
+                    $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+                    Write-Host "Exit: $($DCUConfig.ExitCode)"
+                    Write-Host "Description: $($ExitInfo.Description)"
+                    Write-Host "Resolution: $($ExitInfo.Resolution)"
+                }
+                
+            }
+            else {
+                [string]$systemRestartDeferralVar = "-systemRestartDeferral=$systemRestartDeferral"
+                $ArgList = "/configure $systemRestartDeferralVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-RestartDeferral.log`""
+                Write-Host $ArgList
+                $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+                if ($DCUConfig.ExitCode -ne 0){
+                    $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+                    Write-Host "Exit: $($DCUConfig.ExitCode)"
+                    Write-Host "Description: $($ExitInfo.Description)"
+                    Write-Host "Resolution: $($ExitInfo.Resolution)"
+                }
+            }
+        }
+    }
+
+    if ($delayDays){
+        $delayDaysVar = "-delayDays=$delayDays"
+        $ArgList = "/configure $delayDaysVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-delayDays.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+    #update Device Category
+    if ($updateDeviceCategoryFilter -eq "Disable"){
+        #do nothing, as default is ALl
+    }
+    else {
+        if ($updateDeviceCategoryAudio -eq "True"){
+            $DCAudio = "audio,"
+        }
+        if ($updateDeviceCategoryVideo -eq "True"){
+            $DCVideo = "video,"
+        }
+        if ($updateDeviceCategoryNetwork -eq "True"){
+            $DCNetwork = "network,"
+        }
+        if ($updateDeviceCategoryStorage -eq "True"){
+            $DCStorage = "storage,"
+        }
+        if ($updateDeviceCategoryInput -eq "True"){
+            $DCInput = "input,"
+        }
+        if ($updateDeviceCategoryChipset -eq "True"){
+            $DCChipset = "chipset,"
+        }
+        if ($updateDeviceCategoryOthers -eq "True"){
+            $DCOthers = "others,"
+        }
+        $updateDeviceCategoryString="$DCAudio$DCVideo$DCNetwork$DCStorage$DCInput$DCChipset$DCOthers"
+        #Trim Last ,
+        $updateDeviceCategoryString = $updateDeviceCategoryString.TrimEnd(',')
+        [string]$updateDeviceCategoryvar = "-updateDeviceCategory=$updateDeviceCategoryString"
+        $ArgList = "/configure $updateDeviceCategoryvar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateDeviceCategory.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+    
+    #Update Severity
+    #Confirm something is set
+    if ($updateSeverityFilter -eq "Disable"){
+        #do nothing, as default is All
+    }
+    else {
+        if ($updateSeveritySecurity -eq "True"){
+            $DCUSecurity = "security,"
+        }
+        if ($updateSeverityCritical -eq "True"){
+            $DCUCritical = "critical,"
+        }
+        if ($updateSeverityRecommended -eq "True"){
+            $DCURecommended = "recommended,"
+        }
+        if ($updateSeverityOptional -eq "True"){
+            $DCUOptional = "optional,"
+        }
+        $updateSeverityString="$DCUSecurity$DCUCritical$DCURecommended$DCUOptional"
+        #Trim Last ,
+        $updateSeverityString = $updateSeverityString.TrimEnd(',')
+        [string]$updateSeverityVar = "-updateSeverity=$updateSeverityString"
+        $ArgList = "/configure $updateSeverityVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateSeverity.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+    
+    #Update Type, confirm something is set
+    if ($updateTypeFilter -eq "Disable"){
+        #do nothing, as default is All
+    }
+    else {
+        if ($updateTypeBIOS -eq "True"){
+            $DCUBIOS = "bios,"
+        }
+        if ($updateTypeFirmware -eq "True"){
+            $DCUFirmware = "firmware,"
+        }
+        if ($updateTypeDriver -eq "True"){
+            $DCUDriver = "driver,"
+        }
+        if ($updateTypeApplication -eq "True"){
+            $DCUApplication = "application,"
+        }
+        if ($updateTypeOthers -eq "True"){
+            $DCUOther = "others,"
+        }
+        if ($updateTypeUtility -eq "True"){
+            $DCUUtility = "utility,"
+        }
+        $updateTypeString="$DCUBIOS$DCUFirmware$DCUDriver$DCUApplication$DCUOther$DCUUtility"
+        #Trim Last ,
+        $updateTypeString = $updateTypeString.TrimEnd(',')
+        [string]$updateTypeVar = "-updateType=$updateTypeString"
+        $ArgList = "/configure $updateTypeVar -outputlog=`"$LogPath\DCU-CLI-$($DateTimeStamp)-Configure-updateType.log`""
+        Write-Host $ArgList
+        $DCUCOnfig = Start-Process -FilePath "$DCUPath\dcu-cli.exe" -ArgumentList $ArgList -NoNewWindow -PassThru -Wait
+        if ($DCUConfig.ExitCode -ne 0){
+            $ExitInfo = Get-DCUExitInfo -DCUExit $DCUConfig.ExitCode
+            Write-Host "Exit: $($DCUConfig.ExitCode)"
+            Write-Host "Description: $($ExitInfo.Description)"
+            Write-Host "Resolution: $($ExitInfo.Resolution)"
+        }
+    }
+    
+    
+    
     Write-Host "=============================================================================="
 }
 
