@@ -715,6 +715,7 @@ function Test-WindowsDesktopRuntime {
 
 # Main Script Logic
 
+<#
 # If there is an Intel Management Controller Installer, do that manually, as it will crash the system if run via DCU
 #$IntelMCInstaller = Get-DCUUpdateList -SystemSKUNumber '0B04' -Latest | Where-Object {$_.name -match "Intel Management Engine Components"}
 $IntelMCInstaller = Get-DCUUpdateList -Latest | Where-Object {$_.name -match "Intel Management Engine Components"}
@@ -753,7 +754,7 @@ if ($IntelMCInstaller) {
         Write-Host "Failed to install Intel Management Engine Components. Exit Code: $($InstallProcess.ExitCode)" -ForegroundColor Red
     }
 }
-
+#>
 if ((Get-DCUVersion) -match "False"){
     # Do the Stuff
     write-host "Checking for Dell Command Update Latest Version"
