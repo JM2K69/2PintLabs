@@ -1,4 +1,4 @@
-<#Gary Blok - @gwblok - GARYTOWN.COM
+<#Gary Blok - @gwblok - 2PintSoftware.com
 
 DISCLAIMER: THIS IS NOT AN OFFICIAL DELL SCRIPT. I DO NOT WORK FOR DELL. 
 USE AT YOUR OWN RISK. I TAKE NO RESPONSIBILITY FOR ANYTHING THIS SCRIPT DOES. TEST IN A LAB FIRST.
@@ -713,6 +713,46 @@ function Test-WindowsDesktopRuntime {
 #endregion functions
 
 
+# Main Script Logic
+
+# If there is an Intel Management Controller Installer, do that manually, as it will crash the system if run via DCU
+#$IntelMCInstaller = Get-DCUUpdateList -SystemSKUNumber '0B04' -Latest | Where-Object {$_.name -match "Intel Management Engine Components"}
+$IntelMCInstaller = Get-DCUUpdateList -Latest | Where-Object {$_.name -match "Intel Management Engine Components"}
+
+if ($IntelMCInstaller) {
+    Write-Host "Found Intel Management Engine Components installer, running it manually."
+    $DownloadContentPath = "$env:SystemDrive\Drivers\Dls"
+    if (!(Test-Path -Path $DownloadContentPath)) {
+        New-Item -ItemType Directory -Path $DownloadContentPath -Force | Out-Null
+    }
+    
+    #Download the installer
+    $Name = $IntelMCInstaller.Name
+    $ID = $IntelMCInstaller.PackageID
+    $URL = $IntelMCInstaller.Path
+    try {
+        #Request-DeployRCustomContent -ContentName $($Driver.Id) -ContentFriendlyName $($Driver.Name) -URL "$($Driver.PackageExe)" -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
+        $destFile = Request-DeployRCustomContent -ContentName $ID -ContentFriendlyName $NAME -URL $URL -DestinationPath $DownloadContentPath -ErrorAction SilentlyContinue
+        $GetItemOutFile = Get-Item $destFile
+        $ExpandFile = $GetItemOutFile.FullName
+        if (Test-Path -path $ExpandFile) {
+            Write-Host "Downloaded driver to: $ExpandFile" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "Failed to download driver: $Name" -ForegroundColor red
+        Write-Host "Going to try again with Invoke-WebRequest" -ForegroundColor Yellow
+        $ExpandFile = Join-Path -Path $DownloadContentPath -ChildPath "$ID.exe"
+        Invoke-WebRequest -Uri $URL -OutFile $ExpandFile -UseBasicParsing
+    }
+    Write-Host "Installing Intel Management Engine Components: $Name"
+    #Install the Intel Management Engine Components Silently
+    $InstallProcess = Start-Process -FilePath $ExpandFile -ArgumentList "/s /l=$env:systemdrive\_2p\logs\$ID.log" -Wait -PassThru
+    if ($InstallProcess.ExitCode -eq 0) {
+        Write-Host "Installed Intel Management Engine Components successfully." -ForegroundColor Green
+    } else {
+        Write-Host "Failed to install Intel Management Engine Components. Exit Code: $($InstallProcess.ExitCode)" -ForegroundColor Red
+    }
+}
 
 if ((Get-DCUVersion) -match "False"){
     # Do the Stuff

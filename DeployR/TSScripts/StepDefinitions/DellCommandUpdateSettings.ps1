@@ -54,7 +54,8 @@ if (Get-Module -name "DeployR.Utility"){
     [String]$updateTypeDriver = ${TSEnv:updateTypeDriver}
     [String]$updateTypeApplication = ${TSEnv:updateTypeApplication}
     [String]$updateTypeOthers = ${TSEnv:updateTypeOthers}
-    
+    [String]$updateTypeUtility = ${TSEnv:updateTypeUtility}
+
 }
 else {
     #Testing outside of DeployR
@@ -93,8 +94,8 @@ else {
     [String]$updateTypeDriver = "True"
     [String]$updateTypeApplication = "False"
     [String]$updateTypeOthers = "False"
-    
-    
+    [String]$updateTypeUtility = "False"
+
 }
 
 
@@ -155,6 +156,7 @@ if ($updateTypeFilter -eq "Enable"){
     Write-Host "  Driver: $updateTypeDriver"
     Write-Host "  Application: $updateTypeApplication"
     Write-Host "  Others: $updateTypeOthers"
+    Write-Host "  Utility: $updateTypeUtility"
 }
 
 
@@ -1118,7 +1120,10 @@ else {
         if ($updateTypeOthers -eq "True"){
             $DCUOther = "others,"
         }
-        $updateTypeString="$DCUBIOS$DCUFirmware$DCUDriver$DCUApplication$DCUOther"
+        if ($updateTypeUtility -eq "True"){
+            $DCUUtility = "utility,"
+        }
+        $updateTypeString="$DCUBIOS$DCUFirmware$DCUDriver$DCUApplication$DCUOther$DCUUtility"
         #Trim Last ,
         $updateTypeString = $updateTypeString.TrimEnd(',')
         [string]$updateTypeVar = "-updateType=$updateTypeString"

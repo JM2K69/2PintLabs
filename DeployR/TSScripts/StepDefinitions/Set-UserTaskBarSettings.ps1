@@ -81,6 +81,7 @@ if ($TaskBarMoveStartLeft -eq $true) {
 # Start Menu Disable Bing Search Results
 if ($StartMenuDisableBing -eq $true) {
     Write-Host "Attempting to run: StartMenuDisableBing"
+    New-Item -Path "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Force | Out-Null
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Name "DisableSearchBoxSuggestions" -Value "1" -PropertyType Dword -Force
     $reg = New-ItemProperty "HKLM:\Default\Software\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value "0" -PropertyType Dword -Force
     try { $reg.Handle.Close() } catch {}

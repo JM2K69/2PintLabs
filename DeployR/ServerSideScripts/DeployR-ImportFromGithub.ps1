@@ -58,7 +58,14 @@ Function Get-DeployRStepsFromGitHub {<#
     Write-Host ""
     
     # Create download directory if it doesn't exist
-    if (!(Test-Path $DownloadPath)) {
+    if (Test-Path $DownloadPath) {
+        Write-Host "Download directory already exists: $DownloadPath" -ForegroundColor Green
+        #Delete And Recreate the Directory
+        Remove-Item -Path $DownloadPath -Recurse -Force
+        New-Item -ItemType Directory -Path $DownloadPath -Force | Out-Null
+        Write-Host "Recreated download directory: $DownloadPath" -ForegroundColor Yellow
+    }
+    else {
         Write-Host "Creating download directory: $DownloadPath" -ForegroundColor Yellow
         New-Item -ItemType Directory -Path $DownloadPath -Force | Out-Null
     }
@@ -186,21 +193,25 @@ dir c:\temp\StepDefinitionBackup -File | Import-DeployRStepDefinition
 dir c:\temp\TaskSequenceBackup -File | Import-DeployRTaskSequence
 #>
 Import-Module 'C:\Program Files\2Pint Software\DeployR\Client\PSModules\DeployR.Utility'
-Set-DeployRHost "http://localhost:7282"
+#Set-DeployRHost "http://localhost:7282"
 
 #Import Content for Steps
 $DownloadPath = "D:\DeployRGitHubImports"
+$DownloadStepsPath = "$DownloadPath\CustomSteps"
+$DownloadTSModulesPath = "$DownloadPath\TaskSequences"
+#Download the Steps from GitHub
 
 try {
-    Get-DeployRStepsFromGitHub -DownloadPath $DownloadPath
+    Get-DeployRStepsFromGitHub -DownloadPath $DownloadStepsPath
+    Get-DeployRStepsFromGitHub -DownloadPath $DownloadTSModulesPath -GitHubPath "DeployR/CustomTaskSequenceModules"
 }
 catch {
     Write-Error "Failed to download steps from GitHub: $_"
     exit 0
 }
 #Get Steps info from the Download Path but Exclude the ReferencedContent folder 
-if (Test-Path -Path "$DownloadPath\ReferencedContent") {
-    Get-ChildItem -Path "$DownloadPath\ReferencedContent" -Directory  | ForEach-Object {
+if (Test-Path -Path "$DownloadStepsPath\ReferencedContent") {
+    Get-ChildItem -Path "$DownloadStepsPath\ReferencedContent" -Directory  | ForEach-Object {
         $StepFolder = $_.FullName
         Write-Host "Importing Custom Step from: $StepFolder" -ForegroundColor Cyan
         Get-ChildItem -path $StepFolder -File | Where-Object {$_.Extension -eq ".json"} | ForEach-Object {
@@ -224,7 +235,7 @@ if (Test-Path -Path "$DownloadPath\ReferencedContent") {
 }
 
 #Import Steps
-Get-ChildItem -Path $DownloadPath -Directory | Where-Object {$_.Name -ne "ReferencedContent"} | ForEach-Object {
+Get-ChildItem -Path $DownloadStepsPath -Directory | Where-Object {$_.Name -ne "ReferencedContent"} | ForEach-Object {
     $StepFolder = $_.FullName
     Write-Host "Importing Custom Step from: $StepFolder" -ForegroundColor Cyan
     Get-ChildItem -path $StepFolder -File | Where-Object {$_.Extension -eq ".json"} | ForEach-Object {
@@ -232,5 +243,17 @@ Get-ChildItem -Path $DownloadPath -Directory | Where-Object {$_.Name -ne "Refere
         $StepJSON = Get-Content -Path $StepFile -Raw | ConvertFrom-Json
         Write-Host "Importing step definition from file: $StepFile" -ForegroundColor Yellow
         Import-DeployRStepDefinition -SourceFile $StepFile -Force
+    }
+}
+
+#Import Task Sequences
+Get-ChildItem -Path $DownloadTSModulesPath -Directory | ForEach-Object {
+    $TSFolder = $_.FullName
+    Write-Host "Importing Task Sequence from: $TSFolder" -ForegroundColor Cyan
+    Get-ChildItem -path $TSFolder -File | Where-Object {$_.Extension -eq ".json"} | ForEach-Object {
+        $TSFile = $_.FullName
+        $TSJSON = Get-Content -Path $TSFile -Raw | ConvertFrom-Json
+        Write-Host "Importing task sequence from file: $TSFile" -ForegroundColor Yellow
+        Import-DeployRTaskSequence -SourceFile $TSFile -Force
     }
 }
