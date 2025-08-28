@@ -183,7 +183,6 @@ Start-Process -FilePath $ToolKitFile -ArgumentList "/quiet /extract:$M365Cache" 
     <Language ID="MatchOS" />
     <ExcludeApp ID="Groove" />
     <ExcludeApp ID="OneDrive" />
-    <ExcludeApp ID="Teams" />
     </Product>
     </Add>
     <Property Name="SharedComputerLicensing" Value="0" />
@@ -262,8 +261,6 @@ if ($Project -ne "none")
     $newXmlNameElement.SetAttribute("ID","Groove")
     $newXmlNameElement = $newProductElement.AppendChild($xml.CreateElement("ExcludeApp"))
     $newXmlNameElement.SetAttribute("ID","OneDrive")    
-    $newXmlNameElement = $newProductElement.AppendChild($xml.CreateElement("ExcludeApp"))
-    $newXmlNameElement.SetAttribute("ID","Teams")  
     Write-CMTraceLog -Message "Adding $Project to Install XML" -Type 1 -Component "o365script"
 }  
 
@@ -293,8 +290,6 @@ if ($Visio -ne "none")
     $newXmlNameElement.SetAttribute("ID","Groove")
     $newXmlNameElement = $newProductElement.AppendChild($xml.CreateElement("ExcludeApp"))
     $newXmlNameElement.SetAttribute("ID","OneDrive")     
-    $newXmlNameElement = $newProductElement.AppendChild($xml.CreateElement("ExcludeApp"))
-    $newXmlNameElement.SetAttribute("ID","Teams")  
     Write-CMTraceLog -Message "Adding Visio Pro to Install XML" -Type 1 -Component "o365script"
 }
 
@@ -311,8 +306,6 @@ if ($AccessRuntime -eq "true")
     $newXmlNameElement.SetAttribute("ID","Groove")
     $newXmlNameElement = $newProductElement.AppendChild($xml.CreateElement("ExcludeApp"))
     $newXmlNameElement.SetAttribute("ID","OneDrive")    
-    $newXmlNameElement = $newProductElement.AppendChild($xml.CreateElement("ExcludeApp"))
-    $newXmlNameElement.SetAttribute("ID","Teams")    
     Write-CMTraceLog -Message "Adding Access Runtime to Install XML" -Type 1 -Component "o365script"
 }  
 
