@@ -448,11 +448,24 @@ $xml.Save("$M365Cache\configuration.xml")
 
 
 Write-CMTraceLog -Message "Starting Office 365 Install" -Type 1 -Component "o365script"
-$InstallOffice = Start-Process -FilePath $M365Cache\setup.exe -ArgumentList "/configure $M365Cache\configuration.xml" -Wait -PassThru -WindowStyle Hidden
+Write-Host "Starting Office 365 Install, this may take a while..."
+$InstallOffice = Start-Process -FilePath $M365Cache\setup.exe -ArgumentList "/configure $M365Cache\configuration.xml" -PassThru -WindowStyle Hidden
 $OfficeInstallCode = $InstallOffice.ExitCode
+
+Start-Sleep -Seconds 60
+#Look for the sub process called setup that Office triggers, and monitor that until it finishes
+$setupProcess = Get-Process -Name "setup" -ErrorAction SilentlyContinue
+if ($setupProcess) {
+    Write-Host "Monitoring Office setup process..."
+    $setupProcess | Wait-Process
+}
+
+Write-Host "Finished Office 365 Install with code: $OfficeInstallCode"
 Write-CMTraceLog -Message "Finished Office Install with code: $OfficeInstallCode" -Type 1 -Component "o365script"
-
-
+Start-Sleep -Seconds 5
+Write-CMTraceLog -Message "Stopping OfficeC2RClient process" -Type 1 -Component "o365script"
+Write-Host "Stopping OfficeC2RClient process"
+Get-Process -name OfficeC2RClient | Stop-Process -Force
 
 
 
