@@ -2428,9 +2428,19 @@ else {
         $Drivers = $Drivers | Where-Object {$_.Name -notmatch "Firmware"}
         Write-Host "Found $($Drivers.Count) drivers to process. [Including Graphics & Audio]"
         #Graphics
+        #If Intel, and several available, only grab latest
         if ($IncludeGraphicsIntel -eq "true") {
             $Graphics = $Drivers | Where-Object {($_.Category -match "Video" -and $_.Name -match "Intel")}
+            if ($Graphics.Count -gt 1) {
+                Write-Host "Reducing Graphic Options, Currently Selected"
+                foreach ($Graphic in $Graphics){
+                    write-host "$($Graphic.Name) | $($Graphic.VendorVersion) | $($Graphic.ReleaseDate)"
+                }
+                $Graphics = $Graphics | Sort-Object -Property "ReleaseDate" | Select-Object -Last 1
+                Write-Host "Narrowed down to $($Graphics.Name) | $($Graphics.VendorVersion) | $($Graphics.ReleaseDate)"
+            }
         }
+        #If not limited, just grab everything, including multiples of the same vendor
         if ($IncludeGraphics -eq "true") {
             $Graphics = $Drivers | Where-Object {$_.Category -match "Video" }
         }
