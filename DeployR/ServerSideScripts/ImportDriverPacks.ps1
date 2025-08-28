@@ -5,7 +5,6 @@ function Import-DriverPack {
     [string]$MakeAlias,
     [parameter(Mandatory=$true)]
     [string]$ModelAlias,
-    [parameter(Mandatory=$true)]
     [string]$FriendlyModel, # e.g., 'Latitude 5580' vs '07A8' ModelAlias
     [string]$OSVer,  # e.g., 'Win10' or 'Win11'
     [string]$URL,  # URL to download the driver pack
