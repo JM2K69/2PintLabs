@@ -112,12 +112,53 @@ else{
 }
 
 $SourceDir = Get-Location
-$M365Cache = "C:\ProgramData\M365_Cache"
-$RegistryPath = "HKLM:\SOFTWARE\2Pint Software\DeployR\M365" #Sets Registry Location used for Toast Notification
-$ScriptVer = "25.08.26.01"
+$M365Cache = "C:\windows\Temp\M365_Cache" #Sets Registry Location used for Toast Notification
+$ScriptVer = "25.08.28.01"
+
+
+    
+
+
+
+
+Write-CMTraceLog -Message "=====================================================" -Type 1 -Component "o365script"
+Write-CMTraceLog -Message "Starting Script version $ScriptVer..." -Type 1 -Component "o365script"
+Write-CMTraceLog -Message "=====================================================" -Type 1 -Component "o365script"
+
+#Report Variables
+Write-Host "====================================================="
+Write-Host "Starting M365 Install Script Version: $ScriptVer..."
+Write-Host "====================================================="
+Write-Host ""
+Write-Host "Reporting Variables"
+Write-Host "Project = $Project"
+Write-Host "Visio = $Visio"
+Write-Host "Access = $Access"
+Write-Host "AccessRuntime = $AccessRuntime"
+Write-Host "IncludePublisher = $IncludePublisher"
+Write-Host "IncludeOneNote = $IncludeOneNote"
+Write-Host "IncludeSkype = $IncludeSkype"
+Write-Host "IncludeOutlook = $IncludeOutlook"
+Write-Host "IncludePowerPoint = $IncludePowerPoint"
+#"IncludeBing" = $IncludeBing
+Write-Host "SharedComputerLicensing = $SharedComputerLicensing"
+Write-Host "AUTOACTIVATE = $AUTOACTIVATE"
+Write-Host "PinIconsToTaskbar = $PinIconsToTaskbar"
+Write-Host "DeviceBasedLicensing = $DeviceBasedLicensing"
+Write-Host "Channel = $Channel"
+Write-Host "Language = $Language"
+Write-Host "SetLanguageDefault = $SetLanguageDefault"
+Write-Host "CompanyValue = $CompanyValue"
+Write-Host "OfficeDeployToolKitURL = $OfficeDeployToolKitURL"
+
 
 #Download Office Deployment ToolKit & Extract
-$tempDownloadPath = "C:\Windows\Temp"
+$tempDownloadPath = $M365Cache
+if (!(Test-Path $M365Cache)) {
+    New-Item -ItemType Directory -Path $M365Cache -Force | Out-Null
+}
+
+Write-Host "Downloading Office Deployment ToolKit from $OfficeDeployToolKitURL to $tempDownloadPath"
 Write-CMTraceLog -Message "Downloading Office Deployment ToolKit from $OfficeDeployToolKitURL to $tempDownloadPath" -Type 1 -Component "o365script"
 try {
     $destFile = Request-DeployRCustomContent -ContentName "M365" -ContentFriendlyName "Office Deployment ToolKit" -URL $URL -DestinationPath $tempDownloadPath -ErrorAction SilentlyContinue
@@ -128,41 +169,9 @@ try {
     $ToolKitFile = "$tempDownloadPath\officedeploymenttool.exe"
     Invoke-WebRequest -Uri $OfficeDeployToolKitURL -OutFile $ToolKitFile -ErrorAction SilentlyContinue
 }
-
+Write-Host "Extracting Office Deployment ToolKit to $M365Cache"
 Write-CMTraceLog -Message "Extracting Office Deployment ToolKit to $M365Cache" -Type 1 -Component "o365script"
 Start-Process -FilePath $ToolKitFile -ArgumentList "/quiet /extract:$M365Cache" -Wait -NoNewWindow
-
-
-
-
-
-Write-CMTraceLog -Message "=====================================================" -Type 1 -Component "o365script"
-Write-CMTraceLog -Message "Starting Script version $ScriptVer..." -Type 1 -Component "o365script"
-Write-CMTraceLog -Message "=====================================================" -Type 1 -Component "o365script"
-
-#Report Variables
-$ReportVariables = @{
-    
-    "Project" = $Project
-    "Visio" = $Visio
-    "Access" = $Access
-    "AccessRuntime" = $AccessRuntime
-    "IncludePublisher" = $IncludePublisher
-    "IncludeOneNote" = $IncludeOneNote
-    "IncludeSkype" = $IncludeSkype
-    "IncludeOutlook" = $IncludeOutlook
-    "IncludePowerPoint" = $IncludePowerPoint
-    #"IncludeBing" = $IncludeBing
-    "SharedComputerLicensing" = $SharedComputerLicensing
-    "AUTOACTIVATE" = $AUTOACTIVATE
-    "PinIconsToTaskbar" = $PinIconsToTaskbar
-    "DeviceBasedLicensing" = $DeviceBasedLicensing
-    "Channel" = $Channel
-    "Language" = $Language
-    "SetLanguageDefault" = $SetLanguageDefault
-    "CompanyValue" = $CompanyValue
-    "OfficeDeployToolKitURL" = $OfficeDeployToolKitURL
-}
 
 #Create XML (Configuration.XML) if Install Mode (Not PreCache Mode)
 
