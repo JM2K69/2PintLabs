@@ -40,7 +40,7 @@ $InventoryOSDRegPath = if (Get-Module -Name "DeployR.Utility") {
 
 #Get the Task Sequence Environment Variables
 if (Get-Module -Name "DeployR.Utility") {
-    $InventoryWinPEInfo =       ${TSEnv:InventoryWinPEBuildInfo}
+    $InventoryWinPEInfo =       ${TSEnv:InventoryWinPEInfo}
     $InventoryOSIMAGENAME =     ${TSEnv:InventoryOSIMAGENAME}
     $InventoryDEPLOYRHOST =     ${TSEnv:InventoryDEPLOYRHOST}
     $InventoryOSIMAGEVERSION =  ${TSEnv:InventoryOSIMAGEVERSION}
