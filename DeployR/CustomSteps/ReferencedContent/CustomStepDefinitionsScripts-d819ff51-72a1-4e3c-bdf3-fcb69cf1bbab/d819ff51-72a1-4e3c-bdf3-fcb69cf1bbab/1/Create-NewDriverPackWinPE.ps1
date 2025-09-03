@@ -2311,7 +2311,10 @@ if ($MakeAlias -eq "Panasonic Corporation"){
     }
 }
 
-
+if ($DriverPackOption -eq "Migrate Only"){
+    Write-Host "Driver Pack Option is set to MigrateOnly, exiting script."
+    exit 0
+}
 #Find extraction tools
 if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"){
     $ToolsPath = "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x64"
@@ -2325,10 +2328,17 @@ if (Test-path -Path "X:\_2P\content\00000000-0000-0000-0000-000000000002\Tools\x
     Write-Host "Unable to find Tools Path, please ensure the Tools are available in the expected location."
     Exit 1
 }
-
-if ($DriverPackOption -eq "Migrate Only"){
-    Write-Host "Driver Pack Option is set to MigrateOnly, exiting script."
-    exit 0
+if (Test-Path -path $SevenZipPath){
+    Write-Host "Found 7-Zip at $SevenZipPath"
+} else {
+    Write-Host "Unable to find 7-Zip at $SevenZipPath, please ensure the Tools are available in the expected location."
+    Exit 1
+}   
+if (Test-Path -path $InnoExtractPath){
+    Write-Host "Found InnoExtract at $InnoExtractPath"
+} else {
+    Write-Host "Unable to find InnoExtract at $InnoExtractPath, please ensure the Tools are available in the expected location."
+    Exit 1
 }
 
 #Import DeployR.Utility module
@@ -2348,6 +2358,8 @@ if (!(Test-Path -Path $ExtractedDriverLocation)) {
 
 #Using the Traditional Driver Pack from the OEM
 #Panasonic Corporation is a special case, as it does not have a Driver Update Catalog Option yet, but rather a single driver download
+write-host ""
+Write-Host "---------------------------------------------------------------------------"
 if ($DriverPackOption -eq "Standard" -or $MakeAlias -eq "Panasonic Corporation" -or $MakeAlias -eq "Microsoft") {
     Write-Host "Using Standard Driver Pack for WinPE"
     if ($MakeAlias -eq "Lenovo"){
@@ -2507,7 +2519,8 @@ else {
     Write-Host "Found $($Drivers.Count) drivers to process."
     Write-Output $Drivers.Name
     
-    
+    write-host ""
+    Write-Host "---------------------------------------------------------------------------"
     Write-Host "Starting Downloading Drivers to $DownloadContentPath"
     
     Foreach ($Driver in $Drivers){
@@ -2558,6 +2571,8 @@ else {
             Write-Host "No URL found for this driver, skipping download."
         }
     }
+    write-host ""
+    Write-Host "---------------------------------------------------------------------------"
     Write-Host "Starting Extracting Drivers to $ExtractedDriverLocation"
     $DriversDownloads = Get-ChildItem -Path $DownloadContentPath -Filter *.exe -Recurse
     if ($DriversDownloads) {
@@ -2585,8 +2600,13 @@ else {
                         Write-Host "Failed to expand Dell driver, trying with 7zip" -ForegroundColor Yellow
                         Start-Process -FilePath $SevenZipPath -ArgumentList "x $ExpandFile -o$ExtractedDriverPath -y" -Wait -NoNewWindow -PassThru
                     } catch {
-                        Write-Host "Failed to expand Dell driver with Inno" -ForegroundColor Red
-                        Start-Process -FilePath $InnoExtractPath -ArgumentList "-e -d $ExtractedDriverPath $ExpandFile" -Wait -NoNewWindow -PassThru
+                        try { 
+                            Write-Host "Failed to expand Dell driver with Inno" -ForegroundColor Red
+                            Start-Process -FilePath $InnoExtractPath -ArgumentList "-e -d $ExtractedDriverPath $ExpandFile" -Wait -NoNewWindow -PassThru
+                        }
+                        catch{
+                            write-Host "Unable to Extract Driver File with any of the 3 methods."
+                        }
                     }
                 }
                 #Start-Process -FilePath $ExpandFile -ArgumentList "/s /e=`"$ExtractedDriverPath`"" -Wait -NoNewWindow -PassThru
