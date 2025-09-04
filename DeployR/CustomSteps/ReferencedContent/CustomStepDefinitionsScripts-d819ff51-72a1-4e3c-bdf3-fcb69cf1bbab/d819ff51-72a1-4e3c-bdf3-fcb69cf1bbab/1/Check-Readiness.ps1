@@ -15,6 +15,7 @@ if (Get-Module -name "DeployR.Utility"){
     $CRTPM2 = ${TSEnv:CRTPM2}
     $CRMinWin11 = ${TSEnv:CRMinWin11}
     $HostValueOSType = if (${TSEnv:IsServerOS} -eq "true") { "Server" } else { "Client" }
+    $DebugLogging = ${TSEnv:DebugLogging}
 }
 else{
     $CRMinMemory = "4"
@@ -24,13 +25,14 @@ else{
     $CRTPM2 = "true"
     $CRMinWin11 = "true"
     $HostValueOSType = if ((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1) { "Client" } else { "Server" }
+    $DebugLogging = "true"
 }
-
 if ($env:SystemDrive -eq "X:"){
     $IsWinPE = $true
     Write-Host "Running in WinPE environment, Several Checks do not apply"
 }
 else {$IsWinPE = $false}
+$DebugLogging = $true
 
 #Report Step Variables
 Write-Host "================================================================"
@@ -77,7 +79,12 @@ else {
 
 #region functions
 function Get-Win11Readiness {
-    
+    [CmdletBinding()]
+    param (
+        [switch]$DebugLogging = $true
+    )
+
+
     <#
     Modified for OSD by @gwblok
     
@@ -351,7 +358,8 @@ using System.Runtime.InteropServices;
     }
 "@
     
-    # Storage
+    #region Storage
+    Write-Host "Getting OS Drive Size"
     try {
         
         if ($InWinPE){
@@ -359,8 +367,8 @@ using System.Runtime.InteropServices;
             $osDriveSize = $osDrive | Select-Object @{Name = "SizeGB"; Expression = { $_.Size / 1GB -as [int] } } 
         }
         else {
-            $osDrive = Get-WmiObject -Class Win32_OperatingSystem | Select-Object -Property SystemDrive
-            $osDriveSize = Get-WmiObject -Class Win32_LogicalDisk -filter "DeviceID='$($osDrive.SystemDrive)'" | Select-Object @{Name = "SizeGB"; Expression = { $_.Size / 1GB -as [int] } } 
+            $osDrive = Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -Property SystemDrive
+            $osDriveSize = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$($osDrive.SystemDrive)'" | Select-Object @{Name = "SizeGB"; Expression = { $_.Size / 1GB -as [int] } } 
         }
         
         if ($null -eq $osDriveSize) {
@@ -369,6 +377,7 @@ using System.Runtime.InteropServices;
             $outObject.logging += $logFormatWithBlob -f $STORAGE_STRING, "Storage is null", $FAIL_STRING
             $exitCode = 1
             $HR_Storage = $FAIL_STRING
+            if ($DebugLogging) {Write-Host "OS Drive Size is null"}
         }
         elseif ($osDriveSize.SizeGB -lt $MinOSDiskSizeGB) {
             UpdateReturnCode -ReturnCode 1
@@ -376,11 +385,13 @@ using System.Runtime.InteropServices;
             $outObject.logging += $logFormatWithUnit -f $STORAGE_STRING, $OS_DISK_SIZE_STRING, ($osDriveSize.SizeGB), $GB_UNIT_STRING, $FAIL_STRING
             $exitCode = 1
             $HR_Storage = $FAIL_STRING
+            if ($DebugLogging) {Write-Host "OS Drive Size is less than $MinOSDiskSizeGB GB"}
         }
         else {
             $outObject.logging += $logFormatWithUnit -f $STORAGE_STRING, $OS_DISK_SIZE_STRING, ($osDriveSize.SizeGB), $GB_UNIT_STRING, $PASS_STRING
             UpdateReturnCode -ReturnCode 0
             $HR_Storage = $PASS_STRING
+            if ($DebugLogging) {Write-Host "OS Drive Size is valid: $($osDriveSize.SizeGB) GB"}
         }
     }
     catch {
@@ -389,11 +400,14 @@ using System.Runtime.InteropServices;
         $outObject.logging += $logFormatException -f "$($_.Exception.GetType().Name) $($_.Exception.Message)"
         $exitCode = 1
         $HR_Storage = $FAIL_STRING
+        if ($DebugLogging) {Write-Host "Exception getting OS Drive Size: $($_.Exception.Message)"}
     }
-    
-    # Memory (bytes)
+    #endregion
+
+    #region Memory (bytes)
+    if ($DebugLogging) {Write-Host "Getting Memory Details"}
     try {
-        $memory = Get-WmiObject Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object @{Name = "SizeGB"; Expression = { $_.Sum / 1GB -as [int] } }
+        $memory = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum | Select-Object @{Name = "SizeGB"; Expression = { $_.Sum / 1GB -as [int] } }
         
         if ($null -eq $memory) {
             UpdateReturnCode -ReturnCode 1
@@ -401,7 +415,7 @@ using System.Runtime.InteropServices;
             $outObject.logging += $logFormatWithBlob -f $MEMORY_STRING, "Memory is null", $FAIL_STRING
             $exitCode = 1
             $HR_Memory = $FAIL_STRING
-            
+            if ($DebugLogging) {Write-Host "Memory is null"}
         }
         elseif ($memory.SizeGB -lt $MinMemoryGB) {
             UpdateReturnCode -ReturnCode 1
@@ -409,12 +423,13 @@ using System.Runtime.InteropServices;
             $outObject.logging += $logFormatWithUnit -f $MEMORY_STRING, $SYSTEM_MEMORY_STRING, ($memory.SizeGB), $GB_UNIT_STRING, $FAIL_STRING
             $exitCode = 1
             $HR_Memory = $FAIL_STRING
-            
+            if ($DebugLogging) {Write-Host "Memory is less than $MinMemoryGB GB"}
         }
         else {
             $outObject.logging += $logFormatWithUnit -f $MEMORY_STRING, $SYSTEM_MEMORY_STRING, ($memory.SizeGB), $GB_UNIT_STRING, $PASS_STRING
             UpdateReturnCode -ReturnCode 0
             $HR_Memory = $PASS_STRING
+            if ($DebugLogging) {Write-Host "Memory is valid: $($memory.SizeGB) GB"}
         }
     }
     catch {
@@ -423,9 +438,12 @@ using System.Runtime.InteropServices;
         $outObject.logging += $logFormatException -f "$($_.Exception.GetType().Name) $($_.Exception.Message)"
         $exitCode = 1
         $HR_Memory = $FAIL_STRING
+        if ($DebugLogging) {Write-Host "Exception getting Memory: $($_.Exception.Message)"}
     }
-    
-    # TPM
+    #endregion
+
+    #region TPM
+    if ($DebugLogging) {Write-Host "Getting TPM Status"}
     try {
         if ($InWinPE){
             $tpm = Get-CimInstance -Namespace "ROOT\cimv2\Security\MicrosoftTpm" -ClassName Win32_TPM 
@@ -442,9 +460,10 @@ using System.Runtime.InteropServices;
             $outObject.logging += $logFormatWithBlob -f $TPM_STRING, "TPM is null", $FAIL_STRING
             $exitCode = 1
             $HR_TPM = $FAIL_STRING
+            if ($DebugLogging) {Write-Host "TPM is null"}
         }
         elseif ($tpm.IsOwned_InitialValue -or $tpm.TpmPresent) {
-            $tpmVersion = Get-WmiObject -Class Win32_Tpm -Namespace root\CIMV2\Security\MicrosoftTpm | Select-Object -Property SpecVersion
+            $tpmVersion = Get-CimInstance -ClassName Win32_Tpm -Namespace root\CIMV2\Security\MicrosoftTpm | Select-Object -Property SpecVersion
             
             if ($null -eq $tpmVersion.SpecVersion) {
                 UpdateReturnCode -ReturnCode 1
@@ -452,6 +471,7 @@ using System.Runtime.InteropServices;
                 $outObject.logging += $logFormat -f $TPM_STRING, $TPM_VERSION_STRING, "null", $FAIL_STRING
                 $exitCode = 1
                 $HR_TPM = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "TPM Version is null"}
             }
             
             $majorVersion = $tpmVersion.SpecVersion.Split(",")[0] -as [int]
@@ -461,11 +481,13 @@ using System.Runtime.InteropServices;
                 $outObject.logging += $logFormat -f $TPM_STRING, $TPM_VERSION_STRING, ($tpmVersion.SpecVersion), $FAIL_STRING
                 $exitCode = 1
                 $HR_TPM = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "TPM Version is less than 2: $($tpmVersion.SpecVersion)"}
             }
             else {
                 $outObject.logging += $logFormat -f $TPM_STRING, $TPM_VERSION_STRING, ($tpmVersion.SpecVersion), $PASS_STRING
                 UpdateReturnCode -ReturnCode 0
                 $HR_TPM = $PASS_STRING
+                if ($DebugLogging) {Write-Host "TPM Version is valid: $($tpmVersion.SpecVersion)"}
             }
         }
         else {
@@ -473,6 +495,7 @@ using System.Runtime.InteropServices;
                 UpdateReturnCode -ReturnCode -1
                 $outObject.logging += $logFormat -f $TPM_STRING, $TPM_VERSION_STRING, $UNDETERMINED_STRING, $UNDETERMINED_CAPS_STRING
                 $outObject.logging += $logFormatException -f $tpm
+                if ($DebugLogging) {Write-Host "TPM is undetermined"}
             }
             else {
                 UpdateReturnCode -ReturnCode  1
@@ -484,9 +507,11 @@ using System.Runtime.InteropServices;
                     $outObject.logging += $logFormat -f $TPM_STRING, $TPM_VERSION_STRING, ($tpm.TpmPresent), $FAIL_STRING
                 }
                 $HR_TPM = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "TPM is failed"}
             }
             $exitCode = 1
             $HR_TPM = $FAIL_STRING
+            if ($DebugLogging) {Write-Host "TPM is not owned or not present"}
         }
     }
     catch {
@@ -495,19 +520,22 @@ using System.Runtime.InteropServices;
         $outObject.logging += $logFormatException -f "$($_.Exception.GetType().Name) $($_.Exception.Message)"
         $exitCode = 1
         $HR_TPM = $FAIL_STRING
+        if ($DebugLogging) {Write-Host "Exception getting TPM: $($_.Exception.Message)"}
     }
-    
-    # CPU Details
-    
-    try {
-        $cpuDetails = @(Get-WmiObject -Class Win32_Processor)[0]
-        
+    #endregion
+
+    #region CPU Details
+    if ($DebugLogging) {Write-Host "Getting CPU Details"}
+    #try {
+        $cpuDetails = Get-CimInstance -ClassName Win32_Processor
+        #$cpuDetails = @(Get-CimInstance -ClassName Win32_Processor)[0]
         if ($null -eq $cpuDetails) {
             UpdateReturnCode -ReturnCode 1
             $exitCode = 1
             $outObject.returnReason += $logFormatReturnReason -f $PROCESSOR_STRING
             $outObject.logging += $logFormatWithBlob -f $PROCESSOR_STRING, "CpuDetails is null", $FAIL_STRING
             $HR_CPU = $FAIL_STRING
+            if ($DebugLogging) {Write-Host "CpuDetails is null"}
         }
         else {
             $processorCheckFailed = $false
@@ -518,6 +546,7 @@ using System.Runtime.InteropServices;
                 $processorCheckFailed = $true
                 $exitCode = 1
                 $HR_CPU = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "CpuDetails.AddressWidth is null or not equal to $RequiredAddressWidth"}
             }
             
             # ClockSpeed is in MHz
@@ -526,6 +555,7 @@ using System.Runtime.InteropServices;
                 $processorCheckFailed = $true
                 $exitCode = 1
                 $HR_CPU = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "CpuDetails.MaxClockSpeed is null or less than $MinClockSpeedMHz"}
             }
             
             # Number of Logical Cores
@@ -547,34 +577,41 @@ using System.Runtime.InteropServices;
                 $processorCheckFailed = $true
                 $exitCode = 1
                 $HR_CPU = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "CpuFamily is not valid: $($cpuFamilyResult.Message)"}
             }
             
             if ($processorCheckFailed) {
                 $outObject.returnReason += $logFormatReturnReason -f $PROCESSOR_STRING
                 $outObject.logging += $logFormatWithBlob -f $PROCESSOR_STRING, ($cpuDetailsLog), $FAIL_STRING
                 $HR_CPU = $FAIL_STRING
+                if ($DebugLogging) {Write-Host "Processor check failed"}
             }
             else {
                 $outObject.logging += $logFormatWithBlob -f $PROCESSOR_STRING, ($cpuDetailsLog), $PASS_STRING
                 UpdateReturnCode -ReturnCode 0
                 $HR_CPU = $PASS_STRING
+                if ($DebugLogging) {Write-Host "Processor check passed"}
             }
         }
-    }
-    catch {
+    #}
+    <#catch {
         UpdateReturnCode -ReturnCode -1
         $outObject.logging += $logFormat -f $PROCESSOR_STRING, $PROCESSOR_STRING, $UNDETERMINED_STRING, $UNDETERMINED_CAPS_STRING
         $outObject.logging += $logFormatException -f "$($_.Exception.GetType().Name) $($_.Exception.Message)"
         $exitCode = 1
         $HR_CPU = $FAIL_STRING
-    }
-    
-    # SecureBoot
+        if ($DebugLogging) {Write-Host "Exception getting CpuDetails: $($_.Exception.Message)"}
+    }#>
+    #endregion
+
+    #region SecureBoot
+    if ($DebugLogging) {Write-Host "Getting Secure Boot Status"}
     try {
         $isSecureBootEnabled = Confirm-SecureBootUEFI
         $outObject.logging += $logFormatWithBlob -f $SECUREBOOT_STRING, $CAPABLE_STRING, $PASS_STRING
         UpdateReturnCode -ReturnCode 0
         $HR_SecureBoot = $PASS_STRING
+        if ($DebugLogging) {Write-Host "Secure Boot is enabled"}
     }
     catch [System.PlatformNotSupportedException] {
         # PlatformNotSupportedException "Cmdlet not supported on this platform." - SecureBoot is not supported or is non-UEFI computer.
@@ -583,6 +620,7 @@ using System.Runtime.InteropServices;
         $outObject.logging += $logFormatWithBlob -f $SECUREBOOT_STRING, $NOT_CAPABLE_STRING, $FAIL_STRING
         $exitCode = 1
         $HR_SecureBoot = $FAIL_STRING
+        if ($DebugLogging) {Write-Host "Secure Boot is not capable"}
     }
     catch [System.UnauthorizedAccessException] {
         UpdateReturnCode -ReturnCode -1
@@ -590,6 +628,7 @@ using System.Runtime.InteropServices;
         $outObject.logging += $logFormatException -f "$($_.Exception.GetType().Name) $($_.Exception.Message)"
         $exitCode = 1
         $HR_SecureBoot = $FAIL_STRING
+        if ($DebugLogging) {Write-Host "Secure Boot is not owned or not present"}
     }
     catch {
         UpdateReturnCode -ReturnCode -1
@@ -597,13 +636,14 @@ using System.Runtime.InteropServices;
         $outObject.logging += $logFormatException -f "$($_.Exception.GetType().Name) $($_.Exception.Message)"
         $exitCode = 1
         $HR_SecureBoot = $FAIL_STRING
+        if ($DebugLogging) {Write-Host "Exception getting Secure Boot: $($_.Exception.Message)"}
     }
-    
-    # i7-7820hq CPU
+    #endregion
+    #region i7-7820hq CPU
     try {
         $supportedDevices = @('surface studio 2', 'precision 5520')
-        $systemInfo = @(Get-WmiObject -Class Win32_ComputerSystem)[0]
-        
+        $systemInfo = @(Get-CimInstance -ClassName Win32_ComputerSystem)[0]
+
         if ($null -ne $cpuDetails) {
             if ($cpuDetails.Name -match 'i7-7820hq cpu @ 2.90ghz'){
                 $modelOrSKUCheckLog = $systemInfo.Model.Trim()
@@ -623,7 +663,7 @@ using System.Runtime.InteropServices;
             $exitCode = 1
         }
     }
-    
+    #endregion
     Switch ($outObject.returnCode) {
         
         0 { $outObject.returnResult = $CAPABLE_CAPS_STRING }
@@ -666,12 +706,12 @@ using System.Runtime.InteropServices;
     $Global:Readiness.Memory = $HR_Memory
     #Write-Output "HR_Storage = $HR_Storage"
     $Global:Readiness.Storage= $HR_Storage
-    
+    $outObject | ConvertTo-Json -Depth 10 | Out-File -FilePath $env:TEMP\Win11Readiness.json -Force
     return $Global:Readiness
     
     
     
-    #$outObject | Out-File $env:TEMP\Win11Readiness.txt
+    
 }
 
 #endregion
@@ -680,7 +720,13 @@ using System.Runtime.InteropServices;
 
 
 #Get the Win11 data
-$Win11Readiness = Get-Win11Readiness
+if ($DebugLogging){
+    Write-Host "Getting Windows 11 Readiness Data - Debug Logging Enabled"
+    $Win11Readiness = Get-Win11Readiness -DebugLogging
+}
+else {
+    $Win11Readiness = Get-Win11Readiness
+}
 
 # Start the Compares
 Write-host "Starting Requirement Checks"
@@ -691,6 +737,7 @@ if ($IsWinPE -eq $false){
     #Check for Required Minimum OS Version
     if ($null -ne $CRMinOSVer -and $CRMinOSVer -ne ""){
         #If Set, compare to Current OS Build and ensure Current OS Build is higher
+        Write-Host ""
         Write-Host "Checking Minimum OS Version"
         if ($HostValueCurrentBuild -lt $CRMinOSVer) {
             $Compliant = $false
@@ -703,6 +750,7 @@ if ($IsWinPE -eq $false){
     #Check for Required Free Storage
     if ($null -ne $CRMinFreeStorage -and $CRMinFreeStorage -ne ""){
         #If Set, compare to Current Free Storage and ensure Current Free Storage is higher
+        Write-Host ""
         Write-Host "Checking Minimum Free Storage"
         if ($HostValueFreeStorage -lt $CRMinFreeStorage) {
             $Compliant = $false
@@ -715,6 +763,7 @@ if ($IsWinPE -eq $false){
     #Check for Required OS Type
     if ($null -ne $CROSType -and $CROSType -ne ""){
         #If Set, compare to Current OS Type and ensure they match
+        Write-Host ""
         Write-Host "Checking OS Type (Client of Server OS)"
         if ($HostValueOSType -ne $CROSType) {
             $Compliant = $false
@@ -731,17 +780,23 @@ if ($IsWinPE -eq $false){
 #Check if $CRMinMemory is set
 if ($null -ne $CRMinMemory -and $CRMinMemory -ne ""){
     #If Set, compare to Current Memory and ensure Current Memory is higher
+    #Round up to nearest whole number GB, typically video or graphics memory will steal a bit, making the value a bit lower than actual
+    $HostValueMemoryCeiling = [math]::ceiling($HostValueMemory)
+    Write-Host ""
     Write-Host "Checking Minimum Memory"
-    if ($HostValueMemory -lt $CRMinMemory) {
+    if ($DebugLogging) {write-host "Rounding up to nearest whole number GB: $HostValueMemoryCeiling | Actual: $HostValueMemory"}
+
+    if ($HostValueMemoryCeiling -lt $CRMinMemory) {
         $Compliant = $false
         Write-Host "✗ Compliance Failed: Minimum Memory | Required: $CRMinMemory GB | Current: $HostValueMemory GB" -ForegroundColor Red
     }
     else {
-        Write-Host "✓ Compliant: Minimum Memory | $HostValueMemory GB" -ForegroundColor Green
+        Write-Host "✓ Compliant: Minimum Memory | $HostValueMemoryCeiling GB" -ForegroundColor Green
     }
 } 
 if ($CRTPM2 -eq "true"){
     #If Set to true, ensure TPM 2.0 is present
+    Write-Host ""
     Write-Host "Checking for TPM 2.0"
     if ($CRTPM2 -eq "true" -and $HostValueTPM2 -ne $true) {
         $Compliant = $false
@@ -753,48 +808,49 @@ if ($CRTPM2 -eq "true"){
 }
 if ($CRMinWin11 -eq "true"){
     #If Set to true, ensure Windows 11 is present
-    write-Host "Checking for Windows 11 Compatibility"
+    Write-Host ""
+    Write-Host "Checking for Windows 11 Compatibility"
     if ($Win11Readiness.SecureBoot){
             if (($Win11Readiness.SecureBoot) -eq 'PASS') {
-                Write-Host "SecureBoot: ✓ Pass" -ForegroundColor Green
+                Write-Host "✓ SecureBoot: Pass" -ForegroundColor Green
             }
             else {
-                Write-Host "SecureBoot: ✗ Fail" -ForegroundColor Red
+                Write-Host "✗ SecureBoot: Fail" -ForegroundColor Red
             }
         }
         if ($Win11Readiness.TPM){
             if (($Win11Readiness.TPM) -eq 'PASS') {
-                Write-Host "TPM: ✓ Pass" -ForegroundColor Green
+                Write-Host "✓ TPM: Pass" -ForegroundColor Green
             }
             else {
-                Write-Host "TPM: ✗ Fail" -ForegroundColor Red
+                Write-Host "✗ TPM: Fail" -ForegroundColor Red
             }
         }
         if ($Win11Readiness.CPU){
             if (($Win11Readiness.CPU) -eq 'PASS') {
-                Write-Host "CPU: ✓ Pass" -ForegroundColor Green
+                Write-Host "✓ CPU: Pass" -ForegroundColor Green
             }
             else {
-                Write-Host "CPU: ✗ Fail" -ForegroundColor Red
+                Write-Host "✗ CPU: Fail" -ForegroundColor Red
             }
         }
         if ($Win11Readiness.Memory){
             if (($Win11Readiness.Memory) -eq 'PASS') {
-                Write-Host "Memory: ✓ Pass" -ForegroundColor Green
+                Write-Host "✓ Memory: Pass" -ForegroundColor Green
             }
             else {
-                Write-Host "Memory: ✗ Fail" -ForegroundColor Red
+                Write-Host "✗ Memory: Fail" -ForegroundColor Red
             }
         }
         if ($Win11Readiness.Storage){
             if (($Win11Readiness.Storage) -eq 'PASS') {
-                Write-Host "Storage: ✓ Pass" -ForegroundColor Green
+                Write-Host "✓ Storage: Pass" -ForegroundColor Green
             }
             else {
-                Write-Host "Storage: ✗ Fail" -ForegroundColor Red
+                Write-Host "✗ Storage: Fail" -ForegroundColor Red
             }
         }
-    if ($CRMinWin11 -eq "true" -and $Win11Readiness -ne 'CAPABLE') {
+    if ($CRMinWin11 -eq "true" -and $($Win11Readiness.Return) -ne 'CAPABLE') {
         $Compliant = $false
         Write-Host "✗ Compliance Failed: Windows 11" -ForegroundColor Red
         if ($Win11Readiness.Reason){
