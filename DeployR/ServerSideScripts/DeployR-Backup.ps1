@@ -5,7 +5,7 @@ Import-Module 'C:\Program Files\2Pint Software\DeployR\Client\PSModules\DeployR.
 #Set-DeployRHost "http://localhost:7282"
 
 
-
+Connect-DeployR -Passcode (Get-Content "D:\DeployRPasscode.txt" -Raw) -ErrorAction Stop
 
 # Create Variable that is the FQDN of the Machine:
 function Get-ConnectionSpecificDNSSuffix {
@@ -195,6 +195,7 @@ Function Duplicate-DeployRStepDefinition {
     else {
         $Sample.name = "$($Sample.name)$NewNameSuffix"
     }
+    $Sample.readOnly = $false
     $SampleVersions = $Sample.versions
     $SampleVersions[0].id = $NewVersionGuid
     $SampleVersions[0].StepDefinitionId = $NewStepGuid
@@ -251,4 +252,45 @@ Import-DeployRStepDefinition -SourceFile "C:\Windows\Temp\TempDuplicateStepDef.j
 #Go and confirm the changes you made in JSON are now in the step definition in the Console.
 
 
+#>
+<# - Testing some edge cases
+Function Duplicate-DeployRStepDefinition {
+    param (
+    [Parameter(Mandatory = $true)]
+    [string]$StepDefinitionId = "ef875dff-343c-4e3c-88b5-a22918d65760",
+    [string]$TempLocation,
+    [string]$NewNameSuffix = "-Copy",
+    [string]$NewCIName
+    )
+    if ($null -eq $TempLocation -or $TempLocation -eq "") {
+        Write-Host "No TempLocation specified, setting it to C:\Windows\Temp" -ForegroundColor Yellow
+        $TempLocation = "C:\Windows\Temp"
+    }
+    if (-not (Test-Path -Path $TempLocation)) {
+        Write-Host "Temp location $TempLocation does not exist. Creating it." -ForegroundColor Yellow
+        New-Item -Path $TempLocation -ItemType Directory | Out-Null
+    }
+    $Sample = (Get-DeployRMetadata -Type StepDefinition | Where-Object {$_.id -eq $StepDefinitionId})
+    if ($null -eq $Sample) {
+        Write-Host "Step Definition with ID $StepDefinitionId not found." -ForegroundColor Red
+        return
+    }
+    [System.Guid]$NewStepGuid = New-Guid
+    [System.Guid]$NewVersionGuid = New-Guid
+    $Sample.id = $NewStepGuid
+    if ($NewCIName) {
+        $Sample.name = "Test Delete 2"
+    }
+    else {
+        $Sample.name = "$($Sample.name)$NewNameSuffix"
+    }
+    $Sample.readOnly = $false
+    $SampleVersions = $Sample.versions
+    $SampleVersions[0].id = $NewVersionGuid
+    $SampleVersions[0].StepDefinitionId = $NewStepGuid
+    $TempFilePath = "$TempLocation\TempDuplicateStepDef.json"
+    $Sample | ConvertTo-Json -Depth 10 | Out-File $TempFilePath -Force
+    Import-DeployRStepDefinition -SourceFile $TempFilePath -Force 
+    Write-Host "Duplicated Step Definition as $($Sample.name) with ID $NewStepGuid" -ForegroundColor Green
+}
 #>
