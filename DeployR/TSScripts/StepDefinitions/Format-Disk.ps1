@@ -33,10 +33,10 @@ function Get-SystemDisk {
 # Get the specified disk index - Pull info from TS Step
 $diskIndex = ${TSEnv:DiskIndex}
 $autoPickSmallestFastestDisk = ${TSEnv:autoPickSmallestFastestDisk}
-$efiPartitionSizeMB = ${TSEnv:EFIPartitionSizeMB}
-$recoveryPartitionSizeMB = ${TSEnv:RecoveryPartitionSizeMB}
+[int]$efiPartitionSizeMB = ${TSEnv:EFIPartitionSizeMB}
+[int]$recoveryPartitionSizeMB = ${TSEnv:RecoveryPartitionSizeMB}
 $formatAllRAWDisks = ${TSEnv:formatAllRAWDisks}
-$msrPartitionSizeMB = 128
+[int]$msrPartitionSizeMB = 128
 #Report Variables
 Write-Host "------------------------------------------------------------"
 Write-Host "Format Disk Step"
@@ -81,8 +81,12 @@ Write-Host " Model:         $($disk.Model)"
 
 Write-Host "------------------------------------------------------------"
 # Calculate the OS partition size by subtracting the other sizes
-$osSize = $disk.Size - $efiPartitionSizeMB - $msrPartitionSizeMB - $recoveryPartitionSizeMB
-
+# Calculate the OS partition size by subtracting the other sizes
+$efiPartitionSize = $efiPartitionSizeMB * 1024 * 1024
+$msrPartitionSize = $msrPartitionSizeMB * 1024 * 1024
+$recoveryPartitionSize = $recoveryPartitionSizeMB * 1024 * 1024
+$osSize = $disk.Size - $efiPartitionSize - $msrPartitionSize - $recoveryPartitionSize
+Write-Host "Calculated OS Partition Size: $osSize ($([math]::Round($osSize / 1GB)) GB)"
 # Clean the disk if it isn't already raw
 if ($disk.PartitionStyle -ne "RAW")
 {
@@ -97,9 +101,9 @@ $null = Initialize-Disk -Number $diskIndex -PartitionStyle GPT
 # Partition as needed
 
 Write-Host "Partitioning Boot Disk"
-$efi = New-Partition -DiskNumber $diskIndex -Size $efiPartitionSizeMB -GptType '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}'
-$msr = New-Partition -DiskNumber $diskIndex -Size $msrPartitionSizeMB -GptType '{e3c9e316-0b5c-4db8-817d-f92df00215ae}'
-$os = New-Partition -DiskNumber $diskIndex -Size $osSize
+$efi = New-Partition -DiskNumber $diskIndex -Size [int]$efiPartitionSizeMB -GptType '{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}'
+$msr = New-Partition -DiskNumber $diskIndex -Size [int]$msrPartitionSizeMB -GptType '{e3c9e316-0b5c-4db8-817d-f92df00215ae}'
+$os = New-Partition -DiskNumber $diskIndex -Size [int]$osSize
 $recovery = New-Partition -DiskNumber $diskIndex -UseMaximumSize -GptType '{de94bba4-06d1-4d40-a16a-bfd50179d6ac}'
 
 
