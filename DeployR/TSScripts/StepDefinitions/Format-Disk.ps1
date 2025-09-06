@@ -81,7 +81,11 @@ Write-Host " Model:         $($disk.Model)"
 
 Write-Host "------------------------------------------------------------"
 # Calculate the OS partition size by subtracting the other sizes
-$osSize = $disk.Size - $efiPartitionSizeMB - $msrPartitionSizeMB - $recoveryPartitionSizeMB
+$efiPartitionSize = $efiPartitionSizeMB * 1024 * 1024
+$msrPartitionSize = $msrPartitionSizeMB * 1024 * 1024
+$recoveryPartitionSize = $recoveryPartitionSizeMB * 1024 * 1024
+$osSize = $disk.Size - $efiPartitionSize - $msrPartitionSize - $recoveryPartitionSize
+
 
 # Clean the disk if it isn't already raw
 if ($disk.PartitionStyle -ne "RAW")
