@@ -254,23 +254,10 @@ Foreach ($NetworkGroup in $NetworkGroups) {
         
         Write-host " Assigning Template: $($TemplateDetails.Name) | $CurrentTemplate to new Network Group: $($NewNetworkGroup.Name)" -ForegroundColor Green
         $Invoke = Invoke-CimMethod -InputObject $NewNetworkGroup -MethodName SetTemplate -Arguments $Arguments
-        if ($Invoke.ReturnValue -eq $true) {
-            #Write-Host " Template assigned successfully" -ForegroundColor Green
-        }
-        else {
-            Write-Warning " Failed to assign template to new network group"
-        }
-
         Write-Host " Moving Network: $($NetworkDetails.NetworkID) to new Network Group: $($NewNetworkGroup.Name)" -ForegroundColor Cyan
         $Arguments = @{
             NetworkGroupId = $NewNetworkGroup.id
         }
         $Invoke = Invoke-CimMethod -InputObject $NetworkDetails -MethodName MoveToNewNetworkGroup -Arguments $Arguments
-        if ($Invoke.ReturnValue -eq $true) {
-            #Write-Host " Template assigned successfully" -ForegroundColor Green
-        }
-        else {
-            Write-Warning " Failed to assign template to new network group"
-        }
     }
 }
