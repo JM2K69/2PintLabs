@@ -13,6 +13,7 @@ $PreReqApps = @(
     [PSCustomObject]@{Title = '2Pint Software DeployR'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Server'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Dashboards'; Installed = $false}
+    [PSCustomObject]@{Title = '2Pint Software StifleR WmiAgent'; Installed = $false}
 )
 
 
@@ -136,19 +137,59 @@ if ($Installed_2Pint_Software_DeployR){
     }
 }
 
+#Confirm StifleR Registry Settings
+if ($Installed_2Pint_Software_StifleR_Server){
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Testing StifleR Registry Settings..." -ForegroundColor Cyan
+    $StifleRRegPath = "HKLM:\SOFTWARE\2Pint Software\StifleR\Server\GeneralSettings"
+    $StifleRRegData = Get-ItemProperty -Path $StifleRRegPath -ErrorAction SilentlyContinue
+
+    if ($StifleRRegData -and $StifleRRegData.DeployRUrl) {
+        Write-Host "DeployR API URL: $($StifleRRegData.DeployRUrl)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "DeployR API URL is NOT configured." -ForegroundColor Red
+    }
+    $StifleRCertThumbprint = $StifleRRegData.WSCertificateThumbprint
+    Write-Host "Stifle R Using Certificate with Thumbprint: $($StifleRCertThumbprint)" -ForegroundColor Cyan
+    #Get Certificate from Local Machine Store that matches
+    $CertThumbprint = Get-ChildItem -Path Cert:\LocalMachine\My  | Where-Object { $_.Thumbprint -match $StifleRCertThumbprint }
+    if ($CertThumbprint) {
+        Write-Host "Found certificate in local store: $($CertThumbprint.Thumbprint)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "Certificate NOT found." -ForegroundColor Red
+    }
+}
+
 #Confirm DeployR Registry Settings
 if ($Installed_2Pint_Software_DeployR){
     Write-Host "=========================================================================" -ForegroundColor DarkGray
-    Write-Host "Testing Network Connections..." -ForegroundColor Cyan
+    
     $RegPath = "HKLM:\SOFTWARE\2Pint Software\DeployR\GeneralSettings"
     $DeployRRegData = Get-ItemProperty -Path $RegPath -ErrorAction SilentlyContinue
 
     if ($DeployRRegData -and $DeployRRegData.ConnectionString) {
-        Write-Host "Testing SQL Connection... $($DeployRRegData.ConnectionString)"
+        Write-Host "Testing SQL Connection... " -ForegroundColor Cyan
+        write-host " $($DeployRRegData.ConnectionString)"
         Test-SQLConnection -ConnectionString $DeployRRegData.ConnectionString
     }
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Testing DeployR Certificate..." -ForegroundColor Cyan
+    #Test Certificate
+    $CertThumbprintRegValue = $DeployRRegData.CertificateThumbprint
+    Write-Host "Deploy R Using Certificate with Thumbprint: $($CertThumbprintRegValue)" -ForegroundColor Cyan
+    #Get Certificate from Local Machine Store that matches
+    $CertThumbprint = Get-ChildItem -Path Cert:\LocalMachine\My  | Where-Object { $_.Thumbprint -match $CertThumbprintRegValue }
+    if ($CertThumbprint) {
+        Write-Host "Found certificate in local store: $($CertThumbprint.Thumbprint)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "Certificate NOT found." -ForegroundColor Red
+    }
+Write-Host "=========================================================================" -ForegroundColor DarkGray
     #Test StifleR Server URL
-    
+    Write-Host "Testing Network Connections..." -ForegroundColor Cyan
     #StifleR Server URL = $DeployRRegData.StifleRServerApiUrl without Port Number
     $StifleRServerURL = $DeployRRegData.StifleRServerApiUrl
     $StifleRServerURL = $StifleRServerURL.Split(':')[0..1] -join ':'
@@ -156,6 +197,9 @@ if ($Installed_2Pint_Software_DeployR){
     $DeployRURL = $DeployRRegData.ClientURL
     $DeployRURL = $DeployRURL.Split(':')[0..1] -join ':'
     $DeployRServerName = $DeployRURL.Split('/')[2]
+
+
+
     Write-Host "Testing StifleR Server URL... $($StifleRServerURL)" -ForegroundColor Cyan
     $StifleRTest = Test-Url -Url $StifleRServerURL
     if ($StifleRTest) {
@@ -188,21 +232,10 @@ if ($Installed_2Pint_Software_DeployR){
     else {
         Write-Host "DeployR Server URL is NOT accessible." -ForegroundColor Red
     }
-    Write-Host "=========================================================================" -ForegroundColor DarkGray
-    Write-Host "Testing Certificate..." -ForegroundColor Cyan
-    #Test Certificate
-    $CertThumbprintRegValue = $DeployRRegData.CertificateThumbprint
-    Write-Host "Using Certificate with Thumbprint: $($CertThumbprintRegValue)" -ForegroundColor Cyan
-    #Get Certificate from Local Machine Store that matches
-    $CertThumbprint = Get-ChildItem -Path Cert:\LocalMachine\My  | Where-Object { $_.Thumbprint -match $CertThumbprintRegValue }
-    if ($CertThumbprint) {
-        Write-Host "Found certificate in local store: $($CertThumbprint.Thumbprint)" -ForegroundColor Green
-    }
-    else {
-        Write-Host "Certificate NOT found." -ForegroundColor Red
-    }
-}
 
+}
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+write-host "Checking Certificate... on Ports 443 & 9000" -ForegroundColor Cyan
 # Get the certificate hash from the HTTP.SYS binding for port 443
 $certHash = netsh http show sslcert ipport=0.0.0.0:443 | Select-String "Certificate Hash" | ForEach-Object { ($_ -split ": ")[1].Trim() }
 
@@ -253,4 +286,26 @@ if ($certHash) {
         }
     }
     if (-not $found) { Write-Host "No binding found." -ForegroundColor Red }
+}
+
+if ($Installed_2Pint_Software_StifleR_WmiAgent) {
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    write-host "Checking for StifleR Infrastructure Approval for DeployR" -ForegroundColor Cyan
+    $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler
+    if ($InfraServices) {
+        $DeployR = $InfraServices | Where-Object {$_.Type -eq "DeployR"}
+        if ($DeployR){
+            Write-Host "StifleR Infrastructure for DeployR found." -ForegroundColor Green
+            if ($DeployR.Status -eq "IsApproved") {
+                Write-Host "DeployR Status: Approved" -ForegroundColor Green
+            } else {
+                Write-Host "DeployR Status: NOT Approved" -ForegroundColor Red
+            }
+        }
+        else{
+            Write-Host "No StifleR Infrastructure for DeployR found." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "StifleR Infrastructure Services are NOT available." -ForegroundColor Red
+    }
 }
