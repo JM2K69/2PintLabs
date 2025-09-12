@@ -106,7 +106,9 @@ write-host -ForegroundColor Green "StifleR Servers: $STIFLERSERVERS"
 write-host -ForegroundColor Green "StifleR Rulez URL: $STIFLERULEZURL"
 write-host -ForegroundColor Green "VPN Strings: VPN, Cisco AnyConnect, Virtual Private Network, SonicWall, WireGuard"
 Write-Host -ForegroundColor DarkGray "-------------------------------------------------------"
+Write-Host "$Options"
 
+write-host " Start-Process -FilePath msiexec.exe -ArgumentList `"/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS`" -Wait -PassThru"
 $Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $tempDir\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
 
 if ($Install.ExitCode -eq 0) {
