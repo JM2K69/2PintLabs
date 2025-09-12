@@ -14,7 +14,7 @@ I've already installed StifleR 2.14 but just slightly different then the guide I
 ## PreReqs
 
 - MS Junk
-  - ASP.Net Core 8.0.17
+  - ASP.Net Core 8.0.XX (Latest)
     - .NET RUntime
     - .Net Desktop Runtime
     - ASP.NET Core Runtime

@@ -7,26 +7,34 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 - Defender Updates
 - WinRE Driver Injection (Full OS Stage) - Work with Terrill
 - OEM Tools Offline Mode (offline repo for updates)
-- Updated Format Step with additional customizations and Drive control.
+
+-Script for Pre-Req Checker
+ - .Net Items (3)
+ - SQL Express & Permissions
+ - Cert Stuff
+ - other
+
+- PowerShell Functions
+
+## In Progress
 
 - PowerShell Functions
   - PowerShell Function to import Driver Packs in Automated Process
     - Think "Modern Driver Management" - Scans the Catalogs pops dialog and then downloads and imports
-      - Need to get List of Model Alias
-- 
-
-## In Progress
-
+      - Panasonic - Created Function to get ALL models at once, need to make a bit more dynamic
+      - Dell - Can import based on model
+     
+        
 - create step to enable Features like HyperV with option to reboot.
   - CLIENT OS | COMPLETE
   - SERVER OS | NOT STARTED
 
-- Create script for easy import and overwrite of updated steps and content for sharing
-  - MVP Created: <https://github.com/gwblok/2PintLabs/blob/main/DeployR/ServerSideScripts/DeployR-ImportFromGithub.ps1>
-  - Overwrite doesn't seem to work, this is a Dev side issue I'm waiting on. - THIS IS DONE.. MN fixed issue with import overwrite in .480
-  - Works good on new setups, but after I've modified them the new changes don't import into other systems.
 
 ## Completed
+
+- Updated Format Step with additional customizations and Drive control.
+- Create script for easy import and overwrite of updated steps and content for sharing
+  - MVP Created: <https://github.com/gwblok/2PintLabs/blob/main/DeployR/ServerSideScripts/DeployR-ImportFromGithub.ps1>
 
 - Company Branding - Registered to: etc
   - COMPLETED

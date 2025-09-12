@@ -149,38 +149,39 @@ if ($formatExtraDisks -ne "NO") {
 	if ($Disks) {
 		Write-Host "Found $($Disks.Count) extra disks to format"
 		
-		Write-Host "Formatting extra disks"
+
 		#Change CD Drive to A Drive temporary
 		$cd = Get-CimInstance -ClassName Win32_CDROMDrive -ErrorAction SilentlyContinue
 		if ($cd){
-			Write-Host "Found CD Drive: $($cd.DeviceID)"
-			Write-Host "Changing CD Drive Letter to A:"
+			Write-Host " Found CD Drive: $($cd.DeviceID)"
+			Write-Host " Changing CD Drive Letter to A:"
 			$driveletter = $cd.drive
 			$DriveInfo = Get-CimInstance -class win32_volume | Where-Object {$_.DriveLetter -eq $driveletter} |Set-CimInstance -Arguments @{DriveLetter='A:'}
 		}
-		
+		Write-Host "Formatting extra disks"
 		foreach ($Disk in $Disks)#{}
 		{
-			Write-Host "Starting Process on Disk $($Disk.Number)"
+			Write-Host " Starting Process on Disk $($Disk.Number)"
+			Write-Host "  Size:          $([math]::Round($disk.Size / 1GB)) GB"
+			Write-Host "  Bus Type:      $($disk.BusType)"
+			Write-Host "  Model:         $($disk.Model)"
 			$Size = [math]::Round($Disk.size / 1024 / 1024 / 1024)
 			if ($disk.PartitionStyle -ne "RAW"){
-				Write-Host "Clearing disk $($Disk.Number)"
+				Write-Host "  Clearing disk $($Disk.Number)"
 				Clear-Disk -Number $Disk.Number -RemoveData -RemoveOEM -Confirm:$false
 				start-sleep -Seconds 1
 			}
-			Write-Host "Initializing disk"
+			Write-Host "  Initializing disk"
 			$null = Initialize-Disk -PartitionStyle GPT -Number $Disk.Number
-			New-Partition -DiskNumber $Disk.Number -DriveLetter (Get-NextAvailableDriveLetter) -UseMaximumSize |
-			write-Host " Serial Number: $($disk.SerialNumber)"
-			write-Host " Size:          $([math]::Round($disk.Size / 1GB)) GB"
-			Write-Host " Bus Type:      $($disk.BusType)"
-			Write-Host " Model:         $($disk.Model)"
-			Format-Volume -FileSystem NTFS -NewFileSystemLabel "Storage-$($size)GB" -Confirm:$false
+			$DriveLetter = (Get-NextAvailableDriveLetter)
+			Write-Host "  Creating partition with Drive Letter $DriveLetter and Formatting NTFS"
+			New-Partition -DiskNumber $Disk.Number -DriveLetter $DriveLetter -UseMaximumSize |
+			Format-Volume -FileSystem NTFS -NewFileSystemLabel "Storage-$($Size)GB" -Confirm:$false
 		}
 		if ($cd){
 			#Set CD to next available Drive Letter
 			$CDDriveLetter = "$(Get-NextAvailableDriveLetter):"
-			Write-Host "Changing CD Drive Letter to $CDDriveLetter"
+			Write-Host " Changing CD Drive Letter to $CDDriveLetter"
 			$DriveInfo = Get-CimInstance -class win32_volume | Where-Object {$_.DriveLetter -eq "A:"} |Set-CimInstance -Arguments @{DriveLetter=$CDDriveLetter}
 		}
 	}
