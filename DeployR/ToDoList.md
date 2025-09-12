@@ -8,6 +8,11 @@ List of items I'd like to build for DeployR.  This list is not in order of prior
 - WinRE Driver Injection (Full OS Stage) - Work with Terrill
 - OEM Tools Offline Mode (offline repo for updates)
 
+-Script for Pre-Req Checker
+ - .Net Items (3)
+ - SQL Express & Permissions
+ - Cert Stuff
+ - other
 
 - PowerShell Functions
 
