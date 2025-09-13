@@ -2,20 +2,29 @@
 
 #PowerShell Table of Pre-Req Applications:
 $PreReqApps = @(
-    [PSCustomObject]@{Title = 'Microsoft .NET Runtime'; Installed = $false}
-    [PSCustomObject]@{Title = 'Microsoft Windows Desktop Runtime'; Installed = $false}
-    [PSCustomObject]@{Title = 'Microsoft ASP.NET Core'; Installed = $false}
-    [PSCustomObject]@{Title = 'Windows Assessment and Deployment Kit'; Installed = $false}
-    [PSCustomObject]@{Title = 'Windows Assessment and Deployment Kit Windows Preinstallation Environment'; Installed = $false}
-    [PSCustomObject]@{Title = 'PowerShell 7-x64'; Installed = $false}
-    [PSCustomObject]@{Title = 'Microsoft SQL Server'; Installed = $false}
-    [PSCustomObject]@{Title = 'SQL Server Management Studio'; Installed = $false}
+    [PSCustomObject]@{Title = 'Microsoft .NET Runtime'; Installed = $false ; URL = 'https://dotnet.microsoft.com/en-us/download/dotnet/8.0'}
+    [PSCustomObject]@{Title = 'Microsoft Windows Desktop Runtime'; Installed = $false ; URL = 'https://dotnet.microsoft.com/en-us/download/dotnet/8.0'}
+    [PSCustomObject]@{Title = 'Microsoft ASP.NET Core'; Installed = $false ; URL = 'https://dotnet.microsoft.com/en-us/download/dotnet/8.0'}
+    [PSCustomObject]@{Title = 'Windows Assessment and Deployment Kit Windows Preinstallation Environment'; Installed = $false; URL = 'https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install'}
+    [PSCustomObject]@{Title = 'PowerShell 7-x64'; Installed = $false; URL = 'https://aka.ms/powershell-release?tag=lts'}
+    [PSCustomObject]@{Title = 'Microsoft SQL Server'; Installed = $false; URL = 'https://www.microsoft.com/en-us/download/details.aspx?id=104781'}
+    [PSCustomObject]@{Title = 'SQL Server Management Studio'; Installed = $false; URL = 'https://learn.microsoft.com/en-us/ssms/install/install'}
     [PSCustomObject]@{Title = '2Pint Software DeployR'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Server'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Dashboards'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR WmiAgent'; Installed = $false}
 )
-
+$FirewallRules = @(
+    [PSCustomObject]@{DisplayName = '2Pint DeployR HTTPS 7281'; Port = 7281; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint DeployR HTTP 7282'; Port = 7282; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint Software StifleR API 9000'; Port = 9000; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint Software StifleR SignalR 1414 TCP'; Port = 1414; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint Software StifleR SignalR 1414 UDP'; Port = 1414; Protocol = 'UDP'}
+    [PSCustomObject]@{DisplayName = '2Pint iPXE WebService 8051'; Port = 8051; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint iPXE WebService 8052'; Port = 8052; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint 2PXE 8050'; Port = 8050; Protocol = 'TCP'}
+    [PSCustomObject]@{DisplayName = '2Pint 2PXE 4011'; Port = 4011; Protocol = 'UDP'}
+)
 
 function Get-InstalledApps
 {
@@ -80,6 +89,7 @@ Write-Host "====================================================================
 #Test if Applications are installed
 $installedApps = Get-InstalledApps
 Write-Host "Checking for Pre-Requisite Applications..." -ForegroundColor Cyan
+$PreReqAppsStatus = @()
 foreach ($app in $PreReqApps) {
     $found = $installedApps | Where-Object { 
         $_.DisplayName -match [regex]::Escape($app.Title) -or
@@ -87,16 +97,79 @@ foreach ($app in $PreReqApps) {
     }
     
     if ($found) {
-        $app.Installed = $true
+        if (($found | Select-Object -Unique DisplayName | Measure-Object).Count -gt 1) {
+            #Write-Host "Multiple versions of $($app.Title) found:" -ForegroundColor Yellow
+            #$found | Select-Object -Unique DisplayName | ForEach-Object { Write-Host " - $($_.DisplayName) Version: $($_.DisplayVersion)" -ForegroundColor Yellow }
+                foreach ($appitem in $found) {
+            
+                $PreReqAppsStatus += [PSCustomObject]@{
+                    Title       = $app.Title
+                    Installed   = $true
+                    URL         = $app.URL
+                    InstallDate = $appitem.InstallDate
+                    Version     = $appitem.DisplayVersion
+                    DisplayName = $appitem.DisplayName
+                }
+            }
+        }
+        else{
+            $found = $found | Select-Object -First 1
+            $PreReqAppsStatus += [PSCustomObject]@{
+                Title       = $app.Title
+                Installed   = $true
+                URL         = $app.URL
+                InstallDate = $found.InstallDate
+                Version     = $found.DisplayVersion
+                DisplayName = $found.DisplayName
+            }
+        }
+
         New-Variable -Name "Installed_$($app.Title.Replace(' ', '_'))" -Value $true -Scope Global -Force
+
     }
+
     else {
         New-Variable -Name "Installed_$($app.Title.Replace(' ', '_'))" -Value $false -Scope Global -Force
+        $PreReqAppsStatus += [PSCustomObject]@{
+            Title    = $app.Title
+            Installed = $false
+            URL      = $app.URL
+        }
+    }
+}
+#Display App Status, Green Arrow next to Installed Apps and Red X next to Missing Apps
+
+foreach ($app in $PreReqAppsStatus) {
+    $appVersion = $app.Version
+    if ($app.Installed) {
+        Write-Host " ✓  $($app.Title)  " -ForegroundColor Green
+        Write-Host "   Version: $($app.Version)" -ForegroundColor DarkGray
+        Write-Host "   Display Name: $($app.DisplayName)" -ForegroundColor DarkGray
+    }
+    else {
+        Write-Host " ✗  $($app.Title)" -ForegroundColor Red
     }
 }
 
+$MissingApps = $PreReqAppsStatus | Where-Object { $_.Installed -eq $false }
+if ($MissingApps) {
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "The following Pre-Requisite Applications are NOT installed:" -ForegroundColor Red
+    foreach ($app in $MissingApps) {
+        $appName = $app.Title -replace 'Installed_', '' -replace '_', ' '
+        
+        Write-Host " - $appName" -ForegroundColor Yellow
+        if ($app.URL) {
+            Write-Host "   Download URL: $($app.URL)" -ForegroundColor DarkGray
+        }
+    }
+    Write-Host "Please install the missing applications and re-run this script." -ForegroundColor Yellow
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    return
+}
+
 # Display results
-$PreReqApps | Format-Table -AutoSize
+
 Write-Host "=========================================================================" -ForegroundColor DarkGray
 write-Host "Checking for Services..." -ForegroundColor Cyan
 #Test Services if App Installed
@@ -105,10 +178,21 @@ if ($Installed_Microsoft_SQL_Server){
     $SQLService = Get-Service -Name 'MSSQL$SQLEXPRESS'
     if ($SQLService.Status -eq 'Running') {
         Write-Host "Microsoft SQL Server service is running." -ForegroundColor Green
+        Write-Host "  Display Name: $($SQLService.DisplayName)" -ForegroundColor DarkGray
+        Write-Host "  Service Name: $($SQLService.Name)" -ForegroundColor DarkGray
+        Write-Host "  Start Type:   $($SQLService.StartType)" -ForegroundColor DarkGray
         $Global:SQLServiceRunning = $true
     }
     else {
         Write-Host "Microsoft SQL Server service is NOT running." -ForegroundColor Red
+        Write-Host " Attempting to start service..." -ForegroundColor Yellow
+        Start-Service -Name 'MSSQL$SQLEXPRESS' -ErrorAction SilentlyContinue
+        if ($?) {
+            Write-Host "Service started successfully." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Failed to start service." -ForegroundColor Red
+        }
         $Global:SQLServiceRunning = $false
     }
 }
@@ -117,10 +201,23 @@ if ($Installed_2Pint_Software_StifleR_Server){
     $StifleRService = Get-Service -Name '2Pint Software StifleR Server'
     if ($StifleRService.Status -eq 'Running') {
         Write-Host "2Pint StifleR Server service is running." -ForegroundColor Green
+        Write-Host "  Display Name: $($StifleRService.DisplayName)" -ForegroundColor DarkGray
+        Write-Host "  Service Name: $($StifleRService.Name)" -ForegroundColor DarkGray
+        Write-Host "  Start Type:   $($StifleRService.StartType)" -ForegroundColor DarkGray
         $Global:StifleRServiceRunning = $true
     }
     else {
         Write-Host "2Pint StifleR Server service is NOT running." -ForegroundColor Red
+        Write-Host " Attempting to start service..." -ForegroundColor Yellow
+        Start-Service -Name '2Pint Software StifleR Server' -ErrorAction SilentlyContinue
+        if ($?) {
+            Write-Host "Service started successfully." -ForegroundColor Green
+            Write-Host " Waiting for service to start additional processes..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 5
+        }
+        else {
+            Write-Host "Failed to start service." -ForegroundColor Red
+        }
         $Global:StifleRServiceRunning = $false
     }
 }
@@ -129,10 +226,21 @@ if ($Installed_2Pint_Software_DeployR){
     $DeployRService = Get-Service -Name '2Pint Software DeployR Service'
     if ($DeployRService.Status -eq 'Running') {
         Write-Host "2Pint DeployR service is running." -ForegroundColor Green
+        Write-Host "  Display Name: $($DeployRService.DisplayName)" -ForegroundColor DarkGray
+        Write-Host "  Service Name: $($DeployRService.Name)" -ForegroundColor DarkGray
+        Write-Host "  Start Type:   $($DeployRService.StartType)" -ForegroundColor DarkGray
         $Global:DeployRServiceRunning = $true
     }
     else {
         Write-Host "2Pint DeployR service is NOT running." -ForegroundColor Red
+        Write-Host " Attempting to start service..." -ForegroundColor Yellow
+        Start-Service -Name '2Pint Software DeployR Service' -ErrorAction SilentlyContinue
+        if ($?) {
+            Write-Host "Service started successfully." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Failed to start service." -ForegroundColor Red
+        }
         $Global:DeployRServiceRunning = $false
     }
 }
@@ -151,11 +259,14 @@ if ($Installed_2Pint_Software_StifleR_Server){
         Write-Host "DeployR API URL is NOT configured." -ForegroundColor Red
     }
     $StifleRCertThumbprint = $StifleRRegData.WSCertificateThumbprint
-    Write-Host "Stifle R Using Certificate with Thumbprint: $($StifleRCertThumbprint)" -ForegroundColor Cyan
+    Write-Host "StifleR Using Certificate with Thumbprint: $($StifleRCertThumbprint)" -ForegroundColor Cyan
     #Get Certificate from Local Machine Store that matches
     $CertThumbprint = Get-ChildItem -Path Cert:\LocalMachine\My  | Where-Object { $_.Thumbprint -match $StifleRCertThumbprint }
     if ($CertThumbprint) {
         Write-Host "Found certificate in local store: $($CertThumbprint.Thumbprint)" -ForegroundColor Green
+        write-host " DNSNameList:    $($CertThumbprint.DNSNameList -join ', ')" -ForegroundColor DarkGray
+        write-host " Subject:        $($CertThumbprint.Subject)" -ForegroundColor DarkGray
+        write-host " Issuer:         $($CertThumbprint.Issuer)" -ForegroundColor DarkGray
     }
     else {
         Write-Host "Certificate NOT found." -ForegroundColor Red
@@ -219,7 +330,9 @@ Write-Host "====================================================================
     Write-Host "Testing DeployR Server URL... $($DeployRURL)" -ForegroundColor Cyan
     $DeployRTest = Test-Url -Url $DeployRURL
     if ($DeployRTest) {
-        Write-Host "DeployR Server URL is accessible." -ForegroundColor Green
+
+        
+
         $Test7281 = Test-NetConnection -ComputerName $DeployRServerName -Port 7281
         if ($Test7281) {
             Write-Host "DeployR Server Port 7281 is accessible." -ForegroundColor Green
@@ -287,11 +400,80 @@ if ($certHash) {
     }
     if (-not $found) { Write-Host "No binding found." -ForegroundColor Red }
 }
+#Testing Firewall Rules:
+
+Write-Host "DeployR Server URL is accessible." -ForegroundColor Green
+$Ports = Get-NetFirewallPortFilter
+$InboundRules = Get-NetFirewallRule -Direction Inbound
+foreach ($FirewallRule in $FirewallRules){
+    Write-Host "Checking Firewall Rule: $($FirewallRule.DisplayName)" -ForegroundColor Yellow
+    $RulePorts = $Ports | Where-Object { $_.LocalPort -eq $FirewallRule.Port -and $_.Protocol -eq $FirewallRule.Protocol } | Select-Object -first 1
+    if ($RulePorts){
+        foreach ($Port in $RulePorts){
+            $NetFirewallRule = $InboundRules | Where-Object { $_.InstanceID -eq $Port.InstanceID }
+            Write-Host " Found Firewall Rule: $($NetFirewallRule.DisplayName)" -ForegroundColor Green
+            Write-Host "  Enabled: $($NetFirewallRule.Enabled) | Action:  $($NetFirewallRule.Action) | Profile: $($NetFirewallRule.Profile)" -ForegroundColor DarkGray
+            Write-Host "  Port: $($Port.LocalPort) | Protocol: $($Port.Protocol)" -ForegroundColor DarkGray
+        }
+    }
+    else {
+        Write-Host "No matching ports found for Firewall Rule: $($FirewallRule.DisplayName)" -ForegroundColor Red
+    }
+}
 
 if ($Installed_2Pint_Software_StifleR_WmiAgent) {
     Write-Host "=========================================================================" -ForegroundColor DarkGray
     write-host "Checking for StifleR Infrastructure Approval for DeployR" -ForegroundColor Cyan
-    $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler
+    $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+    try {
+        if ($InfraServices) {
+            Write-Host "StifleR Infrastructure Services found." -ForegroundColor Green
+        } else {
+            Write-Host "No StifleR Infrastructure Services found." -ForegroundColor Red
+        }
+    } catch {
+        Write-Host "Failed to retrieve StifleR Infrastructure Services." -ForegroundColor Red
+        write-host "Waiting for a minute and going to try again..."
+        Start-Sleep -seconds 10
+        write-host " 50..."
+        Start-Sleep -seconds 10
+        write-Host " 40..."
+        Start-Sleep -seconds 10
+        write-host " 30..."
+        Start-Sleep -seconds 10
+        write-host " 20..."
+        Start-Sleep -seconds 10
+        write-host " 10..."
+        Start-Sleep -seconds 10
+        try {
+            $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        }
+        catch {
+            Write-Host "Error occurred while retrieving StifleR Infrastructure Services." -ForegroundColor Red
+        }
+    }
+    if (!$InfraServices) {
+        
+        Write-Host "Sometimes if the service just started, this can take a bit"
+        write-host "Waiting for a minute and going to try again..."
+        Start-Sleep -seconds 10
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        write-host " 50..."
+        Start-Sleep -seconds 10
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        write-Host " 40..."
+        Start-Sleep -seconds 10
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        write-host " 30..."
+        Start-Sleep -seconds 10
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        write-host " 20..."
+        Start-Sleep -seconds 10
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        write-host " 10..."
+        Start-Sleep -seconds 10
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+    }
     if ($InfraServices) {
         $DeployR = $InfraServices | Where-Object {$_.Type -eq "DeployR"}
         if ($DeployR){
@@ -309,3 +491,8 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
         Write-Host "StifleR Infrastructure Services are NOT available." -ForegroundColor Red
     }
 }
+
+#Remediation 
+#prompt user to do installs
+
+
