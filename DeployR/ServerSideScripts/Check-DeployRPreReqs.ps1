@@ -170,7 +170,7 @@ if ($Installed_2Pint_Software_DeployR){
     $DeployRRegData = Get-ItemProperty -Path $RegPath -ErrorAction SilentlyContinue
 
     if ($DeployRRegData -and $DeployRRegData.ConnectionString) {
-        Write-Host "Testing SQL Connection... " -ForegroundColor Cyan
+        Write-Host "Testing DeployR SQL Connection string from Registry... " -ForegroundColor Cyan
         write-host " $($DeployRRegData.ConnectionString)"
         Test-SQLConnection -ConnectionString $DeployRRegData.ConnectionString
     }
@@ -178,7 +178,7 @@ if ($Installed_2Pint_Software_DeployR){
     Write-Host "Testing DeployR Certificate..." -ForegroundColor Cyan
     #Test Certificate
     $CertThumbprintRegValue = $DeployRRegData.CertificateThumbprint
-    Write-Host "Deploy R Using Certificate with Thumbprint: $($CertThumbprintRegValue)" -ForegroundColor Cyan
+    Write-Host "DeployR Using Certificate with Thumbprint: $($CertThumbprintRegValue)" -ForegroundColor Cyan
     #Get Certificate from Local Machine Store that matches
     $CertThumbprint = Get-ChildItem -Path Cert:\LocalMachine\My  | Where-Object { $_.Thumbprint -match $CertThumbprintRegValue }
     if ($CertThumbprint) {
