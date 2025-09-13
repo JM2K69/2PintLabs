@@ -424,7 +424,7 @@ foreach ($FirewallRule in $FirewallRules){
 if ($Installed_2Pint_Software_StifleR_WmiAgent) {
     Write-Host "=========================================================================" -ForegroundColor DarkGray
     write-host "Checking for StifleR Infrastructure Approval for DeployR" -ForegroundColor Cyan
-    $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+    $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
     try {
         if ($InfraServices) {
             Write-Host "StifleR Infrastructure Services found." -ForegroundColor Green
@@ -446,7 +446,7 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
         write-host " 10..."
         Start-Sleep -seconds 10
         try {
-            $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+            $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
         }
         catch {
             Write-Host "Error occurred while retrieving StifleR Infrastructure Services." -ForegroundColor Red
@@ -457,22 +457,22 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
         Write-Host "Sometimes if the service just started, this can take a bit"
         write-host "Waiting for a minute and going to try again..."
         Start-Sleep -seconds 10
-        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
         write-host " 50..."
         Start-Sleep -seconds 10
-        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
         write-Host " 40..."
         Start-Sleep -seconds 10
-        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
         write-host " 30..."
         Start-Sleep -seconds 10
-        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
         write-host " 20..."
         Start-Sleep -seconds 10
-        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
         write-host " 10..."
         Start-Sleep -seconds 10
-        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace root\stifler -ErrorAction SilentlyContinue
+        $InfraServices = Get-CimInstance -ClassName "InfrastructureServices" -Namespace Root\stifleR -ErrorAction SilentlyContinue
     }
     if ($InfraServices) {
         $DeployR = $InfraServices | Where-Object {$_.Type -eq "DeployR"}
