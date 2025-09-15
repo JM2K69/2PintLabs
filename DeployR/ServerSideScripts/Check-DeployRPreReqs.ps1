@@ -9,6 +9,8 @@ $PreReqApps = @(
     [PSCustomObject]@{Title = 'PowerShell 7-x64'; Installed = $false; URL = 'https://aka.ms/powershell-release?tag=lts'}
     [PSCustomObject]@{Title = 'Microsoft SQL Server'; Installed = $false; URL = 'https://www.microsoft.com/en-us/download/details.aspx?id=104781'}
     [PSCustomObject]@{Title = 'SQL Server Management Studio'; Installed = $false; URL = 'https://learn.microsoft.com/en-us/ssms/install/install'}
+    [PSCustomObject]@{Title = 'Microsoft Visual C++ 2015-2022 Redistributable (x64)'; Installed = $false; URL = 'https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170'}
+    
     [PSCustomObject]@{Title = '2Pint Software DeployR'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Server'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Dashboards'; Installed = $false}
