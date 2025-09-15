@@ -742,3 +742,4 @@ if ($IISMimeTypeUpdateRequired) {
         Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.ipxe';mimeType='text/plain'}
         Write-Host "✓ Missing IIS MIME types added successfully." -ForegroundColor Green
     }
+}
