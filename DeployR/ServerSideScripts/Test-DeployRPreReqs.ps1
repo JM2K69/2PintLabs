@@ -201,7 +201,51 @@ if ($MissingComponents) {
 
 }
 
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+Write-Host "Confirm IIS MIME Types" -ForegroundColor Cyan
+# Table of required MIME types for iPXE and related boot files
+$RequiredMimeTypes = @(
+    [PSCustomObject]@{ Extension = ".efi";  MimeType = "application/octet-stream"; Description = "EFI loader files" },
+    [PSCustomObject]@{ Extension = ".com";  MimeType = "application/octet-stream"; Description = "BIOS boot loaders" },
+    [PSCustomObject]@{ Extension = ".n12";  MimeType = "application/octet-stream"; Description = "BIOS loaders without F12 key press" },
+    [PSCustomObject]@{ Extension = ".sdi";  MimeType = "application/octet-stream"; Description = "boot.sdi file" },
+    [PSCustomObject]@{ Extension = ".bcd";  MimeType = "application/octet-stream"; Description = "boot.bcd boot configuration files" },
+    [PSCustomObject]@{ Extension = ".";     MimeType = "application/octet-stream"; Description = "BCD file (with no extension)" },
+    [PSCustomObject]@{ Extension = ".wim";  MimeType = "application/octet-stream"; Description = "winpe images (optional)" },
+    [PSCustomObject]@{ Extension = ".pxe";  MimeType = "application/octet-stream"; Description = "iPXE BIOS loader files" },
+    [PSCustomObject]@{ Extension = ".kpxe"; MimeType = "application/octet-stream"; Description = "UNDIonly version of iPXE" },
+    [PSCustomObject]@{ Extension = ".iso";  MimeType = "application/octet-stream"; Description = ".iso file type" },
+    [PSCustomObject]@{ Extension = ".img";  MimeType = "application/octet-stream"; Description = ".img file type" },
+    [PSCustomObject]@{ Extension = ".ipxe"; MimeType = "text/plain";                Description = ".ipxe file" }
+)
 
+
+
+try {
+    Import-Module WebAdministration -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+}
+catch {
+    write-host "Catch block executed"
+}
+
+if (Get-Module -name WebAdministration) {
+    $IISMimeTypes = Get-WebConfigurationProperty -Filter /system.webServer/staticContent/mimeMap -Name "fileExtension" -PSPath "IIS:\Sites\Default Web Site"
+    # Loop through required MIME types and check if present in IIS
+    foreach ($mime in $RequiredMimeTypes) {
+        if ($IISMimeTypes.value -contains $mime.Extension) {
+            Write-Host ("✓ IIS MIME type for {0} ({1}) is configured." -f $mime.Extension, $mime.Description) -ForegroundColor Green
+        } else {
+            Write-Host ("✗ IIS MIME type for {0} ({1}) is NOT configured." -f $mime.Extension, $mime.Description) -ForegroundColor Red
+            Write-Host "Remediation: Run following Command" -ForegroundColor Yellow
+            Write-Host ("New-WebMimeType -FileExtension '{0}' -MimeType '{1}' -PSPath 'IIS:\Sites\Default Web Site'" -f $mime.Extension, $mime.MimeType) -ForegroundColor DarkGray
+            $IISMimeTypeUpdateRequired = $true
+        }
+    }
+    if ($IISMimeTypeUpdateRequired) {
+        write-host -ForegroundColor Magenta "Run this Script to enable MIME Types"
+        write-Host -ForegroundColor DarkGray "https://github.com/materrill/miketerrill.net/blob/master/Software%20Install%20Scripts/Configure-IISMIMETypes.ps1"
+    }
+}
 Write-Host "=========================================================================" -ForegroundColor DarkGray
 Write-Host "Checking for Services..." -ForegroundColor Cyan
 #Test Services if App Installed
