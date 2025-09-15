@@ -172,10 +172,38 @@ if ($MissingApps) {
     return
 }
 
-# Display results
 
 Write-Host "=========================================================================" -ForegroundColor DarkGray
-write-Host "Checking for Services..." -ForegroundColor Cyan
+Write-Host "Confirming Windows Features for DeployR" -ForegroundColor Cyan
+#Confirm Windows Components
+$RequiredWindowsComponents = @(
+    "BranchCache",
+    "Web-Server",
+    "Web-Http-Errors",
+    "Web-Static-Content",
+    "Web-Digest-Auth",
+    "Web-Windows-Auth",
+    "Web-Mgmt-Console"
+)
+
+foreach ($Component in $RequiredWindowsComponents) {
+    if (Get-WindowsFeature -Name $Component -ErrorAction SilentlyContinue) {
+        Write-Host "✓ $Component is installed." -ForegroundColor Green
+    } else {
+        Write-Host "✗ $Component is NOT installed." -ForegroundColor Red
+        $MissingComponents += $Component
+    }
+}
+if ($MissingComponents) {
+    Write-Host "The following required components are missing:" -ForegroundColor Red
+    Write-Host "Remediation: Run following Command"
+    write-host -ForegroundColor darkgray "Add-WindowsFeature Web-Server, Web-Http-Errors, Web-Static-Content, Web-Digest-Auth, Web-Windows-Auth, Web-Mgmt-Console, BranchCache"
+
+}
+
+
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+Write-Host "Checking for Services..." -ForegroundColor Cyan
 #Test Services if App Installed
 #Test SQL Express
 if ($Installed_Microsoft_SQL_Server){
@@ -496,34 +524,6 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
         Write-Host "StifleR Infrastructure Services are NOT available." -ForegroundColor Red
     }
 }
-Write-Host "=========================================================================" -ForegroundColor DarkGray
-Write-Host "Confirming Windows Features for DeployR" -ForegroundColor Cyan
-#Confirm Windows Components
-$RequiredWindowsComponents = @(
-    "BranchCache",
-    "Web-Server",
-    "Web-Http-Errors",
-    "Web-Static-Content",
-    "Web-Digest-Auth",
-    "Web-Windows-Auth",
-    "Web-Mgmt-Console"
-)
-
-foreach ($Component in $RequiredWindowsComponents) {
-    if (Get-WindowsFeature -Name $Component -ErrorAction SilentlyContinue) {
-        Write-Host "✓ $Component is installed." -ForegroundColor Green
-    } else {
-        Write-Host "✗ $Component is NOT installed." -ForegroundColor Red
-        $MissingComponents += $Component
-    }
-}
-if ($MissingComponents) {
-    Write-Host "The following required components are missing:" -ForegroundColor Red
-    Write-Host "Remediation: Run following Command"
-    write-host -ForegroundColor darkgray "Add-WindowsFeature Web-Server, Web-Http-Errors, Web-Static-Content, Web-Digest-Auth, Web-Windows-Auth, Web-Mgmt-Console, BranchCache"
-
-}
-
 #Remediation 
 #prompt user to do installs
 
