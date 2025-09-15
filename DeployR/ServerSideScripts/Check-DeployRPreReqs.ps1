@@ -1,4 +1,24 @@
-#Need to add checking for BranchCache & IIS Components installed.
+<#Tests
+- Check if all required applications are installed
+- Validate server configuration settings
+- Ensure firewall rules are correctly set
+- Checks Connectivity for DeployR / StifleR URLs & Ports based on Registry Entries
+- Check if BranchCache is enabled
+- Check if IIS components are installed
+- Check if IIS Virtual Web Directory is Setup
+- Check if IIS MIME types added
+- Check StifleR Dashboard URLs in Registry & Server Config File
+- Check for Certificate set in StifleR & DeployR is same and that the thumbprint exists
+- Check if all required services are running
+- Check for SQL String Connection based on DeployR Registry
+
+
+
+Remediation at end will prompt to remediate:
+- Missing IIS MIME types
+- Missing IIS Virtual Directories
+- Missing Windows Components
+#>
 
 #Ensure Several things are installed, as well as configurations are done to help troubleshoot DeployR installations
 
@@ -689,3 +709,36 @@ if ($IISVirtualDirMissing) {
         Write-Host "Skipping virtual directory creation." -ForegroundColor DarkGray
     }
 }
+if ($IISMimeTypeUpdateRequired) {
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Would you like to add the missing IIS MIME types now? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        Write-Host "Adding missing IIS MIME types..." -ForegroundColor Yellow
+        #Set the MIME types for the iPXE boot files, etc. 
+        Import-Module WebAdministration
+        #EFI loader files  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.efi';mimeType='application/octet-stream'}  
+        #BIOS boot loaders  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.com';mimeType='application/octet-stream'}  
+        #BIOS loaders without F12 key press  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.n12';mimeType='application/octet-stream'}  
+        #For the boot.sdi file  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.sdi';mimeType='application/octet-stream'}  
+        #For the boot.bcd boot configuration files  & BCD file (with no extension)
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.bcd';mimeType='application/octet-stream'}
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.';mimeType='application/octet-stream'}   
+        #For the winpe images itself (already added on newer/patched versions of Windows Server
+        #Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.wim';mimeType='application/octet-stream'}  
+        #for the iPXE BIOS loader files  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.pxe';mimeType='application/octet-stream'}  
+        #For the UNDIonly version of iPXE  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.kpxe';mimeType='application/octet-stream'}  
+        #For the .iso file type
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.iso';mimeType='application/octet-stream'}  
+        #For the .img file type
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.img';mimeType='application/octet-stream'}  
+        #For the .ipxe file 
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.ipxe';mimeType='text/plain'}
+        Write-Host "✓ Missing IIS MIME types added successfully." -ForegroundColor Green
+    }
