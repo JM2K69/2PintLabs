@@ -347,7 +347,26 @@ if ($Installed_2Pint_Software_StifleR_Server){
     else {
         Write-Host "Certificate NOT found." -ForegroundColor Red
     }
+
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Checking for StifleRDashboard Web Virtual Directory..." -ForegroundColor Cyan
+
+    try {
+        $vdir = Get-WebVirtualDirectory -Site "Default Web Site" -Name "StifleRDashboard" -ErrorAction SilentlyContinue
+        if ($vdir) {
+            Write-Host "✓ StifleRDashboard Web Virtual Directory exists in Default Web Site." -ForegroundColor Green
+            Write-Host "  Physical Path: $($vdir.PhysicalPath)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "✗ StifleRDashboard Web Virtual Directory is NOT present in Default Web Site." -ForegroundColor Red
+            Write-Host "Remediation: Run the following command:" -ForegroundColor Yellow
+            Write-Host "New-WebVirtualDirectory -Site 'Default Web Site' -Name 'StifleRDashboard' -PhysicalPath 'C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files'" -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host "Error checking for StifleRDashboard Web Virtual Directory: $_" -ForegroundColor Red
+    }
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
 }
+
 
 #Confirm DeployR Registry Settings
 if ($Installed_2Pint_Software_DeployR){
