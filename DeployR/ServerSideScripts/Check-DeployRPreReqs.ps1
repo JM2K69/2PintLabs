@@ -1,3 +1,5 @@
+#Need to add checking for BranchCache & IIS Components installed.
+
 #Ensure Several things are installed, as well as configurations are done to help troubleshoot DeployR installations
 
 #PowerShell Table of Pre-Req Applications:
@@ -404,7 +406,8 @@ if ($certHash) {
 }
 #Testing Firewall Rules:
 
-Write-Host "DeployR Server URL is accessible." -ForegroundColor Green
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+write-host "Checking Firewall Rules to ensure Ports are Open" -ForegroundColor Cyan
 $Ports = Get-NetFirewallPortFilter
 $InboundRules = Get-NetFirewallRule -Direction Inbound
 foreach ($FirewallRule in $FirewallRules){
@@ -492,6 +495,33 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
     } else {
         Write-Host "StifleR Infrastructure Services are NOT available." -ForegroundColor Red
     }
+}
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+Write-Host "Confirming Windows Features for DeployR" -ForegroundColor Cyan
+#Confirm Windows Components
+$RequiredWindowsComponents = @(
+    "BranchCache",
+    "Web-Server",
+    "Web-Http-Errors",
+    "Web-Static-Content",
+    "Web-Digest-Auth",
+    "Web-Windows-Auth",
+    "Web-Mgmt-Console"
+)
+
+foreach ($Component in $RequiredWindowsComponents) {
+    if (Get-WindowsFeature -Name $Component -ErrorAction SilentlyContinue) {
+        Write-Host "✓ $Component is installed." -ForegroundColor Green
+    } else {
+        Write-Host "✗ $Component is NOT installed." -ForegroundColor Red
+        $MissingComponents += $Component
+    }
+}
+if ($MissingComponents) {
+    Write-Host "The following required components are missing:" -ForegroundColor Red
+    Write-Host "Remediation: Run following Command"
+    write-host -ForegroundColor darkgray "Add-WindowsFeature Web-Server, Web-Http-Errors, Web-Static-Content, Web-Digest-Auth, Web-Windows-Auth, Web-Mgmt-Console, BranchCache"
+
 }
 
 #Remediation 
