@@ -360,13 +360,82 @@ if ($Installed_2Pint_Software_StifleR_Server){
             Write-Host "✗ StifleRDashboard Web Virtual Directory is NOT present in Default Web Site." -ForegroundColor Red
             Write-Host "Remediation: Run the following command:" -ForegroundColor Yellow
             Write-Host "New-WebVirtualDirectory -Site 'Default Web Site' -Name 'StifleRDashboard' -PhysicalPath 'C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files'" -ForegroundColor DarkGray
+            $IISVirtualDirMissing = $true
         }
     } catch {
         Write-Host "Error checking for StifleRDashboard Web Virtual Directory: $_" -ForegroundColor Red
     }
     Write-Host "=========================================================================" -ForegroundColor DarkGray
-}
 
+    Write-Host "Testing Dashboard Registry Settings for URLs" -ForegroundColor Cyan
+    $DashReg = "HKLM:\SOFTWARE\2Pint Software\StifleR\Dashboard"
+    $DashRegData = Get-ItemProperty -Path $DashReg -ErrorAction SilentlyContinue
+
+    if ($DashRegData -and $DashRegData.HubUrl) {
+        if ($($DashRegData.HubUrl) -match "localhost") {
+            Write-Host " Hub URL is configured to use localhost." -ForegroundColor Red
+        }
+        else{
+            Write-Host " Hub URL: $($DashRegData.HubUrl)" -ForegroundColor Green
+        }
+    }
+    else {
+        Write-Host " Hub URL is NOT configured." -ForegroundColor Red
+    }
+    
+    if ($DashRegData -and $DashRegData.ServiceUrl) {
+        if ($($DashRegData.ServiceUrl) -match "localhost") {
+            Write-Host " Service URL is configured to use localhost." -ForegroundColor Red
+        }
+        else{
+            Write-Host " Service URL: $($DashRegData.ServiceUrl)" -ForegroundColor Green
+        }
+    }
+    else {
+        Write-Host " Service URL is NOT configured." -ForegroundColor Red
+    }
+    Write-Host "Testing Dashboard Config Settings for URLs" -ForegroundColor Cyan
+    if (Test-Path -Path "C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json") {
+        Write-Host "  Server configuration file exists." -ForegroundColor Green
+        $ServerConfigJSON = Get-Content -Path "C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json" -Raw | ConvertFrom-Json
+        if ($ServerConfigJSON -and $ServerConfigJSON.server.hub) {
+            if ($($ServerConfigJSON.server.hub) -match "localhost") {
+                Write-Host "Hub URL is configured to use localhost." -ForegroundColor Red
+            }
+            else{
+                Write-Host " Hub URL: $($ServerConfigJSON.server.hub)" -ForegroundColor Green
+            }
+        }
+        else {
+            Write-Host " Hub URL is NOT configured." -ForegroundColor Red
+        }
+
+        if ($ServerConfigJSON -and $ServerConfigJSON.server.controller) {
+            if ($($ServerConfigJSON.server.controller) -match "localhost") {
+                Write-Host " Service URL is configured to use localhost." -ForegroundColor Red
+            }
+            else{
+                Write-Host " Service URL: $($ServerConfigJSON.server.controller)" -ForegroundColor Green
+            }
+        }
+        else {
+            Write-Host " Service URL is NOT configured." -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host " Server configuration file is missing." -ForegroundColor Red
+    }
+    #Check to ensure Registry Values match Config Values
+    if ($DashRegData -and $ServerConfigJSON) {
+        if ($DashRegData.HubUrl -ne $ServerConfigJSON.server.hub) {
+            Write-Host " Hub URL in Registry does not match Config file." -ForegroundColor Red
+        }
+        if ($DashRegData.ServiceUrl -ne $ServerConfigJSON.server.controller) {
+            Write-Host " Service URL in Registry does not match Config file." -ForegroundColor Red
+        }
+    }
+}
+Start-Sleep -Seconds 2
 
 #Confirm DeployR Registry Settings
 if ($Installed_2Pint_Software_DeployR){
@@ -589,5 +658,34 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
 }
 #Remediation 
 #prompt user to do installs
-
-
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+if ($MissingComponents) {
+    Write-Host "Would you like to install the missing Windows Features now? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        Write-Host "Remediation: Run the following command to install missing Windows Features:" -ForegroundColor Yellow
+        Write-Host "Add-WindowsFeature $($MissingComponents -join ', ')" -ForegroundColor DarkGray
+    }
+}
+if ($IISVirtualDirMissing) {
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Running Remediation for StifleRDashboard virtual directory"
+    if (Test-Path -path "C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files"){
+        Write-Host "✓ StifleRDashboard directory exists." -ForegroundColor Green
+    } else {
+        Write-Host "✗ StifleRDashboard directory is missing." -ForegroundColor Red
+    }
+    Write-Host "Would you like to create the StifleRDashboard virtual directory now? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        try {
+            New-WebVirtualDirectory -Site 'Default Web Site' -Name 'StifleRDashboard' -PhysicalPath 'C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files' -ErrorAction Stop
+            Write-Host "✓ StifleRDashboard virtual directory created successfully." -ForegroundColor Green
+        } catch {
+            Write-Host "✗ Failed to create virtual directory: $_" -ForegroundColor Red
+            Write-Host "Please run the command manually with elevated permissions." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "Skipping virtual directory creation." -ForegroundColor DarkGray
+    }
+}
