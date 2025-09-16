@@ -122,7 +122,7 @@ else {
         Remove-Item -Path 'HKLM:\SOFTWARE\2Pint Software' -Recurse -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 1
         Write-Host -ForegroundColor Cyan "Retrying installation..."
-        $Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $tempDir\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
+        $Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $tempDir\install.log /quiet OPTIONS=$OPTIONS AUTOSTART=1" -Wait -PassThru
         if ($Install.ExitCode -eq 0) {
             Write-Host -ForegroundColor Green "Installation completed successfully."
         }

@@ -98,8 +98,8 @@ Write-Host -ForegroundColor gray "$OPTIONS"
 Write-Host -ForegroundColor DarkGray "-------------------------------------------------------"
 Write-Host "$Options"
 
-write-host " Start-Process -FilePath msiexec.exe -ArgumentList `"/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS`" -Wait -PassThru"
-$Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
+write-host " Start-Process -FilePath msiexec.exe -ArgumentList `"/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS AUTOSTART=1`" -Wait -PassThru"
+$Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS AUTOSTART=1" -Wait -PassThru
 
 if ($Install.ExitCode -eq 0) {
     Write-Host -ForegroundColor Green "Installation completed successfully."
