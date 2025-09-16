@@ -96,10 +96,10 @@ Write-Host -ForegroundColor DarkGray "------------------------------------------
 #Write out the contents of the $Options Variables
 Write-Host -ForegroundColor gray "$OPTIONS"
 Write-Host -ForegroundColor DarkGray "-------------------------------------------------------"
+Write-Host "$Options"
 
-
-write-host -ForegroundColor Green "Start-Process -FilePath msiexec.exe -ArgumentList `"/i $MSI /l*v $LogFolder\StifleRClientMSI.log /quiet OPTIONS=$OPTIONS AUTOSTART=1`" -Wait -PassThru"
-$Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $LogFolder\StifleRClientMSI.log /quiet OPTIONS=$OPTIONS AUTOSTART=1" -Wait -PassThru
+write-host " Start-Process -FilePath msiexec.exe -ArgumentList `"/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS`" -Wait -PassThru"
+$Install = Start-Process -FilePath msiexec.exe -ArgumentList "/i $MSI /l*v $LogFolder\install.log /quiet OPTIONS=$OPTIONS" -Wait -PassThru
 
 if ($Install.ExitCode -eq 0) {
     Write-Host -ForegroundColor Green "Installation completed successfully."
@@ -146,6 +146,4 @@ else{
     if ($StifleRService.StartType -ne 'Automatic'){
         Set-Service -Name StifleRClient -StartupType Automatic -ErrorAction SilentlyContinue
     }
-    Stop-Transcript
 }
-exit $Install.ExitCode
