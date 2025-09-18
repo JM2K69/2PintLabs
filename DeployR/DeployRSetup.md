@@ -85,7 +85,7 @@ Use the Console to create it, then find it on the D:\DeployRContentItems\Content
 - Create a Content Item (Other) with your Root Certificates
 - Create a Content Item (DriverPack) with your WinPE Drivers
 - Go to Boot Media Page in DeployR, click Generate and wait... monitor the status by refreshing the browser, or monitoring the Log on the DeployR Server
--   DeployRContentLocationPath\Logs\00000003-0000-0000-0000-0000000001.log
+  - DeployRContentLocationPath\Logs\00000003-0000-0000-0000-0000000001.log
 - Once complete, you will find 2 ISO's there and 2 wim files.
 - For iPXE use the winpe_amd64.wim (assuming you're booting x64)
 - For VM mounting an ISO, grab either the DeployR_X64 or noprompt ISO.  noprompt is helpful for automation.
