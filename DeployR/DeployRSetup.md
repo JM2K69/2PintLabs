@@ -76,7 +76,9 @@ Under the IntegrationSettings area:
 
 ## Post Installation
 
-So once you get to this point, you'll want to make sure the services are all running, and you can pull up DeployR in the Dashboard.  Then it's time to build some boot media.
+So once you get to this point, you'll want to make sure the services are all running, and you can pull up DeployR in the Dashboard.  
+In the Dashboard, Administration -> Infrastructure services, in the service list, DeployR will show up, under actions, click the ... and chose approve.
+Then it's time to build some boot media.
 
 
 ### Boot Media
