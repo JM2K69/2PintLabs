@@ -1,3 +1,25 @@
+<#Tests
+- Check if all required applications are installed
+- Validate server configuration settings
+- Ensure firewall rules are correctly set
+- Checks Connectivity for DeployR / StifleR URLs & Ports based on Registry Entries
+- Check if BranchCache is enabled
+- Check if IIS components are installed
+- Check if IIS Virtual Web Directory is Setup
+- Check if IIS MIME types added
+- Check StifleR Dashboard URLs in Registry & Server Config File
+- Check for Certificate set in StifleR & DeployR is same and that the thumbprint exists
+- Check if all required services are running
+- Check for SQL String Connection based on DeployR Registry
+
+
+
+Remediation at end will prompt to remediate:
+- Missing IIS MIME types
+- Missing IIS Virtual Directories
+- Missing Windows Components
+#>
+
 #Ensure Several things are installed, as well as configurations are done to help troubleshoot DeployR installations
 
 #PowerShell Table of Pre-Req Applications:
@@ -9,6 +31,8 @@ $PreReqApps = @(
     [PSCustomObject]@{Title = 'PowerShell 7-x64'; Installed = $false; URL = 'https://aka.ms/powershell-release?tag=lts'}
     [PSCustomObject]@{Title = 'Microsoft SQL Server'; Installed = $false; URL = 'https://www.microsoft.com/en-us/download/details.aspx?id=104781'}
     [PSCustomObject]@{Title = 'SQL Server Management Studio'; Installed = $false; URL = 'https://learn.microsoft.com/en-us/ssms/install/install'}
+    [PSCustomObject]@{Title = 'Microsoft Visual C++ 2015-2022 Redistributable (x64)'; Installed = $false; URL = 'https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170'}
+    
     [PSCustomObject]@{Title = '2Pint Software DeployR'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Server'; Installed = $false}
     [PSCustomObject]@{Title = '2Pint Software StifleR Dashboards'; Installed = $false}
@@ -168,10 +192,82 @@ if ($MissingApps) {
     return
 }
 
-# Display results
 
 Write-Host "=========================================================================" -ForegroundColor DarkGray
-write-Host "Checking for Services..." -ForegroundColor Cyan
+Write-Host "Confirming Windows Features for DeployR" -ForegroundColor Cyan
+#Confirm Windows Components
+$RequiredWindowsComponents = @(
+    "BranchCache",
+    "Web-Server",
+    "Web-Http-Errors",
+    "Web-Static-Content",
+    "Web-Digest-Auth",
+    "Web-Windows-Auth",
+    "Web-Mgmt-Console"
+)
+
+foreach ($Component in $RequiredWindowsComponents) {
+    if (Get-WindowsFeature -Name $Component -ErrorAction SilentlyContinue) {
+        Write-Host "✓ $Component is installed." -ForegroundColor Green
+    } else {
+        Write-Host "✗ $Component is NOT installed." -ForegroundColor Red
+        $MissingComponents += $Component
+    }
+}
+if ($MissingComponents) {
+    Write-Host "The following required components are missing:" -ForegroundColor Red
+    Write-Host "Remediation: Run following Command"
+    write-host -ForegroundColor darkgray "Add-WindowsFeature Web-Server, Web-Http-Errors, Web-Static-Content, Web-Digest-Auth, Web-Windows-Auth, Web-Mgmt-Console, BranchCache"
+
+}
+
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+Write-Host "Confirm IIS MIME Types" -ForegroundColor Cyan
+# Table of required MIME types for iPXE and related boot files
+$RequiredMimeTypes = @(
+    [PSCustomObject]@{ Extension = ".efi";  MimeType = "application/octet-stream"; Description = "EFI loader files" },
+    [PSCustomObject]@{ Extension = ".com";  MimeType = "application/octet-stream"; Description = "BIOS boot loaders" },
+    [PSCustomObject]@{ Extension = ".n12";  MimeType = "application/octet-stream"; Description = "BIOS loaders without F12 key press" },
+    [PSCustomObject]@{ Extension = ".sdi";  MimeType = "application/octet-stream"; Description = "boot.sdi file" },
+    [PSCustomObject]@{ Extension = ".bcd";  MimeType = "application/octet-stream"; Description = "boot.bcd boot configuration files" },
+    [PSCustomObject]@{ Extension = ".";     MimeType = "application/octet-stream"; Description = "BCD file (with no extension)" },
+    [PSCustomObject]@{ Extension = ".wim";  MimeType = "application/octet-stream"; Description = "winpe images (optional)" },
+    [PSCustomObject]@{ Extension = ".pxe";  MimeType = "application/octet-stream"; Description = "iPXE BIOS loader files" },
+    [PSCustomObject]@{ Extension = ".kpxe"; MimeType = "application/octet-stream"; Description = "UNDIonly version of iPXE" },
+    [PSCustomObject]@{ Extension = ".iso";  MimeType = "application/octet-stream"; Description = ".iso file type" },
+    [PSCustomObject]@{ Extension = ".img";  MimeType = "application/octet-stream"; Description = ".img file type" },
+    [PSCustomObject]@{ Extension = ".ipxe"; MimeType = "text/plain";                Description = ".ipxe file" }
+)
+
+
+
+try {
+    Import-Module WebAdministration -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+}
+catch {
+    write-host "Catch block executed"
+}
+
+if (Get-Module -name WebAdministration) {
+    $IISMimeTypes = Get-WebConfigurationProperty -Filter /system.webServer/staticContent/mimeMap -Name "fileExtension" -PSPath "IIS:\Sites\Default Web Site"
+    # Loop through required MIME types and check if present in IIS
+    foreach ($mime in $RequiredMimeTypes) {
+        if ($IISMimeTypes.value -contains $mime.Extension) {
+            Write-Host ("✓ IIS MIME type for {0} ({1}) is configured." -f $mime.Extension, $mime.Description) -ForegroundColor Green
+        } else {
+            Write-Host ("✗ IIS MIME type for {0} ({1}) is NOT configured." -f $mime.Extension, $mime.Description) -ForegroundColor Red
+            Write-Host "Remediation: Run following Command" -ForegroundColor Yellow
+            Write-Host ("New-WebMimeType -FileExtension '{0}' -MimeType '{1}' -PSPath 'IIS:\Sites\Default Web Site'" -f $mime.Extension, $mime.MimeType) -ForegroundColor DarkGray
+            $IISMimeTypeUpdateRequired = $true
+        }
+    }
+    if ($IISMimeTypeUpdateRequired) {
+        write-host -ForegroundColor Magenta "Run this Script to enable MIME Types"
+        write-Host -ForegroundColor DarkGray "https://github.com/materrill/miketerrill.net/blob/master/Software%20Install%20Scripts/Configure-IISMIMETypes.ps1"
+    }
+}
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+Write-Host "Checking for Services..." -ForegroundColor Cyan
 #Test Services if App Installed
 #Test SQL Express
 if ($Installed_Microsoft_SQL_Server){
@@ -271,7 +367,95 @@ if ($Installed_2Pint_Software_StifleR_Server){
     else {
         Write-Host "Certificate NOT found." -ForegroundColor Red
     }
+
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Checking for StifleRDashboard Web Virtual Directory..." -ForegroundColor Cyan
+
+    try {
+        $vdir = Get-WebVirtualDirectory -Site "Default Web Site" -Name "StifleRDashboard" -ErrorAction SilentlyContinue
+        if ($vdir) {
+            Write-Host "✓ StifleRDashboard Web Virtual Directory exists in Default Web Site." -ForegroundColor Green
+            Write-Host "  Physical Path: $($vdir.PhysicalPath)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "✗ StifleRDashboard Web Virtual Directory is NOT present in Default Web Site." -ForegroundColor Red
+            Write-Host "Remediation: Run the following command:" -ForegroundColor Yellow
+            Write-Host "New-WebVirtualDirectory -Site 'Default Web Site' -Name 'StifleRDashboard' -PhysicalPath 'C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files'" -ForegroundColor DarkGray
+            $IISVirtualDirMissing = $true
+        }
+    } catch {
+        Write-Host "Error checking for StifleRDashboard Web Virtual Directory: $_" -ForegroundColor Red
+    }
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+
+    Write-Host "Testing Dashboard Registry Settings for URLs" -ForegroundColor Cyan
+    $DashReg = "HKLM:\SOFTWARE\2Pint Software\StifleR\Dashboard"
+    $DashRegData = Get-ItemProperty -Path $DashReg -ErrorAction SilentlyContinue
+
+    if ($DashRegData -and $DashRegData.HubUrl) {
+        if ($($DashRegData.HubUrl) -match "localhost") {
+            Write-Host " Hub URL is configured to use localhost." -ForegroundColor Red
+        }
+        else{
+            Write-Host " Hub URL: $($DashRegData.HubUrl)" -ForegroundColor Green
+        }
+    }
+    else {
+        Write-Host " Hub URL is NOT configured." -ForegroundColor Red
+    }
+    
+    if ($DashRegData -and $DashRegData.ServiceUrl) {
+        if ($($DashRegData.ServiceUrl) -match "localhost") {
+            Write-Host " Service URL is configured to use localhost." -ForegroundColor Red
+        }
+        else{
+            Write-Host " Service URL: $($DashRegData.ServiceUrl)" -ForegroundColor Green
+        }
+    }
+    else {
+        Write-Host " Service URL is NOT configured." -ForegroundColor Red
+    }
+    Write-Host "Testing Dashboard Config Settings for URLs" -ForegroundColor Cyan
+    if (Test-Path -Path "C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json") {
+        Write-Host "  Server configuration file exists." -ForegroundColor Green
+        $ServerConfigJSON = Get-Content -Path "C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files\assets\config\server.json" -Raw | ConvertFrom-Json
+        if ($ServerConfigJSON -and $ServerConfigJSON.server.hub) {
+            if ($($ServerConfigJSON.server.hub) -match "localhost") {
+                Write-Host "Hub URL is configured to use localhost." -ForegroundColor Red
+            }
+            else{
+                Write-Host " Hub URL: $($ServerConfigJSON.server.hub)" -ForegroundColor Green
+            }
+        }
+        else {
+            Write-Host " Hub URL is NOT configured." -ForegroundColor Red
+        }
+
+        if ($ServerConfigJSON -and $ServerConfigJSON.server.controller) {
+            if ($($ServerConfigJSON.server.controller) -match "localhost") {
+                Write-Host " Service URL is configured to use localhost." -ForegroundColor Red
+            }
+            else{
+                Write-Host " Service URL: $($ServerConfigJSON.server.controller)" -ForegroundColor Green
+            }
+        }
+        else {
+            Write-Host " Service URL is NOT configured." -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host " Server configuration file is missing." -ForegroundColor Red
+    }
+    #Check to ensure Registry Values match Config Values
+    if ($DashRegData -and $ServerConfigJSON) {
+        if ($DashRegData.HubUrl -ne $ServerConfigJSON.server.hub) {
+            Write-Host " Hub URL in Registry does not match Config file." -ForegroundColor Red
+        }
+        if ($DashRegData.ServiceUrl -ne $ServerConfigJSON.server.controller) {
+            Write-Host " Service URL in Registry does not match Config file." -ForegroundColor Red
+        }
+    }
 }
+Start-Sleep -Seconds 2
 
 #Confirm DeployR Registry Settings
 if ($Installed_2Pint_Software_DeployR){
@@ -402,7 +586,8 @@ if ($certHash) {
 }
 #Testing Firewall Rules:
 
-Write-Host "DeployR Server URL is accessible." -ForegroundColor Green
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+write-host "Checking Firewall Rules to ensure Ports are Open" -ForegroundColor Cyan
 $Ports = Get-NetFirewallPortFilter
 $InboundRules = Get-NetFirewallRule -Direction Inbound
 foreach ($FirewallRule in $FirewallRules){
@@ -491,8 +676,70 @@ if ($Installed_2Pint_Software_StifleR_WmiAgent) {
         Write-Host "StifleR Infrastructure Services are NOT available." -ForegroundColor Red
     }
 }
-
 #Remediation 
 #prompt user to do installs
-
-
+Write-Host "=========================================================================" -ForegroundColor DarkGray
+if ($MissingComponents) {
+    Write-Host "Would you like to install the missing Windows Features now? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        Write-Host "Remediation: Run the following command to install missing Windows Features:" -ForegroundColor Yellow
+        Write-Host "Add-WindowsFeature $($MissingComponents -join ', ')" -ForegroundColor DarkGray
+    }
+}
+if ($IISVirtualDirMissing) {
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Running Remediation for StifleRDashboard virtual directory"
+    if (Test-Path -path "C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files"){
+        Write-Host "✓ StifleRDashboard directory exists." -ForegroundColor Green
+    } else {
+        Write-Host "✗ StifleRDashboard directory is missing." -ForegroundColor Red
+    }
+    Write-Host "Would you like to create the StifleRDashboard virtual directory now? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        try {
+            New-WebVirtualDirectory -Site 'Default Web Site' -Name 'StifleRDashboard' -PhysicalPath 'C:\Program Files\2Pint Software\StifleR Dashboards\Dashboard Files' -ErrorAction Stop
+            Write-Host "✓ StifleRDashboard virtual directory created successfully." -ForegroundColor Green
+        } catch {
+            Write-Host "✗ Failed to create virtual directory: $_" -ForegroundColor Red
+            Write-Host "Please run the command manually with elevated permissions." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "Skipping virtual directory creation." -ForegroundColor DarkGray
+    }
+}
+if ($IISMimeTypeUpdateRequired) {
+    Write-Host "=========================================================================" -ForegroundColor DarkGray
+    Write-Host "Would you like to add the missing IIS MIME types now? (Y/N): " -ForegroundColor Yellow -NoNewline
+    $response = Read-Host
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        Write-Host "Adding missing IIS MIME types..." -ForegroundColor Yellow
+        #Set the MIME types for the iPXE boot files, etc. 
+        Import-Module WebAdministration
+        #EFI loader files  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.efi';mimeType='application/octet-stream'}  
+        #BIOS boot loaders  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.com';mimeType='application/octet-stream'}  
+        #BIOS loaders without F12 key press  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.n12';mimeType='application/octet-stream'}  
+        #For the boot.sdi file  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.sdi';mimeType='application/octet-stream'}  
+        #For the boot.bcd boot configuration files  & BCD file (with no extension)
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.bcd';mimeType='application/octet-stream'}
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.';mimeType='application/octet-stream'}   
+        #For the winpe images itself (already added on newer/patched versions of Windows Server
+        #Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.wim';mimeType='application/octet-stream'}  
+        #for the iPXE BIOS loader files  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.pxe';mimeType='application/octet-stream'}  
+        #For the UNDIonly version of iPXE  
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.kpxe';mimeType='application/octet-stream'}  
+        #For the .iso file type
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.iso';mimeType='application/octet-stream'}  
+        #For the .img file type
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.img';mimeType='application/octet-stream'}  
+        #For the .ipxe file 
+        Add-WebConfigurationProperty //staticContent -name collection -value @{fileExtension='.ipxe';mimeType='text/plain'}
+        Write-Host "✓ Missing IIS MIME types added successfully." -ForegroundColor Green
+    }
+}
